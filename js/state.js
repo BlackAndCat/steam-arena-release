@@ -85,9 +85,20 @@ SA.S = (() => {
     try {
       const key = SA.Camp && SA.Camp.isDesignMode && SA.Camp.isDesignMode() ? DESIGN_KEY : KEY;
       localStorage.setItem(key, JSON.stringify(d));
-    } catch (e) { /* 隐私模式 */ }
+      return true;
+    } catch (e) { /* 隐私模式 */ return false; }
   }
   function reset() { d = fresh(); save(); return d; }
+
+  // 玩家重开只替换正式进度；设计模式拒绝调用，蓝图库和作者草稿均不在此处清理。
+  function restartGame() {
+    if (SA.Camp?.isDesignMode?.()) return false;
+    const previous = d;
+    d = fresh();
+    if (save()) return true;
+    d = previous;
+    return false;
+  }
 
   // 主动换车时逐件退回原车，保留每件的耐久、等级、唯一身份和外观；其余存档字段不动。
   function replaceWithStarter() {
@@ -547,5 +558,5 @@ SA.S = (() => {
     for (const cell of res.removed) scrap += stashCell(cell);
     return { ...res, scrap };
   }
-  return { load, save, ...(!SA.RELEASE ? { reset, replaceWithStarter } : {}), starterVehicle, get d() { return d; }, addInv, invCount, takeBest, stockOptions, takeStock, addIngots, hasUnique, claimUnique, LOAN_CAP, loanRoom, borrow, buy, repairCost, opponent, odds, Cloud, Blueprints, arenaEntries, placeBet, cancelBet, settleBattle, stashCell, matUpInfo, buyable, payAmount, repay, repairCells, upgradeMaterial, upgradeCell, renameVehicle, sellStock, installStock, removeVehicleCell };
+  return { load, save, restartGame, ...(!SA.RELEASE ? { reset, replaceWithStarter } : {}), starterVehicle, get d() { return d; }, addInv, invCount, takeBest, stockOptions, takeStock, addIngots, hasUnique, claimUnique, LOAN_CAP, loanRoom, borrow, buy, repairCost, opponent, odds, Cloud, Blueprints, arenaEntries, placeBet, cancelBet, settleBattle, stashCell, matUpInfo, buyable, payAmount, repay, repairCells, upgradeMaterial, upgradeCell, renameVehicle, sellStock, installStock, removeVehicleCell };
 })();

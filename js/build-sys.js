@@ -22,3 +22,4 @@ SA.BUILD_SYS += '+yard-click-text-workbench'; // 院子工作台可分别编辑�
 SA.BUILD_SYS += '+high-arc-near-targets'; // 四种高抛炮支持前方近目标并补偿坡地俯仰。
 SA.BUILD_SYS += '+shop-unlock-melee-wreck'; // 商店按解锁售卖，近战可持续冲击并分摊残骸伤害。
 SA.BUILD_SYS += '+release-boundary-v1'; // 发行版只读正式文案并限制开放章节与开发入口。
+SA.BUILD_SYS += '+player-restart-save'; // 玩家重开正式进度，设计模式保持隔离。

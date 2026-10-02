@@ -140,12 +140,25 @@ SA.UI = (() => {
       gear,
     ].filter(Boolean));
   }
-  // 设置：发行包只显示玩家可用的场景特效选项。
+  // 玩家重开需要两次明确确认；dialog 会先关闭当前层，再运行按钮回调。
+  function confirmRestartGame() {
+    dialog('删除当前存档？', [
+      h('p', {}, '游戏进度和已看剧情会清空，并从开场重新开始。'),
+      h('p', { class: 'muted' }, '蓝图库和作者设计会保留。'),
+    ], [{ label: '继续确认', onClick: () => dialog('最后确认删除存档', [
+      h('p', {}, '确定删除当前游戏进度并重新开始吗？'),
+      h('p', { class: 'muted' }, '蓝图库和作者设计仍会保留。'),
+    ], [{ label: '确认删除并重来', primary: true, onClick: () => {
+      if (!SA.restartGame()) toast('当前无法重开，请先结束战斗或剧情并检查本机存储。');
+    } }]) }]);
+  }
+  // 设置：发行包只显示玩家可用的选项；设计模式不能删除正式进度。
   function settings() {
     const editing = SA.Text && SA.Text.isEditing();
     dialog('设置', [h('p', { style: 'margin-top:0' }, SA.RELEASE ? '调整场景特效显示。' : '开发和调试用的入口。')], [
       !SA.RELEASE ? { label: '开发者', onClick: () => SA.Camp.dev.panel() } : null,
       SA.Scenes ? { label: `场景特效：${SA.Scenes.fxOn() ? '开' : '关'}`, onClick: () => { SA.Scenes.setFx(!SA.Scenes.fxOn()); SA.toast && SA.toast(`场景特效已${SA.Scenes.fxOn() ? '打开' : '关闭'}（雾、光、超近景遮挡）`); } } : null,
+      !SA.Camp?.isDesignMode?.() ? { label: '删除当前存档并重来', onClick: confirmRestartGame } : null,
       !SA.RELEASE && SA.Text ? { label: editing ? '完成页面编辑' : '页面管理', onClick: () => { SA.Text.toggle(); topbar(); } } : null,
     ].filter(Boolean));
   }

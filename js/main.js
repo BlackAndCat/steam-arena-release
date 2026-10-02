@@ -46,3 +46,13 @@ window.addEventListener('DOMContentLoaded', () => {
 
 // 调试用：控制台输入 SA.reset() 重开存档
 if (!SA.RELEASE) SA.reset = () => { SA.S.reset(); SA.Story.reset(); SA.nav('home'); };
+
+// 玩家重开在正式与开发版均可用；重新加载会结束旧战斗/剧情并回到全新存档的开场页。
+SA.restartGame = () => {
+  // 战斗和剧情仍可能在导航后异步结算；这些界面没有设置入口，公开调用也一并拒绝。
+  if (SA.current === 'battle' || document.querySelector('.vn')) return false;
+  if (!SA.S.restartGame()) return false;
+  SA.Story.reset();
+  window.location.reload();
+  return true;
+};
