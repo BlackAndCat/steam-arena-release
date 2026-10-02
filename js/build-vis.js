@@ -32,3 +32,4 @@ SA.BUILD_VIS += '+opening-shock-gaze-wall-car'; // 开场震惊视线缓慢往�
 SA.BUILD_VIS += '+console'; // 后台 tools/console.html：全部工具的统一入口（关卡工作区、剧情、院子闲聊、样机目录、游戏调试、Ctrl+K 搜索），开发者面板第一项。
 SA.BUILD_VIS += '+console-warm-garage'; // 后台改成暖色木纹 + 黄铜 + 纸面；关卡车拼装搬进「关卡」工作区（tools/console-garage.html 嵌游戏车间），文字与奖励、强度也在同一页编辑。
 SA.BUILD_VIS += '+settings-player-restart'; // 设置菜单两次确认后重开游戏。
+SA.BUILD_VIS += '+wreck-grind-shudder'; // 撞击件顶进已毁底盘时整车高频抖动、火花碎铁（规则见 battle.js grindWreck）。

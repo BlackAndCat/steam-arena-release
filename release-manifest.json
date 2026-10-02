@@ -1,10 +1,10 @@
 {
   "version": 1,
-  "releaseVersion": "20261002-main-e04ee3c",
+  "releaseVersion": "20261002-155605",
   "chapters": 2,
   "sourceRoot": "Z:\\Project\\HtmlGames\\SteamArena\\HtmlGames-astra",
   "git": {
-    "commit": "e04ee3c451e7cdef72e69a73b5266d9cd6d1d088",
+    "commit": "f99d60f989d01a047ab0061fb26d3a61a8dc12f4",
     "dirty": true
   },
   "sourceHashes": {
@@ -39,15 +39,15 @@
     "js/home.js": "e70276a7fd62bfa8147d88ccd2e1224680674c4f2a5cfc299b1ce05f142f1720",
     "js/terrain-art.js": "88fc92e56854a096b9d70985ee4aeeda154a3a63bd236de5d6cb143370be891b",
     "js/scenes.js": "4267fe41ccca19b5e91cf5a2a96240aaed013a874fd83c6fd14d4879115ce0fe",
-    "js/battle-view.js": "65b60d01bab5d8d2c1ba5fb85dbfa085c258b0541ef07e08491dda870e53f3d9",
-    "js/battle.js": "e9952bea97ef68fd34706b620e80c2a59eccd55c6234427c89d25d5675ea02af",
-    "js/build-sys.js": "001becaa38d6b8c2931c47c7733ef95f9fe10a058ddb1d540661904959f098a3",
-    "js/build-vis.js": "eae13e47844c0698ce48bc69a596c98a323a4460f4c26e5018bf3c142c52e801",
+    "js/battle-view.js": "26b3e01b95f3c18ec3b00fc480c5639e4af4388a76bab191032de68566f0a82a",
+    "js/battle.js": "50f4f5b4ac7f03cffbe225013dc6e3fec4b072e7bd5d43cd37e89a707c14b5d5",
+    "js/build-sys.js": "a4a255b7d99d781404dad2b11b8f8360d78174f2a3143b33fe858ecd17c1d0b4",
+    "js/build-vis.js": "4c3c1947c5c794395df68c24e315440ed27a5a5a8913086c04f29608dc705da0",
     "js/main.js": "49cf5e8861c28e651b57d44c761774776ae2ae65822d29753a4e3e7436e01a2e",
     "config/content.json": "b56dbb1f6a006e146f5244af7cd3d5dfc03360c5cf3865a470c559f60a7d54a9",
-    "config/modules.json": "fe230d16ca25c2edca720fcfd9f6b5cad40755f8659364fce6c206339f6de74a",
+    "config/modules.json": "ea37b14ada8344796bf6b47a290c67605f1ddadf1df0a34f01926c8684b17444",
     "config/rules.json": "3e6d20cc22856c62a969ecbbbaf15867d522da0798afc493017378eb35f6591a",
-    "config/stage-cars.json": "f08bef4d5764be3f24df53e7fb2a821c79c93a966b972800084b0c451ab0fd57",
+    "config/stage-cars.json": "60f616d1d8a704add89c2635619b61f15fef87546bbe9e00fc6327b77acf7628",
     "config/text.json": "beb2068406014a9b1e3a41894852f8bff4175724d33996e2c0ddca1cdfab7aaf",
     "config/ui.json": "590e6eaf8a3d798a13fab20be8756a06404c300cfcf1567b4c09dfd50e2b6dc9"
   },

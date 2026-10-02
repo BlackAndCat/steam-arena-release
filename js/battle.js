@@ -724,11 +724,53 @@ SA.Battle = (() => {
     return pairs;
   }
 
-  function collide() {
+  // 已毁底盘（履带、轮、腿）不再像存活模块那样把撞击件弹回去，但仍是一大块铁：
+  // 撞击件顶进残骸时限速、艰涩地往里挤，按节拍给一次比正常撞击轻的反震，并让两车震动。
+  // 只限速和反推，不阻止深入或重叠；伤害仍走下方原有的近战结算。
+  function grindWreck(melee, dt) {
+    for (const s of [B.p, B.e]) { s.grind = Math.max(0, (s.grind || 0) - dt * T.WRECK_GRIND_FADE); s.grindT = Math.max(0, (s.grindT || 0) - dt); }
+    const done = new Set();
+    for (const x of melee) {
+      const a = x.a, d = x.d;
+      if (x.g > 0 || done.has(a) || !alive(x.am.cell)) continue;
+      const dir = isP(a) ? 1 : -1, ex = rowEdge(a, x.am), ey = cellY(x.r, a) + HALF;
+      // 撞击件前沿此刻压着的那一格：必须是已毁底盘（穿出残骸、碰到活模块或空格都不算）
+      const px = ex - dir, dc = isP(d) ? Math.floor((px - d.x - PADX) / C) : Math.floor((d.x + VW - PADX - px) / C);
+      const under = dc >= 0 && dc < K.COLS ? d.occ[x.tr][dc] : null;
+      if (!under || alive(under.cell) || M[under.cell.id].layer !== 'chassis') continue;
+      const rel = dir * (a.vx - d.vx);
+      if (rel <= 0 && !(a.dir === dir && canDrive(a))) continue;
+      done.add(a);
+      const fresh = !a.grinding;
+      // 往里挤的相对速度封顶。残骸趴在地上，多出来的速度大半被地面吃掉，只把一小份拱给对方
+      const sum = a.mass + d.mass, share = T.WRECK_PUSH_SHARE * a.mass / sum;
+      if (rel > T.WRECK_GRIND_SPEED_MAX) {
+        const dv = rel - T.WRECK_GRIND_SPEED_MAX;
+        a.vx -= dir * dv; d.vx += dir * dv * share;
+      }
+      a.grind = 1; d.grind = Math.max(d.grind, 0.6);
+      if (!fresh && a.grindT > 0) continue;
+      a.grindT = T.WRECK_GRIND_INTERVAL;
+      // 一次反震：把撞击方往回顶一点（远小于正常撞击的弹开），刚顶上那一下按来速加重
+      const k = fresh ? Math.min(T.WRECK_IMPACT_MAX, 1 + Math.max(0, rel - T.WRECK_GRIND_SPEED_MAX) / T.RAM_CLOSING_REFERENCE) : 1;
+      const back = T.WRECK_GRIND_RECOIL * k;
+      a.vx -= dir * back; d.vx += dir * back * share;
+      SA.Dyn.kick(a.anim.body, -T.WRECK_GRIND_ANIM * k);
+      SA.Dyn.kick(d.anim.body, T.WRECK_GRIND_ANIM * 0.5 * k);
+      for (let i = 0; i < (fresh ? 10 : 4); i++) emit('part', { type: 'spark', x: ex, y: ey + rnd(-8, 8), vx: -dir * rnd(20, 160), vy: rnd(-180, -20), life: rnd(0.12, 0.3), col: undefined });
+      for (let i = 0; i < (fresh ? 5 : 2); i++) emit('part', { type: 'debris', x: ex, y: ey, vx: rnd(-80, 80), vy: rnd(-160, -40), life: rnd(0.5, 1), col: i % 2 ? P.dark[2] : P.iron[2] });
+      emit('part', { type: 'dust', x: ex, y: groundAt(ex) - 2, vx: dir * rnd(10, 50), vy: rnd(-50, -15), life: rnd(0.3, 0.5), col: undefined });
+      B.shake = Math.max(B.shake, fresh ? 3 + 2 * k : 2);
+    }
+    for (const s of [B.p, B.e]) s.grinding = done.has(s);
+  }
+
+  function collide(dt) {
     const p = B.p, e = B.e;
     if (p.frontCol < 0 || e.frontCol < 0) return;
     const { gap, rows, dr } = rowContact(p, e);
     const melee = meleeContact(p, e, dr).filter(x => x.g <= T.CONTACT_GAP);
+    grindWreck(melee, dt);
     B.contactRows = gap <= T.CONTACT_GAP ? rows.map(x => x.r) : [];
     B.contactRowsE = gap <= T.CONTACT_GAP ? rows.map(x => x.re) : [];
     for (const x of melee) { B.contactRows.push(x.a === p ? x.r : x.tr); B.contactRowsE.push(x.a === e ? x.r : x.tr); }
@@ -1239,7 +1281,7 @@ SA.Battle = (() => {
     sim(B.p, B.e, dt);
     sim(B.e, B.p, dt);
     B.p.anim.step(dt); B.e.anim.step(dt);
-    collide();
+    collide(dt);
     pistons(B.p, B.e, dt);
     pistons(B.e, B.p, dt);
     enforceBounds(B.p); enforceBounds(B.e);

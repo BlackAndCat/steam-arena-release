@@ -583,7 +583,10 @@ SA.BattleView.create = function createBattleView(api) {
     g.translate(s.pivX, pivY(s) - s.rock * 2);      // 设备分辨率下不取整：爬坡时平滑移动
     g.rotate(tiltOf(s));                            // 跟着坡度倾斜（整车绕车底中点转）
     if (!isP(s)) g.scale(-1, 1);
-    g.translate(w, 0);
+    // 撞击件在底盘残骸里艰涩地挤：整车高频抖 1~2px（两车相位错开）
+    const gr = s.grind || 0, gt = Math.floor(B.t * 38) + (isP(s) ? 0 : 1);
+    const gx = gr > 0.05 ? (gt % 2 ? 1 : -1) * Math.ceil(gr * 1.6) : 0, gy = gr > 0.05 && gt % 3 === 0 ? -1 : 0;
+    g.translate(w + gx, gy);
     g.rotate(clamp(w * 0.012, -0.06, 0.06));        // 往后坐时车头微微抬起
     blit(isP(s) ? 'p' : 'e', cvs, -lp, -py, n);
     if (s.dead) blit('dead', tint(cvs), -lp, -py, n);
