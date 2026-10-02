@@ -716,8 +716,14 @@ textarea.code-out { font-family: Consolas, "Courier New", monospace; font-size: 
 .vn-portrait { flex: none; width: 104px; height: 104px; padding: 4px; background: var(--iron1); clip-path: var(--px-corner-s); box-shadow: inset 0 0 0 4px var(--dark0), inset 4px 4px 0 4px var(--iron2); }
 .vn-face { width: 96px; height: 96px; }
 .vn-text { flex: 1; font-size: 19px; line-height: 1.75; font-weight: 700; letter-spacing: .04em; color: var(--text); text-shadow: 2px 2px 0 var(--dark0); white-space: pre-wrap; min-height: 3.5em; }
-.vn[data-who=narr] .vn-portrait, .vn[data-who=narr] .vn-name { display: none; }
-.vn[data-who=narr] .vn-text { color: var(--brass3); padding: 8px 12px; }
+/* 旁白：铁灰框 + 冷色字，和人物说话的黄铜框一眼分开；不点亮任何头像——还没人出场时不留头像位，出场过的原样压暗 */
+.vn[data-who=narr] .vn-name, .vn[data-who=narr]:not(.vn-cast) .vn-portrait { display: none; }
+.vn[data-who=narr] .vn-portrait { filter: brightness(.45) saturate(.5); }
+.vn[data-who=narr] .vn-frame { background: var(--iron3); box-shadow: inset 2px 2px 0 var(--iron4), inset -2px -2px 0 var(--iron1); }
+.vn[data-who=narr] .vn-in { background: repeating-linear-gradient(0deg, rgba(169, 223, 238, .03) 0 2px, transparent 2px 4px), #121925; box-shadow: inset 0 0 0 2px var(--iron1); }
+.vn[data-who=narr] .vn-text { color: var(--glass2); }
+.vn[data-who=narr]:not(.vn-cast) .vn-text { padding: 8px 12px; }
+.vn[data-who=narr] .vn-more { border-top-color: var(--glass2); }
 /* 老汤姆和远房亲戚同框：左亲戚、右老汤姆，说话的那个亮，另一个压暗；名牌挪到说话人那一边 */
 .vn-portrait, .vn-name { transition: filter .15s; }
 .vn-duo[data-who=uncle] .vn-portrait2, .vn-duo[data-who=smith] .vn-portrait:not(.vn-portrait2) { filter: brightness(.45) saturate(.5); }

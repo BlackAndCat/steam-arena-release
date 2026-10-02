@@ -883,7 +883,7 @@ SA.StoryData = (() => {
     return lines.map(line => typeof line === 'string' ? { text: line, ...(speaker ? { who: speaker } : {}) } : clone(line));
   }
 
-  // set 接受字符串或 {text,who?,scene?}；省略元数据时沿用该位置原有值。
+  // set 接受字符串或 {text,who?,expr?,scene?}；省略元数据时沿用该位置原有值。expr = 说话人这一句的表情（SA.Coal.EXPR，旁白不带）。
   function set(id, lines) {
     valid(id);
     if (!Array.isArray(lines) || lines.length > 100) throw new Error('剧情必须是至多 100 行的数组');
@@ -891,18 +891,20 @@ SA.StoryData = (() => {
     const next = lines.map((line, i) => {
       if (typeof line !== 'string' && (!line || typeof line !== 'object' || Array.isArray(line))) throw new Error(`第 ${i + 1} 行格式无效`);
       const item = typeof line === 'string' ? { text: line } : line;
-      if (Object.keys(item).some(key => !['text', 'who', 'scene'].includes(key))) throw new Error(`第 ${i + 1} 行包含非法字段`);
+      if (Object.keys(item).some(key => !['text', 'who', 'expr', 'scene'].includes(key))) throw new Error(`第 ${i + 1} 行包含非法字段`);
       if (typeof item.text !== 'string' || !item.text.trim()) throw new Error(`第 ${i + 1} 行文本不能为空`);
       const row = { text: item.text };
-      for (const key of ['who', 'scene']) {
+      for (const key of ['who', 'expr', 'scene']) {
         const value = Object.hasOwn(item, key) ? item[key] : old[i]?.[key];
         if (value !== undefined) {
           if (typeof value !== 'string' || !value.trim()) throw new Error(`第 ${i + 1} 行 ${key} 无效`);
           if (key === 'who' && !Object.hasOwn(story().cast || {}, value)) throw new Error(`未知剧情角色：${value}`);
           if (key === 'scene' && !['sleep', 'roof', 'roll', 'car'].includes(value)) throw new Error(`未知开场分镜：${value}`);
+          if (key === 'expr' && SA.Coal && (!Object.hasOwn(SA.Coal.EXPR, value) || value === 'blink')) throw new Error(`未知表情：${value}`);
           row[key] = value;
         }
       }
+      if (!row.who) delete row.expr;
       return row;
     });
     const encoded = JSON.stringify(next);

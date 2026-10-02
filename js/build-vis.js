@@ -34,3 +34,4 @@ SA.BUILD_VIS += '+console-warm-garage'; // 后台改成暖色木纹 + 黄铜 + �
 SA.BUILD_VIS += '+settings-player-restart'; // 设置菜单两次确认后重开游戏。
 SA.BUILD_VIS += '+wreck-grind-shudder'; // 撞击件顶进已毁底盘时整车高频抖动、火花碎铁（规则见 battle.js grindWreck）。
 SA.BUILD_VIS += '+shift-whole-vehicle-drag'; // 车间按住 Shift 拖动已装模块时预览并横移整车。
+SA.BUILD_VIS += '+story-narration-expressions'; // 剧情旁白改成铁灰框 + 冷色字、不再借用亲戚头像；台词可选表情（expr）；后台剧情页加表情窗（说话动作 + 全部表情）和完整重放（tools/story-player.html，游戏自己的对话框）

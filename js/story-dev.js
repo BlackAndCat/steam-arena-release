@@ -51,9 +51,12 @@ SA.StoryDev = (() => {
     const rows = safeGet(id).map(l => ({ ...l }));
     const list = h('div', { class: 'sd-rows' });
     const status = h('span', { class: 'sd-status muted' }, '');
-    const who = (r) => h('select', { class: 'sd-who', onchange: (e) => { r.who = e.target.value || undefined; } },
+    const who = (r) => h('select', { class: 'sd-who', onchange: (e) => { r.who = e.target.value || undefined; if (!r.who) r.expr = undefined; draw(); } },
       h('option', { value: '', selected: !r.who }, '旁白'),
       cast().map(([k, c]) => h('option', { value: k, selected: r.who === k }, c.name)));
+    // 表情：只给有说话人的句子选；normal 不写进数据
+    const expr = (r) => r.who ? h('select', { class: 'sd-expr', title: '这一句的表情', onchange: (e) => { r.expr = e.target.value === 'normal' ? undefined : e.target.value; } },
+      SA.Story.exprs().map(([k, n]) => h('option', { value: k, selected: (r.expr || 'normal') === k }, `表情 · ${n}`))) : null;
     const scene = (r) => h('select', { class: 'sd-scene', title: '开场分镜', onchange: (e) => { r.scene = e.target.value || undefined; } },
       h('option', { value: '', selected: !r.scene }, '分镜不变'),
       Object.entries(SCENES).map(([k, n]) => h('option', { value: k, selected: r.scene === k }, n)));
@@ -68,7 +71,7 @@ SA.StoryDev = (() => {
         const mv = (d) => { const j = i + d; if (j < 0 || j >= rows.length) return; [rows[i], rows[j]] = [rows[j], rows[i]]; touch(); draw(); };
         list.append(h('div', { class: 'sd-row' },
           h('span', { class: 'sd-n' }, i + 1),
-          h('div', { class: 'sd-meta' }, who(r), id === 'opening' || r.scene ? scene(r) : null),
+          h('div', { class: 'sd-meta' }, who(r), expr(r), id === 'opening' || r.scene ? scene(r) : null),
           txt,
           h('div', { class: 'sd-ops' },
             h('button', { class: 'btn small', title: '上移', disabled: i === 0, onclick: () => mv(-1) }, '↑'),
@@ -81,7 +84,7 @@ SA.StoryDev = (() => {
     async function save() {
       let out;
       try {
-        out = rows.filter(r => (r.text || '').trim()).map(r => ({ text: r.text.trim(), who: r.who || undefined, scene: r.scene || undefined }));
+        out = rows.filter(r => (r.text || '').trim()).map(r => ({ text: r.text.trim(), who: r.who || undefined, expr: (r.who && r.expr) || undefined, scene: r.scene || undefined }));
         D().set(id, out);
       } catch (e) { status.textContent = `没保存：${e.message}`; status.className = 'sd-status bad'; return false; }
       status.textContent = '保存中……'; status.className = 'sd-status muted';

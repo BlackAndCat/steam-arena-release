@@ -82,11 +82,16 @@ SA.Story = (() => {
     return coalCache[k] || (coalCache[k] = SA.Coal.draw(SA.Coal.byName[name], o));
   }
   // 对话框头像（96×96）：talk 时身子往上弹 2 像素；blink 眨眼。亲戚在对话框左边，眼睛朝右看着你；
-  // 老汤姆（和亲戚同框时）在右边，眼睛朝左
-  function portrait(talk, blink, who = 'uncle') {
+  // 老汤姆（和亲戚同框时）在右边，眼睛朝左。expr = 这一句的表情（台词的 expr 字段，缺省 normal）
+  // 笑眯眼和瞪眼本身就是一种眼形，不再眨眼
+  const NO_BLINK = { happy: 1, shock: 1, blink: 1 };
+  function portrait(talk, blink, who = 'uncle', expr = 'normal') {
     const c = SA.STORY.cast[who] || SA.STORY.cast.uncle;
-    return coal(c.coal || '远房亲戚', { size: 'bust', expr: blink ? 'blink' : 'normal', cy: talk ? 60 : 62, look: who === 'smith' ? -1 : 1 });
+    const e = SA.Coal.EXPR[expr] ? expr : 'normal';
+    return coal(c.coal || '远房亲戚', { size: 'bust', expr: blink && !NO_BLINK[e] ? 'blink' : e, cy: talk ? 60 : 62, look: who === 'smith' ? -1 : 1 });
   }
+  // 编辑器可选的表情：[id, 名字]（括号里的画法备注不要）；blink 是眨眼动画用的，不给选
+  const exprs = () => Object.entries(SA.Coal.EXPR).filter(([k]) => k !== 'blink').map(([k, n]) => [k, String(n).split(/[（(]/)[0].trim() || k]);
   // 站着的亲戚（56×56，身子底边在第 46 行）；pose：salute 敬礼 / idle 垂手 / cheer 欢呼
   const uncle = (pose = 'salute', expr = 'normal') => coal('远房亲戚', { size: 'scene', pose, expr, look: -1 });
   // 老汤姆：拿着铁锤站着，看向左边的你
@@ -194,7 +199,8 @@ SA.Story = (() => {
   // 你的战车：裁到包围盒，从墙后探出来
   let carCv = null;
   function carSprite(t) {
-    const v = SA.S.d.vehicle, K = SA.K, CL = K.CELL;
+    const v = SA.S && SA.S.d && SA.S.d.vehicle, K = SA.K, CL = K.CELL;
+    if (!v) return null;
     let c0 = K.COLS, c1 = -1, r0 = K.ROWS, cockpitRow = K.ROWS;
     SA.V.each(v, (cell, r, c) => {
       c0 = Math.min(c0, c); c1 = Math.max(c1, c + SA.fp(cell.id).w - 1); r0 = Math.min(r0, r);
@@ -353,10 +359,12 @@ SA.Story = (() => {
   }
 
   // ---------- 对话框 ----------
-  // lines: [{ who, text, scene, on }]。host 默认整页（带暗底）；战斗里传画布外框，对话框压在画面下沿。
+  // lines: [{ who, text, expr, scene, on }]。host 默认整页（带暗底）；战斗里传画布外框，对话框压在画面下沿。
+  // 没有 who 的是旁白：换成铁灰框、冷色字，不画、不换、不点亮任何头像（已经出场的头像原样压暗留着）。
   // 点击 / 空格 / 回车：先把字打完，再翻下一句；Esc 或「跳过」直接结束。结束时调用 onDone。
+  // start：从第几句开始（试播用；之前各人最后的表情照样算上，开场分镜也补到那一格）
   const CPS = 26;
-  function talk(lines, { host = document.body, scene = null, onDone = null, onEdit = null, cls = '' } = {}) {
+  function talk(lines, { host = document.body, scene = null, onDone = null, onEdit = null, cls = '', start = 0 } = {}) {
     const page = host === document.body;
     const face = h('canvas', { class: 'px vn-face', width: 96, height: 96 });
     // 老汤姆一出场就和远房亲戚同框：左边亲戚、右边老汤姆，谁说话谁亮
@@ -375,15 +383,18 @@ SA.Story = (() => {
     host.append(root);
     const fg = face.getContext('2d'), fg2 = face2 && face2.getContext('2d');
     let i = -1, shown = 0, full = '', done = false, raf = 0, last = performance.now(), lt = 0, gt = 0;
+    // 每个人当前的表情：说话人用这一句的 expr；没说话的人保持自己上一句的表情
+    const mood = {}, speaker = (L) => (L.who && SA.STORY.cast[L.who] ? L.who : null);
     function show(k) {
       i = k; const L = lines[k];
       full = L.text; shown = 0; lt = 0;
-      const who = L.who && SA.STORY.cast[L.who];
-      root.dataset.who = L.who || 'narr';
-      name.textContent = who ? who.name : '';
+      const who = speaker(L);
+      root.dataset.who = who || 'narr';
+      if (who) { mood[who] = L.expr || 'normal'; root.classList.add('vn-cast'); }
+      name.textContent = who ? SA.STORY.cast[who].name : '';
       if (L.scene && scene) scene.set(L.scene);
       if (L.on) L.on();
-      render();
+      render(); faces();
     }
     function render() {
       txt.textContent = full.slice(0, Math.floor(shown));
@@ -394,18 +405,20 @@ SA.Story = (() => {
       if (shown < full.length) { shown = full.length; render(); return; }
       if (i + 1 < lines.length) show(i + 1); else finish();
     }
+    // 头像：旁白时谁都不在说话，单人框沿用上一位说话人（压暗由 CSS 做）
+    let solo = null;
+    function faces() {
+      const who = root.dataset.who, talking = who !== 'narr' && shown < full.length && Math.floor(gt * 9) % 2 === 0;
+      const left = duo ? 'uncle' : who !== 'narr' ? (solo = who) : solo;
+      if (left) { fg.clearRect(0, 0, 96, 96); fg.drawImage(portrait(talking && who === left, gt % 3.2 < 0.12, left, mood[left]), 0, 0); }
+      if (fg2) { fg2.clearRect(0, 0, 96, 96); fg2.drawImage(portrait(talking && who === 'smith', (gt + 1.3) % 3.7 < 0.12, 'smith', mood.smith), 0, 0); }
+    }
     function frame(now) {
       if (done) return;
       if (edit) edit.hidden = !canEditOpening();
       const dt = Math.min(0.05, (now - last) / 1000); last = now; lt += dt; gt += dt;
       if (shown < full.length) { shown = Math.min(full.length, shown + dt * CPS); render(); }
-      const who = root.dataset.who;
-      if (who !== 'narr') {
-        const talking = shown < full.length && Math.floor(gt * 9) % 2 === 0;
-        const left = duo ? 'uncle' : who;
-        fg.clearRect(0, 0, 96, 96); fg.drawImage(portrait(talking && who === left, gt % 3.2 < 0.12, left), 0, 0);
-        if (fg2) { fg2.clearRect(0, 0, 96, 96); fg2.drawImage(portrait(talking && who === 'smith', (gt + 1.3) % 3.7 < 0.12, 'smith'), 0, 0); }
-      }
+      faces();
       if (scene) scene.draw(gt);
       raf = requestAnimationFrame(frame);
     }
@@ -427,7 +440,16 @@ SA.Story = (() => {
     skip.addEventListener('click', (e) => { e.stopPropagation(); finish(); });
     if (edit) edit.addEventListener('click', (e) => { e.stopPropagation(); if (canEditOpening()) { finish(false); onEdit(); } });
     window.addEventListener('keydown', onKey, true);
-    show(0);
+    // 从中间开始：先补齐之前的表情和分镜，再演这一句
+    const from = Math.max(0, Math.min(lines.length - 1, start | 0));
+    let sc = null;
+    for (let k = 0; k < from; k++) {
+      const who = speaker(lines[k]);
+      if (who) { mood[who] = lines[k].expr || 'normal'; solo = who; root.classList.add('vn-cast'); }
+      if (lines[k].scene) sc = lines[k].scene;
+    }
+    if (sc && scene && !lines[from].scene) scene.set(sc);
+    show(from);
     if (edit) edit.hidden = !canEditOpening();
     raf = requestAnimationFrame(frame);
     return { close: () => finish(), cancel: () => finish(false), get index() { return i; } };
@@ -510,9 +532,9 @@ SA.Story = (() => {
   // 台词一律经 SA.StoryData.get 读；SA.STORY 只是同一配置的结构化运行时视图。
   const lines = (id, fb) => { try { return SA.StoryData ? SA.StoryData.get(id) : fb; } catch (e) { return fb; } };
   // 开场试播使用正式分镜，但结束后只执行编辑器回调，不写进度或进入战斗。
-  function previewOpening(rows, next) {
+  function previewOpening(rows, next, o = {}) {
     if (!rows.length) { next(); return; }
-    talk(rows, { scene: openingScene(), cls: 'vn-opening', onDone: next });
+    return talk(rows, { scene: openingScene(), cls: 'vn-opening', onDone: next, ...o });
   }
   // 开始游戏：全新存档先演开场，演完直接进第一场战斗；否则回到正常的页面
   function begin() {
@@ -534,8 +556,8 @@ SA.Story = (() => {
     if (seen('tutorial') || opts.mode !== 'campaign' || opts.replay) return null;
     const st = SA.Camp.current();
     if (!st || st.ci !== 0 || st.si !== 0) return null;
-    // 每句还原成 { who, text }：没写 who 的是远房亲戚说的
-    const T0 = SA.STORY.tutorial, rows = (id, fb) => lines(id, fb).map(l => (typeof l === 'string' ? { who: 'uncle', text: l } : { ...l, who: l.who || 'uncle' }));
+    // 每句还原成 { who, text }：老格式的纯字符串是远房亲戚说的；对象里没写 who 的就是旁白（编辑器里选的「旁白」）
+    const T0 = SA.STORY.tutorial, rows = (id, fb) => lines(id, fb).map(l => (typeof l === 'string' ? { who: 'uncle', text: l } : { ...l }));
     return { intro: rows('tutorial.intro', [].concat(T0.intro)), parts: T0.parts.map((p, i) => ({ ...p, lines: rows(`tutorial.parts.${i}`, p.lines) })) };
   }
   // 过关提示：at = 打的是哪一场（战役），newFeat = 这一场新开放的功能。每条只说一次
@@ -552,5 +574,5 @@ SA.Story = (() => {
     talk(out, { onDone: next, cls: 'vn-hint' });
   }
 
-  return { title, begin, talk, previewOpening, tutorial, afterBattle, emblem, portrait, seen, mark, reset, isFresh };
+  return { title, begin, talk, previewOpening, tutorial, afterBattle, emblem, portrait, exprs, seen, mark, reset, isFresh };
 })();
