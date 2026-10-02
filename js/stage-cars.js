@@ -61,6 +61,7 @@ SA.StageCars = (() => {
       rewardItems: meta.rewardItems === undefined ? (base.rewardItems || []) : meta.rewardItems,
       rewardMoney: meta.rewardMoney === undefined ? base.rewardMoney : !!meta.rewardMoney,
       victoryRepairFree: meta.victoryRepairFree === undefined ? base.victoryRepairFree : !!meta.victoryRepairFree,
+      repairFree: meta.repairFree === undefined ? base.repairFree === true : !!meta.repairFree,
       name: meta.name || base.name || vehicleValue.name, pilot: meta.pilot || base.pilot || '', blurb: meta.blurb ?? base.blurb ?? '', weakness: meta.weakness ?? base.weakness ?? '',
       source: 'manual', locked: meta.locked !== false, updatedAt: new Date().toISOString(), rules: ruleFingerprint(),
       analysis: { rating: stats.rating, value: stats.value, weight: stats.weight, drive: stats.drive, water: stats.water, overheat: stats.overheat, dps: stats.dps, hp: stats.hp },

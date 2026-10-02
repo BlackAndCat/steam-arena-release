@@ -23,14 +23,14 @@
   ],
   "records": {
     "0:0": {
-      "name": "破铜烂铁号",
-      "pilot": "学徒 小提米",
+      "name": "天降横财？",
+      "pilot": "学徒 皮普",
       "prize": 60,
       "rewardMoney": false,
       "victoryRepairFree": true,
-      "aim": 0.35,
-      "style": "rush",
-      "blurb": "铁匠铺学徒拿废料拼的练习车，只有一门机炮，枪法也很烂。放心开火。",
+      "aim": 0.15,
+      "style": "rookie",
+      "blurb": "拿废料拼的练习车，只有一挺机枪，枪法很烂。",
       "spec": {
         "terrain": "flat",
         "reward": "tank_s",
@@ -55,73 +55,74 @@
         "mods": [
           "tank_s"
         ],
-        "note": "车间开放：库存里有一门机炮和四块铁装甲，再给你一只小水罐练习冷却。"
+        "note": "车间开放：库存里有一挺机枪和两块铁装甲，再给你一只小水罐练习冷却。"
       },
       "version": 1,
       "id": "0:0",
       "cells": [
         [
           0,
+          7,
           8,
-          9,
-          "boiler_s",
-          1,
-          0
-        ],
-        [
-          0,
-          8,
-          10,
-          "mg_s",
-          1,
-          0
-        ],
-        [
-          0,
-          9,
-          10,
           "helmet",
           1,
           0
         ],
         [
           0,
-          10,
+          8,
+          8,
+          "boiler_s",
+          1,
+          0
+        ],
+        [
+          0,
           9,
+          9,
+          "mg_s",
+          1,
+          0
+        ],
+        [
+          0,
+          10,
+          8,
           "track",
           1,
           0
         ]
       ],
-      "code": "SA2.eyJuIjoi6L+b5YyW5YCZ6YCJwrcxLTEtODQwNDLCt+WPmOW8gjQ3MTYxIiwiYiI6W1s4LDksNDRdLFs4LDEwLDQyXSxbOSwxMCwxNl0sWzEwLDksMF1dLCJzIjpbXSwiYSI6MiwicHYiOjIsIm1zIjpbXX0=",
+      "code": "SA2.eyJuIjoi56C06ZOc54OC6ZOB5Y+3IiwiYiI6W1s3LDgsMTZdLFs4LDgsNDRdLFs5LDksNDJdLFsxMCw4LDBdXSwicyI6W10sImEiOjIsInB2IjoyLCJtcyI6W119",
       "terrain": "flat",
       "boss": false,
       "uniqueLoot": [],
       "weakness": "",
       "source": "manual",
       "locked": true,
-      "updatedAt": "2026-09-29T13:25:25.658Z",
-      "rules": "2026-09-28-giant-indirect-module-family",
+      "updatedAt": "2026-10-02T06:11:36.419Z",
+      "rules": "2026-10-01-end-armor-chapter-bounds",
       "analysis": {
-        "rating": 73,
+        "rating": 81,
         "value": 340,
         "weight": 1435,
-        "drive": 0.4,
+        "drive": 2.5433132812499992,
         "water": 0,
-        "overheat": 43.5,
+        "overheat": null,
         "dps": 3.733333333333333,
-        "hp": 408
+        "hp": 271
       },
-      "vehicleName": "破铜烂铁号"
+      "vehicleName": "破铜烂铁号",
+      "repairFree": true
     },
     "0:1": {
-      "name": "钉子号",
-      "pilot": "铆工 小艾达",
+      "name": "小试牛刀",
+      "pilot": "学徒 皮普",
       "prize": 0,
       "rewardMoney": false,
       "victoryRepairFree": true,
-      "aim": 0.45,
-      "style": "rush",
+      "aim": 0.4,
+      "style": "turtle",
       "blurb": "驾驶舱上方焊着一块甲片。观察它护住了哪里，再试着从薄弱处打进去。",
       "spec": {
         "terrain": "flat",
@@ -154,7 +155,7 @@
           0,
           7,
           8,
-          "boiler_s",
+          "helmet",
           1,
           0
         ],
@@ -162,23 +163,23 @@
           0,
           7,
           9,
-          "tank_s",
-          1,
-          0
-        ],
-        [
-          0,
-          8,
-          9,
           "plate",
           1,
           0
         ],
         [
           0,
-          9,
           8,
-          "helmet",
+          8,
+          "boiler_s",
+          1,
+          0
+        ],
+        [
+          0,
+          8,
+          9,
+          "tank_s",
           1,
           0
         ],
@@ -199,29 +200,30 @@
           0
         ]
       ],
-      "code": "SA2.eyJuIjoi6L+b5YyW5YCZ6YCJwrcxLTItOTYzMjQiLCJiIjpbWzcsOCw0NF0sWzcsOSwxOF0sWzgsOSwxN10sWzksOCwxNl0sWzksOSw0Ml0sWzEwLDgsMF1dLCJzIjpbXSwiYSI6Mn0=",
+      "code": "SA2.eyJuIjoi6ZKJ5a2Q5Y+3IiwiYiI6W1s3LDgsMTZdLFs3LDksMTddLFs4LDgsNDRdLFs4LDksMThdLFs5LDksNDJdLFsxMCw4LDBdXSwicyI6W10sImEiOjIsInB2IjoyLCJtcyI6W119",
       "terrain": "flat",
       "boss": false,
       "uniqueLoot": [],
       "weakness": "",
       "source": "manual",
       "locked": true,
-      "updatedAt": "2026-09-29T08:47:16.961Z",
-      "rules": "2026-09-28-giant-indirect-module-family",
+      "updatedAt": "2026-10-01T13:39:31.901Z",
+      "rules": "2026-10-01-end-armor-chapter-bounds",
       "analysis": {
         "rating": 86,
         "value": 372,
-        "weight": 1725,
-        "drive": 0.5,
+        "weight": 1761,
+        "drive": 3.1210973437499994,
         "water": 36,
-        "overheat": 68.5,
+        "overheat": null,
         "dps": 3.733333333333333,
-        "hp": 481
+        "hp": 330
       },
-      "vehicleName": "钉子号"
+      "vehicleName": "钉子号",
+      "repairFree": true
     },
     "0:2": {
-      "name": "进化候选·1-3-1064·变异48369·变异74536",
+      "name": "初出茅庐",
       "pilot": "铁匠 老汤姆",
       "prize": 120,
       "rewardMoney": false,
@@ -282,14 +284,6 @@
         ],
         [
           0,
-          9,
-          10,
-          "mg_s",
-          1,
-          0
-        ],
-        [
-          0,
           10,
           8,
           "track",
@@ -305,26 +299,29 @@
           0
         ]
       ],
-      "code": "SA2.eyJuIjoi6L+b5YyW5YCZ6YCJwrcxLTMtMTA2NMK35Y+Y5byCNDgzNjnCt+WPmOW8gjc0NTM2IiwiYiI6W1s4LDgsNDRdLFs4LDksMThdLFs4LDEwLDE3XSxbOSw5LDE2XSxbOSwxMCw0Ml0sWzEwLDgsMF0sWzEwLDEwLDEyXV0sInMiOltdLCJhIjoyfQ==",
-      "style": "turtle",
+      "code": "SA2.eyJuIjoi5rGk5aeG55qE6ZOy6L2mIiwiYiI6W1s4LDgsNDRdLFs4LDksMThdLFs4LDEwLDE3XSxbOSw5LDE2XSxbMTAsOCwwXSxbMTAsMTAsMTJdXSwicyI6W10sImEiOjIsInB2IjoyLCJtcyI6W119",
+      "style": "rush",
       "terrain": "flat",
       "boss": false,
       "uniqueLoot": [],
       "weakness": "",
       "source": "manual",
       "locked": true,
-      "updatedAt": "2026-09-29T08:46:44.184Z",
-      "rules": "2026-09-28-giant-indirect-module-family",
+      "updatedAt": "2026-10-02T03:46:51.023Z",
+      "rules": "2026-10-01-end-armor-chapter-bounds",
       "analysis": {
-        "rating": 122,
-        "value": 482,
-        "weight": 2425,
-        "drive": 0.7,
+        "rating": 91,
+        "value": 434,
+        "weight": 2343.5,
+        "drive": 4.153487578125,
         "water": 36,
-        "overheat": 67,
-        "dps": 3.733333333333333,
-        "hp": 741
-      }
+        "overheat": null,
+        "dps": 0,
+        "hp": 554
+      },
+      "vehicleName": "汤姆的铲车",
+      "rewardItems": [],
+      "repairFree": true
     },
     "1:0": {
       "name": "铁皮罐头",
@@ -350,7 +347,9 @@
           "bank"
         ],
         "note": "街头赛和银行开放：先用短赛补足改装预算，再决定把钱投到武器还是冷却。",
-        "mods": []
+        "mods": [
+          "mortar_s"
+        ]
       },
       "version": 1,
       "id": "1:0",
@@ -359,7 +358,7 @@
           0,
           7,
           7,
-          "cannon_s",
+          "mg_s",
           1,
           0
         ],
@@ -382,8 +381,16 @@
         [
           0,
           8,
+          6,
+          "mortar_s",
+          1,
+          0
+        ],
+        [
+          0,
+          8,
           7,
-          "armor",
+          "plate",
           1,
           0
         ],
@@ -405,6 +412,14 @@
         ],
         [
           0,
+          9,
+          7,
+          "plate",
+          1,
+          0
+        ],
+        [
+          0,
           10,
           4,
           "track",
@@ -420,54 +435,35 @@
           0
         ]
       ],
-      "code": "SA2.eyJuIjoi6ZOB55qu572Q5aS0IiwiYiI6W1s3LDcsMjFdLFs4LDQsNDRdLFs4LDUsMThdLFs4LDcsNl0sWzksNSwxOF0sWzksNiwxNl0sWzEwLDQsMF0sWzEwLDYsMF1dLCJzIjpbXSwiYSI6MiwicHYiOjIsIm1zIjpbXX0=",
+      "code": "SA2.eyJuIjoi6ZOB55qu572Q5aS0IiwiYiI6W1s3LDcsNDJdLFs4LDQsNDRdLFs4LDUsMThdLFs4LDYsMzVdLFs4LDcsMTddLFs5LDUsMThdLFs5LDYsMTZdLFs5LDcsMTddLFsxMCw0LDBdLFsxMCw2LDBdXSwicyI6W10sImEiOjIsInB2IjoyLCJtcyI6W119",
       "boss": false,
       "uniqueLoot": [],
       "weakness": "",
       "source": "manual",
       "locked": true,
-      "updatedAt": "2026-09-29T13:27:28.684Z",
-      "rules": "2026-09-28-giant-indirect-module-family",
+      "updatedAt": "2026-10-01T09:24:02.852Z",
+      "rules": "2026-09-30-special-weapons-audit-damage",
       "analysis": {
-        "rating": 126,
-        "value": 574,
-        "weight": 2885,
-        "drive": 0.9,
+        "rating": 142,
+        "value": 624,
+        "weight": 3109.5,
+        "drive": 5.511102890625,
         "water": 72,
-        "overheat": 137.5,
-        "dps": 4.438888888888889,
-        "hp": 758
+        "overheat": null,
+        "dps": 9.422446406052963,
+        "hp": 582
       },
       "rewardMoney": true,
-      "victoryRepairFree": false
+      "victoryRepairFree": false,
+      "vehicleName": "铁皮罐头"
     },
     "1:1": {
-      "name": "双管哨兵",
+      "name": "兄弟齐心",
       "pilot": "扒手 机灵杰克",
       "prize": 150,
       "aim": 0.65,
       "style": "kite",
       "blurb": "上下两门机炮一起扫，跑得还快，专挑没护甲的模块。把锅炉、驾驶舱藏到装甲后面，拉近了打。",
-      "rows": [
-        "........",
-        "........",
-        "...M....",
-        "..KAM...",
-        "..OWA...",
-        "..TTT..."
-      ],
-      "subs": [
-        [
-          4,
-          10,
-          "periscope"
-        ],
-        [
-          4,
-          12,
-          "autoloader"
-        ]
-      ],
       "spec": {
         "terrain": "flat",
         "reward": "periscope",
@@ -480,17 +476,118 @@
       },
       "unlock": {
         "mods": [
-          "periscope",
-          "autoloader"
+          "tank_tall",
+          "cockpit_pair"
         ],
-        "note": "观察镜和装弹机开放：装到车上即可改善瞄准和装填，被击毁后效果消失。"
+        "note": "观察镜和装弹机开放：装到车上即可改善瞄准和装填，被击毁后效果消失。",
+        "feat": []
       },
       "version": 1,
       "id": "1:1",
-      "source": "original",
-      "locked": false,
+      "source": "manual",
+      "locked": true,
       "rewardMoney": true,
-      "victoryRepairFree": false
+      "victoryRepairFree": false,
+      "cells": [
+        [
+          0,
+          8,
+          5,
+          "tank_tall",
+          1,
+          0
+        ],
+        [
+          0,
+          8,
+          6,
+          "boiler_s",
+          1,
+          0
+        ],
+        [
+          0,
+          8,
+          7,
+          "cockpit_pair",
+          1,
+          0
+        ],
+        [
+          0,
+          8,
+          8,
+          "plate",
+          1,
+          0
+        ],
+        [
+          0,
+          8,
+          9,
+          "mg_s",
+          1,
+          0
+        ],
+        [
+          0,
+          9,
+          8,
+          "plate",
+          1,
+          0
+        ],
+        [
+          0,
+          9,
+          9,
+          "mg_s",
+          1,
+          0
+        ],
+        [
+          0,
+          10,
+          4,
+          "track",
+          1,
+          0
+        ],
+        [
+          0,
+          10,
+          6,
+          "track",
+          1,
+          0
+        ],
+        [
+          0,
+          10,
+          8,
+          "track",
+          1,
+          0
+        ]
+      ],
+      "code": "SA2.eyJuIjoi5Y+M566h5ZOo5YW1IiwiYiI6W1s4LDUsMTldLFs4LDYsNDRdLFs4LDcsMjZdLFs4LDgsMTddLFs4LDksNDJdLFs5LDgsMTddLFs5LDksNDJdLFsxMCw0LDBdLFsxMCw2LDBdLFsxMCw4LDBdXSwicyI6W10sImEiOjIsInB2IjoyLCJtcyI6W119",
+      "terrain": "flat",
+      "boss": false,
+      "uniqueLoot": [],
+      "weakness": "",
+      "updatedAt": "2026-10-01T09:24:20.154Z",
+      "rules": "2026-09-30-special-weapons-audit-damage",
+      "analysis": {
+        "rating": 144,
+        "value": 825,
+        "weight": 4020,
+        "drive": 7.124821874999999,
+        "water": 75,
+        "overheat": null,
+        "dps": 6.56891495601173,
+        "hp": 769
+      },
+      "vehicleName": "双管哨兵"
     },
     "1:2": {
       "name": "煤灰寡妇",
@@ -500,34 +597,6 @@
       "aim": 0.75,
       "boss": true,
       "blurb": "【宿敌】玛莎把四足炮台的车头换成重装甲，顶层火炮和侧炮从高处往下压；车头的铲斗仍会把你铲出去。她说后巷只容得下一个人。",
-      "rows": [
-        "........",
-        "........",
-        "...P....",
-        "...KZ...",
-        "..WOHH..",
-        "..Q.U..."
-      ],
-      "sides": [
-        [
-          3,
-          4
-        ]
-      ],
-      "elite": [
-        [
-          3,
-          4,
-          2
-        ]
-      ],
-      "subs": [
-        [
-          4,
-          14,
-          "boss_lens"
-        ]
-      ],
       "uniqueLoot": [
         {
           "id": "boss_lens",
@@ -551,17 +620,122 @@
           "side"
         ],
         "mods": [
-          "side_cannon",
-          "armor_heavy"
+          "mortar"
         ],
         "note": "缴获侧炮和重装甲：侧挂层能从装甲外侧射击，重装甲则把正面推撞的成本降下来。"
       },
       "version": 1,
       "id": "1:2",
-      "source": "original",
-      "locked": false,
+      "source": "manual",
+      "locked": true,
       "rewardMoney": true,
-      "victoryRepairFree": false
+      "victoryRepairFree": false,
+      "cells": [
+        [
+          0,
+          6,
+          4,
+          "mortar",
+          1,
+          0
+        ],
+        [
+          0,
+          6,
+          6,
+          "rangefinder",
+          1,
+          0
+        ],
+        [
+          0,
+          6,
+          7,
+          "armor",
+          1,
+          0
+        ],
+        [
+          0,
+          7,
+          6,
+          "helmet",
+          1,
+          0
+        ],
+        [
+          0,
+          8,
+          4,
+          "boiler_s",
+          1,
+          0
+        ],
+        [
+          0,
+          8,
+          5,
+          "tank_s",
+          1,
+          0
+        ],
+        [
+          0,
+          8,
+          6,
+          "tank_tall",
+          1,
+          0
+        ],
+        [
+          0,
+          8,
+          7,
+          "armor",
+          1,
+          0
+        ],
+        [
+          0,
+          9,
+          5,
+          "tank_s",
+          1,
+          0
+        ],
+        [
+          0,
+          10,
+          4,
+          "track",
+          1,
+          0
+        ],
+        [
+          0,
+          10,
+          6,
+          "track",
+          1,
+          0
+        ]
+      ],
+      "code": "SA2.eyJuIjoi54Wk54Gw5a+h5aaHIiwiYiI6W1s2LDQsOV0sWzYsNiw0MF0sWzYsNyw2XSxbNyw2LDE2XSxbOCw0LDQ0XSxbOCw1LDE4XSxbOCw2LDE5XSxbOCw3LDZdLFs5LDUsMThdLFsxMCw0LDBdLFsxMCw2LDBdXSwicyI6W10sImEiOjIsInB2IjoyLCJtcyI6W119",
+      "style": "wander",
+      "weakness": "",
+      "updatedAt": "2026-10-01T09:23:35.670Z",
+      "rules": "2026-09-30-special-weapons-audit-damage",
+      "analysis": {
+        "rating": 147,
+        "value": 850,
+        "weight": 4267,
+        "drive": 7.562590781249998,
+        "water": 147,
+        "overheat": null,
+        "dps": 7.477216238608119,
+        "hp": 843
+      },
+      "vehicleName": "煤灰寡妇"
     },
     "2:0": {
       "name": "推土机",
@@ -572,21 +746,6 @@
       "style": "rush",
       "mt": 2,
       "blurb": "宽履带加车头铲斗，一门心思往前推；车尾还挂着一只小臼炮，示范如何在泥地里用间接火力补近战的空档。",
-      "rows": [
-        "........",
-        "........",
-        "........",
-        "...KM...",
-        "..WOAA..",
-        "..TTTTU."
-      ],
-      "subs": [
-        [
-          4,
-          10,
-          "mortar_s"
-        ]
-      ],
       "spec": {
         "terrain": "mud",
         "reward": "mortar_s",
@@ -609,10 +768,133 @@
       },
       "version": 1,
       "id": "2:0",
-      "source": "original",
-      "locked": false,
+      "source": "manual",
+      "locked": true,
       "rewardMoney": true,
-      "victoryRepairFree": false
+      "victoryRepairFree": false,
+      "cells": [
+        [
+          0,
+          6,
+          6,
+          "cockpit",
+          2,
+          0
+        ],
+        [
+          0,
+          6,
+          8,
+          "mg",
+          2,
+          0
+        ],
+        [
+          0,
+          8,
+          4,
+          "water",
+          2,
+          0
+        ],
+        [
+          0,
+          8,
+          6,
+          "boiler",
+          2,
+          0
+        ],
+        [
+          0,
+          8,
+          8,
+          "armor",
+          2,
+          0
+        ],
+        [
+          0,
+          8,
+          9,
+          "armor",
+          2,
+          0
+        ],
+        [
+          0,
+          8,
+          10,
+          "armor",
+          2,
+          0
+        ],
+        [
+          0,
+          8,
+          11,
+          "armor",
+          2,
+          0
+        ],
+        [
+          0,
+          10,
+          4,
+          "track",
+          2,
+          0
+        ],
+        [
+          0,
+          10,
+          6,
+          "track",
+          2,
+          0
+        ],
+        [
+          0,
+          10,
+          8,
+          "track",
+          2,
+          0
+        ],
+        [
+          0,
+          10,
+          10,
+          "track",
+          2,
+          0
+        ],
+        [
+          0,
+          10,
+          12,
+          "bucket",
+          2,
+          0
+        ]
+      ],
+      "code": "SA2.eyJuIjoi5o6o5Zyf5py6IiwiYiI6W1s2LDYsM10sWzYsOCwxMF0sWzgsNCw1XSxbOCw2LDRdLFs4LDgsNl0sWzgsOSw2XSxbOCwxMCw2XSxbOCwxMSw2XSxbMTAsNCwwXSxbMTAsNiwwXSxbMTAsOCwwXSxbMTAsMTAsMF0sWzEwLDEyLDEyXV0sInMiOltdLCJhIjoyLCJwdiI6MiwibXMiOltdfQ==",
+      "boss": false,
+      "uniqueLoot": [],
+      "weakness": "",
+      "updatedAt": "2026-10-01T10:51:52.573Z",
+      "rules": "2026-10-01-end-armor-chapter-bounds",
+      "analysis": {
+        "rating": 281,
+        "value": 2176,
+        "weight": 7630,
+        "drive": 13.522982812499999,
+        "water": 180,
+        "overheat": null,
+        "dps": 9.749999999999998,
+        "hp": 2028
+      },
+      "vehicleName": "推土机"
     },
     "2:1": {
       "name": "独角兽",

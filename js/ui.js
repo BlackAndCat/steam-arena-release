@@ -332,7 +332,7 @@ SA.UI = (() => {
     // 战后剧情插入点（SA.StoryDev）：按开战时记下的关卡 key，不读胜利推进后的新当前关；写好的段落先演，再是亲戚的提示
     const inserted = (next) => (SA.StoryDev ? SA.StoryDev.after({ key: res.opts && res.opts.storyKey, replay: res.replay }, next) : next());
     const story = (next) => inserted(() => (SA.Story ? SA.Story.afterBattle({ key: at && `${at.ci},${at.si}`, win: res.win, newFeat: d.camp.feat.filter(f => !feat0.includes(f)) }, next) : next()));
-    const { lines, pre: pending, money0 } = SA.S.settleBattle(res);
+    const { lines, pre: pending, money0, repairFree } = SA.S.settleBattle(res);
     const pre = pending.map(p => p.kind === 'salvage'
       ? (next) => SA.Camp.salvageDialog(p.survivors, next)
       : (next) => SA.Camp.unlockDialog(p.unlock, next));
@@ -343,6 +343,7 @@ SA.UI = (() => {
         h('p', { style: 'font-size:16px;margin-top:0' }, h('b', {}, res.reason)),
         h('p', { class: 'muted' }, SA.Config.text("ui_0cf010dd881d", `${Math.round(res.dealt)}`, `${Math.round(res.taken)}`, `${Math.round(res.time)}`)),
         h('div', { class: 'warn', style: 'border-left-color:var(--brass2)' }, SA.Config.text("ui_5d0f059166f2")),
+        repairFree ? h('div', { class: 'warn repair-free-note', style: 'border-left-color:var(--brass2)' }, SA.Config.text('ui_repair_free_done')) : null,
         feedbackRow(res.humanId),
       ], [], SA.Config.text("ui_7c9691192f1b"), () => { refresh(); inserted(() => SA.Camp.introIfNew()); });
       return;
@@ -352,8 +353,8 @@ SA.UI = (() => {
     const summary = () => {
       const hurt = [];
       SA.V.each(d.vehicle, (cell) => { if (cell.hp < SA.V.maxHp(cell)) hurt.push(cell); });
-      // 免费修理只适用于本场战役胜利；损伤和点击修复仍走原有部件流程。
-      const freeRepair = res.mode === 'campaign' && res.win && !res.draw && res.opts?.victoryRepairFree === true;
+      // 旧胜利免修仍由按钮完成；全结果免修已在规则结算时自动写入存档。
+      const freeRepair = !repairFree && res.mode === 'campaign' && res.win && !res.draw && res.opts?.victoryRepairFree === true;
       const cost = freeRepair ? 0 : hurt.reduce((a, c) => a + SA.S.repairCost(c), 0);
       const fixAll = () => { SA.S.repairCells(hurt); toast(freeRepair ? SA.Config.text("ui_54a224778a07", `${hurt.length}`) : SA.Config.text("ui_6da34172caea", `${hurt.length}`, `${money(cost)}`)); };
       const after = () => { refresh(); story(() => SA.Camp.introIfNew()); };
@@ -362,16 +363,17 @@ SA.UI = (() => {
         h('p', { style: 'font-size:16px;margin-top:0' }, h('b', {}, res.reason)),
         h('p', { class: 'muted' }, SA.Config.text("ui_0cf010dd881d", `${Math.round(res.dealt)}`, `${Math.round(res.taken)}`, `${Math.round(res.time)}`)),
         lines.map(l => h('div', { class: 'warn', style: 'border-left-color:var(--brass2)' }, l)),
-        hurt.length ? h('div', { class: 'rp-sum' },
+        repairFree ? h('div', { class: 'warn repair-free-note', style: 'border-left-color:var(--brass2)' }, SA.Config.text('ui_repair_free_done')) : null,
+        !repairFree && hurt.length ? h('div', { class: 'rp-sum' },
           h('div', { class: 'rp-head' }, h('b', {}, SA.Config.text("ui_2837356f3ad9", `${freeRepair ? SA.Config.text("ui_b41b7071ad0a") : SA.Config.text("ui_18a30ed66d7a")}`, `${hurt.length}`)), h('span', { class: 'muted' }, freeRepair ? SA.Config.text("ui_19790ec76561") : SA.Config.text("ui_99d1acadca51"))),
           repairList(hurt, 5, freeRepair),
           gain > 0 || freeRepair ? h('div', { class: `rp-net ${net < 0 ? 'bad' : ''}` },
             SA.Config.text("ui_a491f0181535", `${money(gain)}`, `${freeRepair ? SA.Config.text("ui_649a0fc7237e") : money(cost)}`), h('b', {}, `${net < 0 ? SA.Config.text("ui_1ccb728430fa") : SA.Config.text("ui_75fb0e9d94fa")} ${money(Math.abs(net))}`)) : null) : null,
         feedbackRow(res.humanId),
       ], [
-        hurt.length ? { label: freeRepair ? SA.Config.text("ui_cf2f1a6510a9") : SA.Config.text("arena_218d949df8a3", `${money(cost)}`), primary: true, onClick: () => freeRepair ? (fixAll(), after()) : pay({ title: SA.Config.text("arena_a0b0db2e55b8"), amount: cost, okLabel: SA.Config.text("arena_a0b0db2e55b8"), confirm: false, onPaid: () => { fixAll(); after(); } }) } : null,
-        hurt.length && SA.Camp.has('garage') ? { label: SA.Config.text("ui_b9b89cadaed4"), onClick: () => { SA.nav('garage'); story(() => {}); } } : null,
-      ].filter(Boolean), hurt.length ? SA.Config.text("ui_99845832ed7f") : SA.Config.text("ui_7c9691192f1b"), after);
+        !repairFree && hurt.length ? { label: freeRepair ? SA.Config.text("ui_cf2f1a6510a9") : SA.Config.text("arena_218d949df8a3", `${money(cost)}`), primary: true, onClick: () => freeRepair ? (fixAll(), after()) : pay({ title: SA.Config.text("arena_a0b0db2e55b8"), amount: cost, okLabel: SA.Config.text("arena_a0b0db2e55b8"), confirm: false, onPaid: () => { fixAll(); after(); } }) } : null,
+        !repairFree && hurt.length && SA.Camp.has('garage') ? { label: SA.Config.text("ui_b9b89cadaed4"), onClick: () => { SA.nav('garage'); story(() => {}); } } : null,
+      ].filter(Boolean), !repairFree && hurt.length ? SA.Config.text("ui_99845832ed7f") : SA.Config.text("ui_7c9691192f1b"), after);
     };
     const run = (i) => (i < pre.length ? pre[i](() => run(i + 1)) : summary());
     run(0);

@@ -45,7 +45,8 @@
     "dom:main::screen:garage::div#modal/div.panel:n1/div.panel-body:n2/div.help:n1/p:n1::text:0": "1. 从模块清单选择模块，移动到格子上使用左键放置。",
     "dom:main::screen:garage::div#modal/div.panel:n1/div.panel-body:n2/div.help:n1/p:n2::text:0": "2. 选中时，使用右键取消当前操作。",
     "story:before.0,1": "[{\"text\":\"我刚替你看了看，除了水罐，汤姆还给车上加了额外的甲片！真是卑鄙！这不公平！\",\"who\":\"uncle\"},{\"text\":\"你怎么还来偷看！作弊的老东西！\",\"who\":\"smith\"},{\"text\":\"你要想办法打掉他的武器，只要没有武器你就算赢了！\",\"who\":\"uncle\"},{\"text\":\"这不公平！\",\"who\":\"smith\"}]",
-    "dom:main::screen:arena::div#modal/div.panel.dialog:n1/div.panel-body:n2/div.salvage:n1/div.dlg-item:n1/div:n1/div.muted:n1::text:0": "耐久 260 · 装甲厚度 5 · 重量 0.70 t "
+    "dom:main::screen:arena::div#modal/div.panel.dialog:n1/div.panel-body:n2/div.salvage:n1/div.dlg-item:n1/div:n1/div.muted:n1::text:0": "耐久 260 · 装甲厚度 5 · 重量 0.70 t ",
+    "dom:main::screen:home::div#modal/div.panel.dialog:n1/div.panel-body:n2::text:0": "这是一个占位符"
   },
   "removedElements": [
     "main::global::div#app/aside#side/span.px-sk.px-sk-brass:n1",
@@ -74,11 +75,28 @@
     "main::screen:arena::div#app/main#screen/div.home:n1/div.home-stage.px-ui:n1/div.yard-board.down:n30/div.yb-face.px-sk:n1/div.yb-in:n1/section.ar-side:n3/div.ar-dossier.px-sk:n2/div.px-sk.px-sk-paper:n1/div.f:n6/span:n2/span.px-small:n1",
     "main::screen:arena::div#app/main#screen/div.home:n1/div.home-stage.px-ui:n1/div.yard-board.down:n30/div.yb-face.px-sk:n1/div.yb-in:n1/section.ar-side:n3/div.ar-go:n3/div.px-cap:n2",
     "main::screen:arena::div#app/main#screen/div.home:n1/div.home-stage.px-ui:n1/div.yard-board.down:n30/div.yb-face.px-sk:n1/div.yb-in:n1/section.ar-side:n3/div.px-sk.px-sk-paper:n1",
+    "main::screen:arena::div#modal/div.panel.dialog:n1/div.panel-body:n2/div.warn:n1",
     "main::screen:arena::div#modal/div.panel.dialog:n1/div.panel-body:n2/p:n1",
     "main::screen:battle::div#app/main#screen/div.bt:n1/div.bt-dash.px-sk:n2/div.dash-mid:n2/div.dash-note.px-sk:n1",
     "main::screen:garage::div#app/main#screen/div.ed:n1/div.ed-main:n1/div.ed-dock:n2/div.dock-ctx:n1/canvas.px.thumb:n1",
     "main::screen:garage::div#app/main#screen/div.ed:n1/div.ed-main:n1/div.ed-dock:n2/div.dock-ctx:n1/div.info:n1/div:n1/span.chip.rp-chip:n2",
-    "main::screen:garage::div#modal/div.panel:n1/div.panel-body:n2/div.help:n1/p:n3"
+    "main::screen:garage::div#modal/div.panel:n1/div.panel-body:n2/div.help:n1/p:n3",
+    "main::screen:arena::div#app/main#screen/div.home:n1/div.home-stage.px-ui:n1/div.yard-board.down:n29/div.yb-face.px-sk:n1/div.yb-in:n1/section.ar-side:n3/div.ar-go:n3/div.px-cap:n2",
+    "main::screen:arena::div#app/main#screen/div.home:n1/div.home-stage.px-ui:n1/div.yard-board.down:n29/div.yb-face.px-sk:n1/div.yb-in:n1/section.ar-mid:n2/div.ar-notes:n2/div.ar-stick.px-sk:n2/div.nb:n2",
+    "main::screen:arena::div#app/main#screen/div.home:n1/div.home-stage.px-ui:n1/div.yard-board.down:n29/div.yb-face.px-sk:n1/div.yb-in:n1/section.ar-mid:n2/div.ar-notes:n2/div.ar-stick.px-sk:n2/div.nt:n1",
+    "main::screen:arena::div#app/main#screen/div.home:n1/div.home-stage.px-ui:n1/div.yard-board.down:n29/div.yb-face.px-sk:n1/div.yb-in:n1/section.ar-mid:n2/div.ar-notes:n2/div.ar-stick.px-sk:n2",
+    "main::screen:arena::div#app/main#screen/div.home:n1/div.home-stage.px-ui:n1/div.yard-board.down:n29/div.yb-face.px-sk:n1/div.yb-in:n1/section.ar-mid:n2/div.ar-notes:n2/div.ar-stick.px-sk:n1",
+    "main::screen:arena::div#app/main#screen/div.home:n1/div.home-stage.px-ui:n1/div.yard-board.down:n29/div.yb-face.px-sk:n1/div.yb-in:n1/section.ar-mid:n2/div.ar-poster.px-sk:n1/div.ar-prize:n5",
+    "main::screen:arena::div#app/main#screen/div.home:n1/div.home-stage.px-ui:n1/div.yard-board.down:n29/div.yb-face.px-sk:n1/div.yb-in:n1/section.ar-mid:n2/div.ar-poster.px-sk:n1/div.ar-kick:n1",
+    "main::screen:arena::div#app/main#screen/div.home:n1/div.home-stage.px-ui:n1/div.yard-board.down:n29/div.yb-face.px-sk:n1/div.yb-in:n1/section.ar-side:n3/div.px-sk.px-sk-paper:n1",
+    "main::screen:arena::div#app/main#screen/div.home:n1/div.home-stage.px-ui:n1/div.yard-board.down:n29/div.yb-face.px-sk:n1/div.yb-in:n1/section.ar-side:n3/div.ar-dossier.px-sk:n2/div.px-sk.px-sk-paper:n1/div.f:n5",
+    "main::screen:arena::div#app/main#screen/div.home:n1/div.home-stage.px-ui:n1/div.yard-board.down:n29/div.yb-face.px-sk:n1/div.yb-in:n1/section.ar-side:n3/div.ar-dossier.px-sk:n2/div.px-sk.px-sk-paper:n1/div.f:n6/span:n2/span.px-small:n1",
+    "main::screen:arena::div#app/main#screen/div.home:n1/div.home-stage.px-ui:n1/div.yard-board.down:n29/div.yb-face.px-sk:n1/div.yb-in:n1/section.ar-side:n3/div.ar-dossier.px-sk:n2/div.px-sk.px-sk-paper:n1/div.f:n3",
+    "main::screen:arena::div#app/main#screen/div.home:n1/div.home-stage.px-ui:n1/div.yard-board.down:n29/div.yb-face.px-sk:n1/div.yb-in:n1/section.ar-chalk:n1/div.ch-foot:n2",
+    "main::screen:arena::div#app/main#screen/div.home:n1/div.home-stage.px-ui:n1/div.yard-board.down:n29/div.yb-face.px-sk:n1/div.yb-in:n1/section.ar-chalk:n1/div.ch-list:n1/div.ch-row.lock:n1/span.nm:n2",
+    "main::screen:arena::div#app/main#screen/div.home:n1/div.home-stage.px-ui:n1/div.yard-board.down:n29/div.yb-face.px-sk:n1/div.yb-in:n1/section.ar-chalk:n1/div.ch-list:n1/div.ch-row.lock:n1",
+    "main::screen:battle::div#app/main#screen/div.bt:n1/div.bt-dash.px-sk:n2/div.dash-act:n3/div.dash-vent:n1/button.px-btn.dng:n1",
+    "main::screen:battle::div#app/main#screen/div.bt:n1/div.bt-dash.px-sk:n2/div.dash-act:n3/div.dash-vent:n1/span.px-cap:n1"
   ],
   "storyMeta": {
     "cast": {
@@ -109,5 +127,7 @@
         "label": "机枪"
       }
     ]
-  }
+  },
+  "updatedAt": "2026-10-02T06:14:55.164906+00:00",
+  "edited": true
 }

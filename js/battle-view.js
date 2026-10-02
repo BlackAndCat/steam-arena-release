@@ -852,7 +852,7 @@ SA.BattleView.create = function createBattleView(api) {
       h('div', { class: 'dash-act' },
         h('div', { class: 'dash-vent' }, hud.vent, h('span', { class: 'px-cap' }, SA.Config.text('battle_view_once'))),
         PXI().btn(SA.Config.text('battle_view_retreat'), { title: SA.Config.text('battle_view_retreat_title'), onclick: () => { if (!B.p.dead) SA.UI.dialog(SA.Config.text('battle_view_retreat_title_short'), h('p', {}, SA.Config.text('battle_view_retreat_confirm')), [{ label: SA.Config.text('battle_view_retreat'), primary: true, onClick: () => { endIntro(); api.retreat(); } }], SA.Config.text('battle_view_continue')); } }),
-        speedSlider()),
+        !SA.RELEASE ? speedSlider() : null),
       h('div', { class: 'bt-touch' }, holdBtn(SA.Config.text('battle_view_backward'), 'left'), holdBtn(SA.Config.text('battle_view_forward'), 'right'), holdBtn(SA.Config.text('battle_view_fire'), 'fire')));
   }
   // 你的车现在的警报（按紧急程度）：亮哪几盏灯 + 纸条上的红字
@@ -982,15 +982,33 @@ SA.BattleView.create = function createBattleView(api) {
     }
   }
 
-  // 游戏速度：整场战斗的时间流速（移动、装填、热量、AI、动画全部按它缩放）
-  const SPEED_KEY = 'steam_arena_speed_v1';
-  function gameSpeed() { try { const v = parseFloat(localStorage.getItem(SPEED_KEY)); return v > 0 ? v : K.GAME_SPEED; } catch (e) { return K.GAME_SPEED; } }
+  // 整场战斗共用正式模块配置中的速度；发行版不提供调速入口，也不读取旧浏览器偏好。
+  function gameSpeed() { return K.GAME_SPEED; }
   function speedSlider() {
     const out = h('b', {}, `${gameSpeed().toFixed(2)}×`);
+    const status = h('span', { 'aria-live': 'polite' });
     const range = h('input', { type: 'range', min: T.GAME_SPEED_MIN, max: T.GAME_SPEED_MAX, step: T.GAME_SPEED_STEP, value: gameSpeed(), 'aria-label': SA.Config.text('battle_view_speed_aria'),
-      oninput: () => { B.speed = +range.value; out.textContent = `${B.speed.toFixed(2)}×`; try { localStorage.setItem(SPEED_KEY, String(B.speed)); } catch (e) { /* ignore */ } },
-      onchange: () => range.blur() });
-    return h('label', { class: 'bt-speed', title: SA.Config.text('battle_view_speed_title') }, SA.Config.text('battle_view_speed'), range, out);
+      oninput: () => { B.speed = +range.value; out.textContent = `${B.speed.toFixed(2)}×`; status.textContent = ''; },
+      onchange: async () => {
+        range.blur(); range.disabled = true;
+        const speed = +range.value;
+        status.textContent = SA.Config.text('battle_view_speed_saving');
+        try {
+          // 服务端在配置锁内只改 GAME_SPEED，避免整份覆盖同时保存的模块作者数据。
+          const saved = await fetch('/__battle-speed/save', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ gameSpeed: speed }) });
+          const result = await saved.json().catch(() => ({}));
+          if (!saved.ok || !result.ok) throw new Error(result.error || `写入配置 HTTP ${saved.status}`);
+          K.GAME_SPEED = result.gameSpeed;
+          SA.Config.get('modules').K.GAME_SPEED = result.gameSpeed;
+          status.textContent = SA.Config.text('battle_view_speed_saved');
+        } catch (error) {
+          B.speed = gameSpeed(); range.value = B.speed; out.textContent = `${B.speed.toFixed(2)}×`;
+          status.textContent = SA.Config.text('battle_view_speed_save_failed');
+          SA.UI.toast(SA.Config.text('battle_view_speed_save_failed_detail', error.message));
+        } finally { range.disabled = false; }
+      } });
+    return h('label', { class: 'bt-speed', title: SA.Config.text('battle_view_speed_title') }, SA.Config.text('battle_view_speed'), range, out, status);
   }
 
   function holdBtn(label, key) {

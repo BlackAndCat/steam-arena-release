@@ -348,7 +348,7 @@ SA.S = (() => {
           start: () => {
             const latest = SA.Camp.stage(chapterIndex, i);
             // 本场经济规则随战斗选项固定，结算时不再读取可能已被工作台修改的关卡。
-            SA.Battle.start({ mode: 'campaign', storyKey: `${chapterIndex},${i}`, replay, enemyVehicle: latest.vehicle, enemyName: latest.vehicle?.name || latest.name, aim: latest.aim, style: latest.style, terrain: latest.terrain, bounds: latest.chapter.bounds, boss: latest.boss, hpMul: 1, prize: replay || !latest.rewardMoney ? 0 : latest.prize, rewardMoney: latest.rewardMoney, victoryRepairFree: latest.victoryRepairFree, uniqueLoot: latest.uniqueLoot || [] });
+            SA.Battle.start({ mode: 'campaign', storyKey: `${chapterIndex},${i}`, replay, enemyVehicle: latest.vehicle, enemyName: latest.vehicle?.name || latest.name, aim: latest.aim, style: latest.style, terrain: latest.terrain, bounds: latest.chapter.bounds, boss: latest.boss, hpMul: 1, prize: replay || !latest.rewardMoney ? 0 : latest.prize, rewardMoney: latest.rewardMoney, victoryRepairFree: latest.victoryRepairFree, repairFree: latest.repairFree === true, uniqueLoot: latest.uniqueLoot || [] });
           } }];
       }));
     }
@@ -383,6 +383,13 @@ SA.S = (() => {
   const drawFee = (prize) => Math.max(ECON.drawFeeMinimum, Math.round(prize * ECON.drawFeeRate / ECON.drawFeeStep) * ECON.drawFeeStep);
   function settleBattle(res) {
     const lines = [], pre = [], money0 = d.money;
+    const repairFree = res.mode === 'campaign' && res.opts?.repairFree === true;
+    // 教学关的全结果免修只处理当前参赛车；重打虽不记战损，原有旧伤也一并免修。
+    const repairCurrentVehicle = () => {
+      let count = 0;
+      SA.V.each(d.vehicle, cell => { if (cell.hp < SA.V.maxHp(cell)) { cell.hp = SA.V.maxHp(cell); count++; } });
+      return count;
+    };
     // 旧链接或脚本传入已取消的遭遇战时，不结算战损、奖励或旧档进度。
     if (res.mode === 'side') return { lines, pre, money0 };
     // 发行版拒绝越过开放章节的伪造结算，避免修改战损、经济与进度。
@@ -391,9 +398,10 @@ SA.S = (() => {
       if (!key || !SA.Camp.stage(Number(key[1]), Number(key[2]))) return { lines, pre, money0 };
     }
     if (res.replay) {
+      const repaired = repairFree ? repairCurrentVehicle() : 0;
       d.news = res.win ? SA.Config.text("state_418ea32bb605", `${d.vehicle.name}`, `${res.enemyName}`) : SA.Config.text("state_fff0caf5f77d", `${d.vehicle.name}`, `${res.enemyName}`);
       save();
-      return { lines, pre, money0 };
+      return { lines, pre, money0, repairFree, repaired };
     }
     const settlesDamage = res.mode !== 'friendly';
     if (res.mode !== 'friendly' && settlesDamage) {
@@ -405,6 +413,7 @@ SA.S = (() => {
         cell.hp = b ? Math.max(0, b.hp) : 0;
       });
     }
+    const repaired = repairFree ? repairCurrentVehicle() : 0;
     if (res.mode === 'street') {
       const tier = SA.STREET_TIERS[res.opts.streetTier];
       if (res.draw) {
@@ -475,7 +484,7 @@ SA.S = (() => {
       lines.push(SA.Config.text("state_19588cbff97b"));
     }
     SA.S.save();
-    return { lines, pre, money0 };
+    return { lines, pre, money0, repairFree, repaired };
   }
 
   function stashCell(cell) {

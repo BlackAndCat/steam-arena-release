@@ -93,7 +93,7 @@ SA.CampUI = (() => {
   // 对手来源：战役各关 / 终局锦标赛 / 官方蓝图 / 我的蓝图 / 分享码示例 / 随机街头车；可以改材料、AI 性格、枪法。
   const SB = { src: 'camp', foe: '1,0', terrain: '', mt: 0, style: '', aim: '', scene: '' };   // 记住上一次的选择
   const SRC = [['camp', SA.Config.text("camp_ui_aef74652a522")], ['tour', SA.Config.text("camp_ui_481666d112b2")], ['bp', SA.Config.text("camp_ui_09cf3953e6fb")], ['mine', SA.Config.text("camp_ui_77209467c816")], ['cloud', SA.Config.text("camp_ui_564d439aeaf1")], ['evolve', SA.Config.text("camp_ui_82481210220a")], ['street', SA.Config.text("camp_ui_61da76cd5798")]];
-  const STYLES = [['', SA.Config.text("camp_ui_2c2210ed86d7")], ['roam', SA.Config.text("camp_ui_ddb2fe50fb4b")], ['rush', SA.Config.text("camp_ui_c0d497cf61ab")], ['kite', SA.Config.text("camp_ui_2662eea55207")], ['turtle', SA.Config.text("camp_ui_91ed0ccb46f7")]];
+  const STYLES = [['', SA.Config.text("camp_ui_2c2210ed86d7")], ['roam', SA.Config.text("camp_ui_ddb2fe50fb4b")], ['rush', SA.Config.text("camp_ui_c0d497cf61ab")], ['kite', SA.Config.text("camp_ui_2662eea55207")], ['turtle', SA.Config.text("camp_ui_91ed0ccb46f7")], ['rookie', SA.Config.text('camp_ui_rookie_style')]];
   // 某个来源的对手列表：{ key, name, make() → { v, aim, style, terrain, boss } }
   function foeList(src) {
     if (src === 'camp') return SA.CAMPAIGN.flatMap((ch, ci) => ch.stages.map((o, si) => ({ key: `${ci},${si}`, name: `${ch.name.split(' · ')[0]} · ${o.name}${o.boss ? '【Boss】' : ''}`,

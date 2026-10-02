@@ -195,7 +195,48 @@
       "ENDING_TIME": 1.8,
       "GAME_SPEED_MIN": 0.3,
       "GAME_SPEED_MAX": 1.5,
-      "GAME_SPEED_STEP": 0.05
+      "GAME_SPEED_STEP": 0.05,
+      "AI_ROOKIE_FIRE_START": [
+        1.4,
+        2.5
+      ],
+      "AI_ROOKIE_FIRE_ON": [
+        0.55,
+        0.9
+      ],
+      "AI_ROOKIE_FIRE_OFF": [
+        1.6,
+        3
+      ],
+      "AI_ROOKIE_DRIVE_START": [
+        0.8,
+        1.6
+      ],
+      "AI_ROOKIE_FAR_GAP": 580,
+      "AI_ROOKIE_FAR_DIRS": [
+        1,
+        1,
+        1,
+        1,
+        0,
+        -1
+      ],
+      "AI_ROOKIE_NEAR_DIRS": [
+        0,
+        0,
+        1,
+        1,
+        1,
+        -1
+      ],
+      "AI_ROOKIE_DRIVE_BACK": [
+        0.2,
+        0.45
+      ],
+      "AI_ROOKIE_DRIVE_OTHER": [
+        0.6,
+        1.25
+      ]
     }
   },
   "MODULES": {

@@ -1037,13 +1037,13 @@ SA.Battle = (() => {
       }
     }
     if (s.style === 'rookie') {
-      // 序章学徒会迟疑、点射后忘记扣扳机；每辆车独立计时，沿用战斗随机源以保持回放可复现。
-      if (!s.rookie) s.rookie = { fireT: rnd(1.4, 2.5), firing: false, driveT: rnd(0.8, 1.6) };
+      // 教学新手的时序和远近驾驶权重来自配置；随机调用顺序保持不变，确保回放可复现。
+      if (!s.rookie) s.rookie = { fireT: rnd(...T.AI_ROOKIE_FIRE_START), firing: false, driveT: rnd(...T.AI_ROOKIE_DRIVE_START) };
       const novice = s.rookie;
       novice.fireT -= dt;
       if (novice.fireT <= 0) {
         novice.firing = !novice.firing;
-        novice.fireT = novice.firing ? rnd(0.55, 0.9) : rnd(1.6, 3);
+        novice.fireT = novice.firing ? rnd(...T.AI_ROOKIE_FIRE_ON) : rnd(...T.AI_ROOKIE_FIRE_OFF);
       }
       s.fireHeld = !!s.target && novice.firing;
       novice.driveT -= dt;
@@ -1051,9 +1051,9 @@ SA.Battle = (() => {
         // 远处会慌忙追近；贴近后乱踩油门和倒车，避免退远后把教学战拖到锅炉烧干。
         const fwd = isP(s) ? 1 : -1;
         const gap = fwd * (frontEdge(o) - frontEdge(s));
-        const choices = gap > 580 ? [fwd, fwd, fwd, fwd, 0, -fwd] : [0, 0, fwd, fwd, fwd, -fwd];
+        const choices = (gap > T.AI_ROOKIE_FAR_GAP ? T.AI_ROOKIE_FAR_DIRS : T.AI_ROOKIE_NEAR_DIRS).map(dir => dir === 0 ? 0 : dir * fwd);
         s.dir = choices[Math.floor(random() * choices.length)];
-        novice.driveT = s.dir === -fwd ? rnd(0.2, 0.45) : rnd(0.6, 1.25);
+        novice.driveT = s.dir === -fwd ? rnd(...T.AI_ROOKIE_DRIVE_BACK) : rnd(...T.AI_ROOKIE_DRIVE_OTHER);
       }
       return;
     }
