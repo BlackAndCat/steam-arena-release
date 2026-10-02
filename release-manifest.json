@@ -1,10 +1,10 @@
 {
   "version": 1,
-  "releaseVersion": "20261002-155605",
+  "releaseVersion": "20261002-162729",
   "chapters": 2,
   "sourceRoot": "Z:\\Project\\HtmlGames\\SteamArena\\HtmlGames-astra",
   "git": {
-    "commit": "f99d60f989d01a047ab0061fb26d3a61a8dc12f4",
+    "commit": "743ca18e4954915667e2e4fb2cebb94c336359af",
     "dirty": true
   },
   "sourceHashes": {
@@ -22,7 +22,7 @@
     "js/sprites.js": "41ebf1360f8e676070b06ae6c6da42a42c3d6ce0cac273983e9d9ce3364b400e",
     "js/ui-px.js": "9d8fbede9e769712ff3828a6a5950e7e53f641e042f5c00706af562171047b2e",
     "js/legs.js": "27b3820b67f05bfb881e98fe37431b0726464e692df485a72496bb77a203371e",
-    "js/vehicle.js": "632f159931c05f01de253e4a6052d448085cc87c1c800fca7786b5ccad60f215",
+    "js/vehicle.js": "3f7756fbbcfd1f2805b45ec73365e8241fad73bb43cba3b05008bfe964cde5a4",
     "js/content.js": "ca87a476a4bc01ccd95e0d89768515eb628d53f9eeb5b345f30f2eac034ee6e5",
     "js/stage-cars.js": "f7f90587f6897a714cc587c2aa7f39d1ef74261e1792b69878730a4e87e36c2b",
     "js/state.js": "7cdea8472c8c76a22050d90cc33c2008aba3f56d701b5f1d34255c5f3476f746",
@@ -31,7 +31,7 @@
     "js/camp-ui.js": "e1ab41c250ea875e69f05c46910a34d4a047a9f5f37a4eb4c22fc4ec0b5b48c9",
     "js/story.js": "c19b2e57c10d67fa416f41b2708a697a561d5c170e2264e4920dc472ed386dd6",
     "js/story-dev.js": "5f9d9993dcc63141f5593250b0bf7b08671a3b466d597946b562a6e02e15d9f1",
-    "js/editor.js": "ed5cec96a0477085b9534e906ad94bb3da7794116914ba8116e3d0968bbdaf6e",
+    "js/editor.js": "3007a4d46ad6783a1106dd17d55918445a6f8adae76997a6dc5016be5de43095",
     "js/blueprints.js": "186669ff7b649658a32e23b276cc51670a5e3182eb6f1f70fd763281a6180f96",
     "js/street.js": "90fa9bad9c3fe35463b8cc40852b114d6d48105be6ce333fbb1a56e03eadc6b9",
     "js/arena.js": "afa1c01082430a5fd816f3eeb5552c82ff6416d02822164ea3c46ea94fd131d8",
@@ -41,15 +41,15 @@
     "js/scenes.js": "4267fe41ccca19b5e91cf5a2a96240aaed013a874fd83c6fd14d4879115ce0fe",
     "js/battle-view.js": "26b3e01b95f3c18ec3b00fc480c5639e4af4388a76bab191032de68566f0a82a",
     "js/battle.js": "50f4f5b4ac7f03cffbe225013dc6e3fec4b072e7bd5d43cd37e89a707c14b5d5",
-    "js/build-sys.js": "a4a255b7d99d781404dad2b11b8f8360d78174f2a3143b33fe858ecd17c1d0b4",
-    "js/build-vis.js": "4c3c1947c5c794395df68c24e315440ed27a5a5a8913086c04f29608dc705da0",
+    "js/build-sys.js": "a298b5ab0aca92d470e5dc5b2cbd830156aabff593e9f8cc81b4d9b49b5a64cf",
+    "js/build-vis.js": "a392352cc9730f502728ec5456058995aab7fce6311a9f3f23e9428a7ed62ff4",
     "js/main.js": "49cf5e8861c28e651b57d44c761774776ae2ae65822d29753a4e3e7436e01a2e",
-    "config/content.json": "b56dbb1f6a006e146f5244af7cd3d5dfc03360c5cf3865a470c559f60a7d54a9",
+    "config/content.json": "39ed51b5add583ce9880c200fb2c45070a6409f57120634f9782487ca3ff94e5",
     "config/modules.json": "ea37b14ada8344796bf6b47a290c67605f1ddadf1df0a34f01926c8684b17444",
     "config/rules.json": "3e6d20cc22856c62a969ecbbbaf15867d522da0798afc493017378eb35f6591a",
     "config/stage-cars.json": "60f616d1d8a704add89c2635619b61f15fef87546bbe9e00fc6327b77acf7628",
-    "config/text.json": "beb2068406014a9b1e3a41894852f8bff4175724d33996e2c0ddca1cdfab7aaf",
-    "config/ui.json": "590e6eaf8a3d798a13fab20be8756a06404c300cfcf1567b4c09dfd50e2b6dc9"
+    "config/text.json": "6dbeac250e333263f3ef17925f8533d7393ef83e0f5dd985e9a41d82e7df7bd3",
+    "config/ui.json": "8459ef8b506335ed4439a8b33b69eba557bfddbb8656e841c10f9ef5490dbacb"
   },
   "gitAttributesSha256": "87aa5905d4841e83c7955076d249bae876cea9b7a46e4743a4624cef8ff22907"
 }

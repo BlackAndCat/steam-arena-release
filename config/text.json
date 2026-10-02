@@ -3,12 +3,12 @@
   "game": "steam-arena",
   "locale": "zh-CN",
   "values": {
-    "story:opening": "[{\"text\":\"你正在睡觉，伦敦的春季酷烈无情，冷风像一颗颗钉子从门缝吹进来。你像无数普通人一样背井离乡，身无分文。\",\"scene\":\"sleep\"},{\"text\":\"就在你于梦中探寻着家中的厨房时，你的窝棚门突然被打开了——\",\"scene\":\"roof\"},{\"text\":\"许久未见的远房亲戚滚了进来……还有你的房东铁匠。\",\"scene\":\"roll\"},{\"text\":\"为了女皇的寿辰！现在继承我的战车，赢取荣耀吧！\",\"who\":\"uncle\",\"scene\":\"car\"},{\"text\":\"……和奖金！\",\"who\":\"smith\"}]",
-    "story:tutorial.intro": "[{\"text\":\"女皇的寿辰在即，十年一遇的大竞技赛就要开始了。我们得抓紧时间训练，好在生日宴那天出现在竞技场上。\",\"who\":\"uncle\"},{\"text\":\"我给你找来了我的徒弟提米对练，小心别把他打伤了！\",\"who\":\"smith\"}]",
+    "story:opening": "[{\"text\":\"伦敦的春季酷烈无情，冷风像一颗颗钉子从门缝吹进来。你像无数普通人一样背井离乡，身无分文。\",\"scene\":\"sleep\"},{\"text\":\"就在你于梦中探寻着家中的厨房时，你的窝棚顶突然被掀开了——\",\"scene\":\"roof\"},{\"text\":\"许久未见的远房亲戚滚了进来……还有你的房东铁匠。\",\"scene\":\"roll\"},{\"text\":\"为了女皇的寿辰！现在继承我的战车，赢取荣耀吧！\",\"who\":\"uncle\",\"scene\":\"car\"},{\"text\":\"……和奖金！\",\"who\":\"smith\"},{\"text\":\"这群人来干嘛的？但不容你细想，就被推上了车\"}]",
+    "story:tutorial.intro": "[{\"text\":\"女皇的寿辰在即，十年一遇的大竞技赛就要开始了。我们得抓紧时间训练，好在生日宴那天出现在竞技场上。\",\"who\":\"uncle\"},{\"text\":\"我给你找来了我的徒弟提米对练！\",\"who\":\"smith\"},{\"text\":\"说真的，为什么他们自作主张就把你推上了车？呃……可能是欠了很多房租？也可能是亲戚之前来过信但被你丢掉了。\"},{\"text\":\"不论如何，新生活已经开始了！\"}]",
     "story:tutorial.parts.0": "[{\"text\":\"驾驶舱：一切的核心，就像心脏。失去了它你就输了。\",\"who\":\"uncle\"}]",
     "story:tutorial.parts.1": "[{\"text\":\"履带：本世纪最好的发明。\"},{\"text\":\"……上个世纪的。\",\"who\":\"smith\"}]",
-    "story:tutorial.parts.2": "[{\"text\":\"锅炉：一切的核心，就像心脏。失去了它你就输了。\",\"who\":\"uncle\"},{\"text\":\"……我刚刚是不是这么说过？\",\"who\":\"uncle\"}]",
-    "story:tutorial.parts.3": "[{\"text\":\"机枪：别担心，这是训练用弹！\"},{\"text\":\"只是打在身上……会有点疼。\",\"who\":\"smith\"}]",
+    "story:tutorial.parts.2": "[{\"text\":\"锅炉：一切的核心，就像心脏。失去了它你就输了。\",\"who\":\"uncle\"},{\"text\":\"……我刚刚是不是这么说过？\",\"who\":\"uncle\"},{\"text\":\"是的，你个老年痴呆。\",\"who\":\"smith\"}]",
+    "story:tutorial.parts.3": "[{\"text\":\"机枪：别担心，这是训练用弹！\",\"who\":\"uncle\"},{\"text\":\"“你确定吗？！”\"},{\"text\":\"你试图大喊，但引擎的轰鸣声淹没了你。你衷心祈祷着，这不会是亲戚老年痴呆做出的发言。\"}]",
     "story:stage.0,0.win": "[]",
     "story:stage.0,0.lose": "[]",
     "story:stage.0,1.win": "[]",
@@ -46,7 +46,10 @@
     "dom:main::screen:garage::div#modal/div.panel:n1/div.panel-body:n2/div.help:n1/p:n2::text:0": "2. 选中时，使用右键取消当前操作。",
     "story:before.0,1": "[{\"text\":\"我刚替你看了看，除了水罐，汤姆还给车上加了额外的甲片！真是卑鄙！这不公平！\",\"who\":\"uncle\"},{\"text\":\"你怎么还来偷看！作弊的老东西！\",\"who\":\"smith\"},{\"text\":\"你要想办法打掉他的武器，只要没有武器你就算赢了！\",\"who\":\"uncle\"},{\"text\":\"这不公平！\",\"who\":\"smith\"}]",
     "dom:main::screen:arena::div#modal/div.panel.dialog:n1/div.panel-body:n2/div.salvage:n1/div.dlg-item:n1/div:n1/div.muted:n1::text:0": "耐久 260 · 装甲厚度 5 · 重量 0.70 t ",
-    "dom:main::screen:home::div#modal/div.panel.dialog:n1/div.panel-body:n2::text:0": "这是一个占位符"
+    "dom:main::screen:home::div#modal/div.panel.dialog:n1/div.panel-body:n2::text:0": "这是一个占位符",
+    "home:tip:rel": "",
+    "home:tip:tom": "",
+    "home:tip:tim": ""
   },
   "removedElements": [
     "main::global::div#app/aside#side/span.px-sk.px-sk-brass:n1",
@@ -128,6 +131,6 @@
       }
     ]
   },
-  "updatedAt": "2026-10-02T06:14:55.164906+00:00",
+  "updatedAt": "2026-10-02T08:11:11.072712+00:00",
   "edited": true
 }

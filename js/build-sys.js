@@ -28,3 +28,4 @@ SA.BUILD_SYS += '+release-git-bytes'; // 发行包禁用 Git 换行转换，保�
 SA.BUILD_SYS += '+config-single-source'; // 模块、战役、关卡、规则与文案从配置文件统一加载。
 SA.BUILD_SYS += '+rookie-free-repair'; // 教学 AI 与前三关全结果自动免修。
 SA.BUILD_SYS += '+wreck-chassis-grind'; // 撞击件顶进已毁底盘：不弹回，限速艰涩深入，按节拍减弱反震（用户授权 Opus 改）。
+SA.BUILD_SYS += '+centered-starter-shift-vehicle'; // 初始车居中，并支持 Shift 拖动已装模块整体横移。

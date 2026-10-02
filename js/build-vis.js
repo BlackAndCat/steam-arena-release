@@ -33,3 +33,4 @@ SA.BUILD_VIS += '+console'; // 后台 tools/console.html：全部工具的统一
 SA.BUILD_VIS += '+console-warm-garage'; // 后台改成暖色木纹 + 黄铜 + 纸面；关卡车拼装搬进「关卡」工作区（tools/console-garage.html 嵌游戏车间），文字与奖励、强度也在同一页编辑。
 SA.BUILD_VIS += '+settings-player-restart'; // 设置菜单两次确认后重开游戏。
 SA.BUILD_VIS += '+wreck-grind-shudder'; // 撞击件顶进已毁底盘时整车高频抖动、火花碎铁（规则见 battle.js grindWreck）。
+SA.BUILD_VIS += '+shift-whole-vehicle-drag'; // 车间按住 Shift 拖动已装模块时预览并横移整车。

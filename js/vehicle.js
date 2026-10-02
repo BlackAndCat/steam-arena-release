@@ -369,6 +369,28 @@ SA.V = (() => {
     return { ok: false, reason: SA.Config.text("vehicle_2189a813bf25", `${M[X.cell.id].name}`) };
   }
 
+  // 整车只横移：先检查主层与侧挂层的全部占格，再一次替换锚点表；失败时原车完全不变。
+  function translate(v, dc) {
+    if (!Number.isInteger(dc) || dc === 0) return { ok: false, reason: '' };
+    const body = grid(), side = grid(), used = { body: new Set(), side: new Set() };
+    let reason = '';
+    each(v, (cell, r, c, layer) => {
+      if (reason) return;
+      const nc = c + dc, { w, h } = fp(cell.id);
+      if (!fits(r, nc, w, h)) { reason = SA.Config.text("vehicle_7230b6f9f8a8"); return; }
+      if (!boxInRegion(v, r, nc, w, h)) { reason = LOCKED; return; }
+      for (const [rr, cc] of box(r, nc, w, h)) {
+        const key = rr * K.COLS + cc;
+        if (used[layer].has(key)) { reason = SA.Config.text("vehicle_45f9e24da252"); return; }
+        used[layer].add(key);
+      }
+      (layer === 'body' ? body : side)[r][nc] = cell;
+    });
+    if (reason) return { ok: false, reason };
+    v.body = body; v.side = side;
+    return { ok: true };
+  }
+
   // 出战检查：逐个模块找出悬空（没有一路连到底盘）或摆放不合规的。
   // 连通规则：从底盘出发，四周紧贴的主体模块都算连上（可以侧挂、可以悬挑）；撞击件不传导支撑
   function issues(v) {
@@ -823,5 +845,5 @@ SA.V = (() => {
   }
   // 载具的底盘锚点行（没有底盘时是 CH）；战斗悬挂、画面找底盘都用它
   const chassisRowOf = (v) => { const a = chassisAnchors(v)[0]; return a ? a.r : CH; };
-  return { widenArmor, chassisRow, chassisRowOf, bipedOf, bipedWaist, floorRow, endArmorSide, armorSpeedFactor, create, fromAscii, fromBig, migrate, region, inRegion, boxInRegion, occ, at, CH, each, canPlace, place, canPut, put, remove, move, issues, layout, fromLayout, fromCells, countIds, blockedList, stats, clone, battleCopy, encode, decode, validLayout, validStockCell, layerOf, maxHp, alive, editorSpot, placeCheck, chassisClash, statsWith };
+  return { widenArmor, chassisRow, chassisRowOf, bipedOf, bipedWaist, floorRow, endArmorSide, armorSpeedFactor, create, fromAscii, fromBig, migrate, region, inRegion, boxInRegion, occ, at, CH, each, canPlace, place, canPut, put, remove, move, translate, issues, layout, fromLayout, fromCells, countIds, blockedList, stats, clone, battleCopy, encode, decode, validLayout, validStockCell, layerOf, maxHp, alive, editorSpot, placeCheck, chassisClash, statsWith };
 })();

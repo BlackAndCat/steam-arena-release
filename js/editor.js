@@ -63,7 +63,7 @@ SA.Editor = (() => {
     viewEl = h('div', { class: 'ed-view' });
     leverEl = h('div', { class: 'ed-lever' });
     stage = h('div', { class: 'ed-stage' }, cv, viewEl, tipEl,
-      h('button', { class: 'ed-help', title: SA.Config.text("editor_a21fcfac4591"), 'aria-label': SA.Config.text("editor_a21fcfac4591"), onclick: openHelp }, '?'));
+      h('button', { class: 'ed-help', title: `${SA.Config.text("editor_a21fcfac4591")} · ${SA.Config.text('editor_whole_move_hint')}`, 'aria-label': SA.Config.text("editor_a21fcfac4591"), onclick: openHelp }, '?'));
     // 中间：画布 + 下方操作栏；右边：模块清单 / 蓝图库（拖出车外的模块丢到这里就回库存）
     ctxEl = h('div', { class: 'dock-ctx' });
     toolsEl = h('div', { class: 'panel-tools' });
@@ -185,6 +185,9 @@ SA.Editor = (() => {
     st.hover = cell;
     if (!cell) { if (st.sel) { emptyTap(null); return; } beginPress(e, { kind: 'pan', cell: null, panX: st.panX }); return; }
     const v = veh();
+    // Shift 在按下时锁定整车模式；侧挂层也允许从可见的主体模块抓起。
+    const so = SA.V.at(v, 'side', cell.r, cell.c), bo = SA.V.at(v, 'body', cell.r, cell.c);
+    if (e.shiftKey && (so || bo)) { beginPress(e, { kind: 'whole', startFc: cell.fc }); return; }
     if (st.sel) { placeAt(st.sel, cell); return; }
     const here = SA.V.at(v, st.layer, cell.r, cell.c);
     if (here) { beginPress(e, { kind: 'cell', layer: st.layer, r: here.r, c: here.c, id: here.cell.id, key: SA.invKey(here.cell.id, here.cell.mt) }); return; }
@@ -217,7 +220,7 @@ SA.Editor = (() => {
     }
     if (!st.drag && Math.hypot(e.clientX - p.x, e.clientY - p.y) > DRAG_PX) {
       st.drag = p.src;
-      makeGhost(p.src.key);
+      if (p.src.kind !== 'whole') makeGhost(p.src.key);
     }
     if (st.drag) {
       st.hover = cellAtXY(e.clientX, e.clientY);
@@ -246,6 +249,7 @@ SA.Editor = (() => {
     st.noClick = true;   // 拖完松手不再触发库存按钮的 click
     setTimeout(() => { st.noClick = false; }, 0);
     st.hover = target;
+    if (src.kind === 'whole') { if (target) moveWhole(Math.round(target.fc - src.startFc)); return; }
     if (src.kind === 'inv') { if (target) placeAt(src.key, target); return; }
     if (target) moveTo(src, target);
     else if (!inside) removeAt(src);
@@ -388,6 +392,15 @@ SA.Editor = (() => {
     const other = res.swapped && v[from.layer][from.r][from.c];
     say(other ? SA.Config.text("editor_dfd679d1cff6", `${M[cell.id].name}`, `${M[other.id].name}`) : SA.Config.text("editor_d0d9887d9d2f", `${where(sp.r, sp.c)}`));
     st.pick = null;   // 移动完成即取消选中
+    changed();
+  }
+
+  // 整车位移只改已装模块的锚点；失败或原地松开都不动库存、存档与选中状态。
+  function moveWhole(dc) {
+    const res = SA.V.translate(veh(), dc);
+    if (!res.ok) { if (res.reason) say(res.reason, true); return; }
+    st.pick = null;
+    say(SA.Config.text('editor_whole_move_done'));
     changed();
   }
 
@@ -822,8 +835,23 @@ SA.Editor = (() => {
     return dropMemo.bad;
   }
 
+  // 拖动预览与松手使用同一整车规则；相同列位移复用结果，避免每帧克隆车辆。
+  function wholePreview() {
+    const drag = st.drag, hv = st.hover;
+    if (!drag || drag.kind !== 'whole' || !hv) return null;
+    const dc = Math.round(hv.fc - drag.startFc);
+    if (drag.preview && drag.preview.dc === dc) return drag.preview;
+    const test = SA.V.clone(veh());
+    const res = dc === 0 ? { ok: true } : SA.V.translate(test, dc);
+    return (drag.preview = { dc, ok: res.ok, reason: res.reason, vehicle: res.ok ? test : null });
+  }
+
   function tipText() {
     const v = veh(), hv = st.hover, now = performance.now();
+    if (st.drag && st.drag.kind === 'whole') {
+      const preview = wholePreview();
+      return preview && !preview.ok ? { text: preview.reason, err: true } : { text: SA.Config.text('editor_whole_move_hint') };
+    }
     if (st.drag && st.drag.kind === 'cell' && !hv) return { text: SA.Config.text("editor_41244e613de2", `${M[st.drag.id].name}`) };
     if (hv && !SA.V.inRegion(v, hv.r, hv.c)) return { text: SA.Config.text("vehicle_bd09be8e512a"), err: true };
     if (st.msg && now - st.msg.at < 2600) return st.msg;
@@ -996,15 +1024,23 @@ SA.Editor = (() => {
     g.fillStyle = 'rgba(111,207,106,0.06)';
     for (let c = 0; c < K.COLS; c++) if (O[K.ROWS - 1][c]) g.fillRect(PADX + c * C, 0, C, K.ROWS * C);
     const drag = st.drag && st.drag.kind === 'cell' ? st.drag : null;
-    const vc = SA.SPR.renderVehicle(v, {
+    const opts = {
       key: 'editor', t, heat: 0.35, water: 1, showWrecks: true, showBlocked: true,
       blocked: st.stats.blocked, dimBody: st.layer === 'side', dimCell: drag && drag.layer === 'body' ? drag : null,
       ghostLegs: !!(st.sel || drag),   // 正在摆放 / 拖动：四足的腿半透明，底盘两侧的格子看得清
-    });
+    };
+    const vc = SA.SPR.renderVehicle(v, opts), whole = wholePreview();
+    const moved = whole && whole.ok && whole.dc !== 0;
+    if (moved) g.globalAlpha = 0.25;
     g.drawImage(vc, 0, 0);
+    if (moved) {
+      g.globalAlpha = 0.8;
+      g.drawImage(SA.SPR.renderVehicle(whole.vehicle, opts), 0, 0);
+      g.globalAlpha = 1;
+    }
 
     // 悬空 / 不合规：整个模块红色闪烁 + 感叹号
-    for (const x of st.stats.issues) {
+    for (const x of moved ? [] : st.stats.issues) {
       if (!v[x.layer][x.r][x.c]) continue;
       const [px, py, w, h] = boxOf(v, x.layer, x.r, x.c);
       tint(fromVeh(vc, px, py, w, h), px, py, w, h, RED, pulse(t, 0.2, 0.65));
@@ -1012,7 +1048,7 @@ SA.Editor = (() => {
     }
 
     const hv = st.hover;
-    const selKey = drag ? drag.key : st.sel;
+    const selKey = st.drag && st.drag.kind === 'whole' ? null : drag ? drag.key : st.sel;
     const id = selKey && kid(selKey), selMt = selKey ? kmt(selKey) : 1;
     if (id) {
       // 能稳稳装上的地方：淡淡的绿色呼吸（所有合规位置盖到的小格）
@@ -1049,7 +1085,7 @@ SA.Editor = (() => {
       if (o) { const [x, y, w, h] = boxOf(v, st.layer, o.r, o.c); tint(fromVeh(vc, x, y, w, h), x, y, w, h, WHITE, 0.18); }
     }
     // 选中：整个模块绿色闪烁
-    if (st.pick && !drag && v[st.pick.layer][st.pick.r][st.pick.c]) {
+    if (st.pick && !st.drag && v[st.pick.layer][st.pick.r][st.pick.c]) {
       const [x, y, w, h] = boxOf(v, st.pick.layer, st.pick.r, st.pick.c);
       tint(fromVeh(vc, x, y, w, h), x, y, w, h, GREEN, pulse(t, 0.25, 0.6));
     }
