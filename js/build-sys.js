@@ -1,0 +1,23 @@
+// 后台构建标记：规则、数据、存档和检查工具的版本由 astra 维护。
+window.SA = window.SA || {};
+SA.BUILD_SYS = '2026-09-30 overnight-diagnostics+rootcause-economy+tanks3x+bigwater3x+stage-editor+stage-workshop+evolve-cache+evolve-workers+evolve-progress+selected-view+gpu-benchmark+module-family+giant-indirect+armor-merge+module-display-check+replay-settlement+native-vm+boss-reference+gpu-heat+gpu-interval+first-stage-preview+track-chain+stage-limits+four-core+efficiency+evolve-arena+prologue-plate+evolve-eta+economy60-reward+chapter-generation+manual-prologue+pressure2+leg-unique+side-loot+story-data+surrender-api+tiny-starter+special-weapons+audit-correctness+campaign-visibility+removed-modes+page-overrides+page-file-autosave+rookie-prologue-ai-r1+all-stage-manual+fresh-stage-start';
+SA.BUILD_SYS += '+engineering-units-v1'; // 马力、质量、给水与机组热量的统一工程单位。
+SA.BUILD_SYS += '+module-property-workbench'; // 模块文字与玩法属性工作台。
+SA.BUILD_SYS += '+home-text-api'; // 院子闲谈与人物提示的动态默认文案接口。
+SA.BUILD_SYS += '+explicit-water-only'; // 开局储水只取模块明确配置的容量。
+SA.BUILD_SYS += '+cooling-water-final'; // 锅炉供能独立于储水，储水只用于冷却。
+SA.BUILD_SYS += '+module-editor-save'; // 模块工作台记住文件授权并支持 Ctrl/Cmd+S 保存。
+SA.BUILD_SYS += '+stage-car-name-workbench'; // 关卡车工作台恢复像素车间并分别保存关卡名与车名。
+SA.BUILD_SYS += '+page-versions-canvas-hover'; // 页面历史版本、画布文字和悬浮内容编辑。
+SA.BUILD_SYS += '+opening-story-editor'; // 标题与开场演出直达剧情编排，试播不推进存档。
+SA.BUILD_SYS += '+yard-chat-data'; // 院子闲谈支持章节继承、成套对答、权重冷却和全局时间。
+SA.BUILD_SYS += '+page-startup-version-fix'; // 页面旧草稿版本恢复与首屏覆盖应用。
+SA.BUILD_SYS += '+page-two-versions'; // 页面原始版与编辑版固定两版，旧历史文案合入编辑稿。
+SA.BUILD_SYS += '+first-stage-tank-reward'; // 首关小水罐实物奖励与旧档一次性补发。
+SA.BUILD_SYS += '+stage-workbench-full-modules'; // 关卡车工作台显示正式注册的全部非退役模组。
+SA.BUILD_SYS += '+end-armor-chapter-bounds'; // 底盘端部挂甲减速与序章、第二章场地边界。
+SA.BUILD_SYS += '+author-content-release'; // 作者剧情、闲谈、页面文案与模块设计覆盖入包。
+SA.BUILD_SYS += '+arena-edit-first-open'; // 出战黑板首开与切关使用同一页面编辑路径。
+SA.BUILD_SYS += '+stage-reward-quantity-settlement'; // 关卡固定物品数量与金币、胜后修理配置。
+SA.BUILD_SYS += '+reputation-paused'; // 暂停声望结算，保留旧存档中的声望数值。
+SA.BUILD_SYS += '+publisher-release-v1'; // 发行版封闭开发入口并限制战役开放章节。
