@@ -3,6 +3,7 @@ window.SA = window.SA || {};
 
 SA.YardChat = (() => {
   const KEY = 'home:chat:';
+  const ABSENT = '\u0000yard-chat-absent\u0000';
   const DEFAULT_SETTINGS = { intervalSec: 3.3, bubbleSec: 3.3, replySec: 3.3 };
   const cooldowns = new Map(); // 同一游戏会话内重建院子时仍记住各组上次开始时间。
   const clone = value => JSON.parse(JSON.stringify(value));
@@ -69,8 +70,9 @@ SA.YardChat = (() => {
   function read(scope = currentScope()) {
     validScope(scope);
     for (const candidate of fallbackScopes(scope)) {
-      const raw = SA.Text.get(scopeKey(candidate), '');
-      if (raw) return { source: candidate, groups: clone(JSON.parse(raw)) };
+      const raw = SA.Text.get(scopeKey(candidate), ABSENT);
+      // 未覆盖才继承上级或默认池；作者显式保存空字符串表示清空该池。
+      if (raw !== ABSENT) return { source: candidate, groups: raw === '' ? [] : clone(JSON.parse(raw)) };
     }
     return { source: 'default', groups: clone(DEFAULT_GROUPS) };
   }

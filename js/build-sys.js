@@ -23,3 +23,5 @@ SA.BUILD_SYS += '+high-arc-near-targets'; // 四种高抛炮支持前方近目�
 SA.BUILD_SYS += '+shop-unlock-melee-wreck'; // 商店按解锁售卖，近战可持续冲击并分摊残骸伤害。
 SA.BUILD_SYS += '+release-boundary-v1'; // 发行版只读正式文案并限制开放章节与开发入口。
 SA.BUILD_SYS += '+player-restart-save'; // 玩家重开正式进度，设计模式保持隔离。
+SA.BUILD_SYS += '+author-source-release'; // HTTP 作者保存直写正式源文件，发行包读取当前正式内容。
+SA.BUILD_SYS += '+release-git-bytes'; // 发行包禁用 Git 换行转换，保持索引与资源哈希对应的原始字节。

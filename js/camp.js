@@ -390,7 +390,9 @@ SA.Camp = (() => {
     const st = stage(chapter, stageIndex);
     if (!st) throw new Error(`找不到第 ${chapter + 1} 章第 ${stageIndex + 1} 关`);
     const v = SA.V.clone(SA.S.d.vehicle);
-    const record = SA.StageCars.makeRecord(chapter, stageIndex, st, v, meta);
+    // 重新保存当前车时保留既有记录的附加字段，当前拼装和表单字段仍由新记录覆盖。
+    const previous = SA.STAGE_CARS.records?.[`${chapter}:${stageIndex}`];
+    const record = { ...(previous || {}), ...SA.StageCars.makeRecord(chapter, stageIndex, st, v, meta) };
     const check = checkStageCar(chapter, stageIndex, record, v);
     if (!check.ok) throw new Error(`关卡车不能保存：${check.errors.join('；')}`);
     if (check.warnings.length) console.warn(`关卡车保存警告（允许保存）：${check.warnings.join('；')}`);
@@ -413,7 +415,8 @@ SA.Camp = (() => {
     // 无论文件同步是否成功，都把当前页的战役对象更新到手工车。
     applyLocalStageCars(local.payload);
     return { record, stats: check.stats, warnings: check.warnings, response: response && response.status,
-      persisted: local.localPersisted || filePersisted, localPersisted: local.localPersisted,
+      // HTTP 来源只有正式文件写入成功才算完整保存；本机草稿单独由 localPersisted 表示。
+      persisted: filePersisted || (!canWriteFile && local.localPersisted), localPersisted: local.localPersisted,
       channelSent: local.channelSent, filePersisted, serverError };
   }
 

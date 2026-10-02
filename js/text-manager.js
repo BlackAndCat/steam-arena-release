@@ -64,6 +64,8 @@ SA.Text = (() => {
   const storageKey = () => `sa-text-${config.game}-${config.locale}`;
   const fileName = () => `text/${config.game}/${config.locale}.json`;
   const handleKey = () => `${config.game}/${config.locale}:${location.pathname}`;
+  // HTTP 作者页统一由本机服务写入正式项目文件；file 页面才使用浏览器文件句柄。
+  const usesTextService = () => location.protocol === 'http:' || location.protocol === 'https:';
   const safeKey = key => typeof key === 'string' && key.length > 0 && key.length <= 240;
   // 剧情编排入口及编辑器自身是功能控件，页面选字模式不能拦截其点击或扫描其文字。
   const isUiElement = el => el && el.closest && el.closest('#sa-text-manager, [data-sa-text-mirror], [data-story-action], [data-yard-chat-editor]');
@@ -709,16 +711,18 @@ SA.Text = (() => {
     const toggleButton = toolbar.querySelector('[data-text-action="toggle"]');
     const saveButton = toolbar.querySelector('[data-text-action="save"]');
     toggleButton.textContent = editing ? '完成编辑' : '开启编辑';
-    saveButton.disabled = !dirty && !!fileHandle && filePermission;
-    saveButton.textContent = !window.showSaveFilePicker ? '保存到本机服务' : fileHandle ? '保存到已选文件' : '选择保存文件';
+    saveButton.disabled = !dirty && !usesTextService() && !!fileHandle && filePermission;
+    saveButton.textContent = usesTextService() ? '保存到本机服务'
+      : !window.showSaveFilePicker ? '保存到本机服务' : fileHandle ? '保存到已选文件' : '选择保存文件';
     if (editorBox) {
       editorBox.querySelector('[data-text-action="parent"]').disabled = !activeElement || !activeElement.parentElement || activeElement.parentElement === document.body;
       editorBox.querySelector('[data-text-action="remove-element"]').disabled = !canRemove(activeElement);
       editorBox.querySelector('[data-text-action="remove-text"]').disabled = !activeEntry;
     }
     statusEl.textContent = message || fileLoadError || (dirty
-      ? filePermission ? '正在自动保存到文件…' : window.showSaveFilePicker ? fileHandle ? '草稿已保存；点击保存重新授权' : `草稿已保存；点击选择 ${fileName()}` : '草稿已保存；可通过本机服务保存或导出 JSON'
-      : loaded ? filePermission ? '文件已同步' : '本机草稿已保存' : '正在加载…');
+      ? usesTextService() ? '草稿已保存；点击保存写入本机服务'
+        : filePermission ? '正在自动保存到文件…' : window.showSaveFilePicker ? fileHandle ? '草稿已保存；点击保存重新授权' : `草稿已保存；点击选择 ${fileName()}` : '草稿已保存；可通过本机服务保存或导出 JSON'
+      : loaded ? !usesTextService() && filePermission ? '文件已同步' : '本机草稿已保存' : '正在加载…');
   }
 
   function persistLocal() {
@@ -775,7 +779,7 @@ SA.Text = (() => {
   }
 
   function scheduleAutoSave() {
-    if (!fileHandle || !filePermission) return;
+    if (usesTextService() || !fileHandle || !filePermission) return;
     clearTimeout(autoSaveTimer);
     autoSaveTimer = setTimeout(() => { autoSaveTimer = 0; save(); }, 250);
   }
@@ -828,7 +832,7 @@ SA.Text = (() => {
     resetPending = !!(local && local.resetPending && dirty);
     let sourceLoaded = false;
     let fileRestoreFailed = false;
-    if (window.showSaveFilePicker) {
+    if (!usesTextService() && window.showSaveFilePicker) {
       try {
         fileHandle = await handleStore('read');
         if (fileHandle) {
@@ -922,27 +926,31 @@ SA.Text = (() => {
   function save() {
     clearTimeout(autoSaveTimer);
     // prepareFile 立即调用文件选择器，避免排队的 Promise 丢失浏览器用户手势。
-    const prepared = window.showSaveFilePicker && (!fileHandle || !filePermission) ? prepareFile() : Promise.resolve(true);
+    const prepared = !usesTextService() && window.showSaveFilePicker && (!fileHandle || !filePermission)
+      ? prepareFile() : Promise.resolve(true);
     saves = saves.then(async () => (await prepared) ? saveNow() : { ok: false, cancelled: true },
       async () => (await prepared) ? saveNow() : { ok: false, cancelled: true });
     return saves;
   }
 
   async function saveNow() {
-    if (!dirty && !fileHandle) return { ok: true, local: true };
+    if (!usesTextService() && !dirty && !fileHandle) return { ok: true, local: true };
     persistLocal();
     const payload = payloadNow();
     const revision = changeRevision;
     try {
       let serverRevision;
-      if (fileHandle && filePermission) {
+      if (!usesTextService() && fileHandle && filePermission) {
         const writable = await fileHandle.createWritable();
         await writable.write(JSON.stringify(payload, null, 2) + '\n');
         await writable.close();
       } else {
         const response = await fetch(config.saveUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-        const data = await response.json().catch(() => ({}));
-        if (!response.ok) throw new Error(data.error || `HTTP ${response.status}`);
+        if (!response.ok) {
+          const data = await response.json().catch(() => ({}));
+          throw new Error(data.error || `HTTP ${response.status}`);
+        }
+        const data = await response.json();
         serverRevision = data.revision;
       }
       // 写入过程中产生的新稿由修订号保护，下一次自动写入最新完整内容。
@@ -954,7 +962,7 @@ SA.Text = (() => {
       return { ok: true, file: fileName(), revision: serverRevision, pending: dirty, document: payload };
     } catch (error) {
       persistLocal();
-      if (fileHandle) filePermission = false;
+      if (!usesTextService() && fileHandle) filePermission = false;
       updateToolbar(`写入失败，草稿仍在浏览器：${error.message}`);
       return { ok: false, error };
     }

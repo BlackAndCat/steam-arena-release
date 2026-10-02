@@ -1,18 +1,18 @@
 {
   "version": 1,
-  "releaseVersion": "20261002-main-19b52e3",
+  "releaseVersion": "20261002-main-463b650",
   "chapters": 2,
   "sourceRoot": "Z:\\Project\\HtmlGames\\SteamArena\\HtmlGames-astra",
   "git": {
-    "commit": "19b52e326d2b7c171bf87ad042ad6383a9524bb8",
+    "commit": "463b650253d09dece852c787c1c0017cbb9a6a75",
     "dirty": true
   },
   "sourceHashes": {
     "index.html": "3b7288d24d9a9c99ef7e92ead2acf04d2b993730193130b4bd20e72471faf29b",
     "css/style.css": "c6e9f883209c498ef36276ce59fd9518eb1526f1a00048ea19498bb139e85518",
     "js/release.js": "5e217275d74ff4f000ca3ff3ad5d676b199f6a1065a9e41ce4c8ebd3e426362b",
-    "js/text-manager.js": "963e8fe3961d8b94f22b5dd67c631076ca040080bfe62b9533c04e3316e96f8d",
-    "js/yard-chat.js": "a780c2f1446c971ec9f96bc201358d9918515ab736478ef2f312115a1d20186f",
+    "js/text-manager.js": "c81d68705ba9b0cf6352f2342b598a7ef12b3942b29c8ea1e656b278b80ab6b6",
+    "js/yard-chat.js": "aa293bef0b21b3c2ebc268a9dc1b4c74f1117ef49d06966061067a8c75c0e298",
     "js/palette.js": "0f2008ffba85136c7aa9f9d9ca76c2767e2222b7757235997c10a7ccb576fcda",
     "js/coal.js": "9849695121ca15a182b6ced8fd1712f04eff4f71a45f6f09c86c4da1e56e97bc",
     "js/modules.js": "4530e11eef3c3038a5880bf7026ce6a8ff4317f27c592afab08da9b4810eb8b6",
@@ -22,10 +22,10 @@
     "js/ui-px.js": "9d8fbede9e769712ff3828a6a5950e7e53f641e042f5c00706af562171047b2e",
     "js/legs.js": "27b3820b67f05bfb881e98fe37431b0726464e692df485a72496bb77a203371e",
     "js/vehicle.js": "f1434594061b98fbcb7edb73611d2b04e63a7611532d392beb00ea95e423141a",
-    "js/content.js": "bcc790984dc6165792f99faa8f9cfc9c696eeb9d2bf02fe43b0396d01e420dc0",
+    "js/content.js": "0dc1c76b1149df9dc5ef371e63b2a5e9e45dd142b1d711857409cf02496900e4",
     "js/state.js": "2d570886e5f4a77b2de0469e2d166fef860ed6ca744f73d8ef517b0804ceef8f",
     "js/ui.js": "56c668c2c384dfb0dbd4c8283de58027b9f754aeddfd846054ee39f81e89f4c5",
-    "js/camp.js": "668e06f9917c2f4c444984ab2f92ab47462d34462f11e769186f8cd13b133d2d",
+    "js/camp.js": "359d6647f54682f255393d485119295a4b805398c0225271154beefcc5ac3775",
     "js/camp-ui.js": "78066f5d1abf9939ac273252d8d1695b014acc636236ab50b0583cbbc36ed09b",
     "js/story.js": "5d56ba3b6a0b095491ebddf5611410f14fb49360952ad91396cad2080edf64ba",
     "js/story-dev.js": "b837879b3dbf96d3720d4bf555930d5d925e2672d8c73a5cd0bcda36eee1d431",
@@ -39,12 +39,13 @@
     "js/scenes.js": "5001915e54d460eefc300e96b9d1b92ece20a5dcd0cf0a97401fa56e70c5b13d",
     "js/battle-view.js": "6572e0ca7c36de1bd0ba517ee7fa81111dfd738f2dad1ca7f6109bf02b364ca4",
     "js/battle.js": "c7dd7a90428990bb6bf9407a3d49c95b51feb7e1006d0f6089c2d19cf4927aa6",
-    "js/build-sys.js": "8314e6ebed8fff3d45c4dca175aeb5f42f4fdfc650e4f47cbf798b6be791be0f",
+    "js/build-sys.js": "43b293220f249542f7516e57438715018734f5ca7a2d82f8be197ab67a2570a4",
     "js/build-vis.js": "eae13e47844c0698ce48bc69a596c98a323a4460f4c26e5018bf3c142c52e801",
     "js/main.js": "49cf5e8861c28e651b57d44c761774776ae2ae65822d29753a4e3e7436e01a2e",
     "js/stage-cars.js": "f5f89ab2ce482caec87f907a742cf411e23c115f126afcdeaac0b9ee0c2d7d82",
     "text/steam-arena/zh-CN.json": "be195a8d36cc50899e42caa8dd8f2f8d02bb0bebce35103fa1c5130fe1c054b9"
   },
+  "gitAttributesSha256": "87aa5905d4841e83c7955076d249bae876cea9b7a46e4743a4624cef8ff22907",
   "archive": {
     "archivedAt": "2026-10-02T00:52:56.217900+00:00",
     "sources": [

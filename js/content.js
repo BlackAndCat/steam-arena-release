@@ -369,5 +369,7 @@ if (typeof document !== 'undefined' && document.readyState === 'loading' && !win
   window.SA_STAGE_CARS_SCRIPT = true;
   const source = document.currentScript && document.currentScript.src;
   const stageCars = source ? new URL('stage-cars.js', source).href : 'js/stage-cars.js';
-  document.write('<script src="' + stageCars + '"></' + 'script>');
+  // 发行配置已先于本脚本载入；版本参数让正式关卡车改动避开旧静态缓存。
+  const version = SA.RELEASE ? '?v=' + encodeURIComponent(SA.RELEASE_VERSION) : '';
+  document.write('<script src="' + stageCars + version + '"></' + 'script>');
 }
