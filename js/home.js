@@ -54,7 +54,7 @@ SA.Home = (() => {
     const brd = h('div', { class: `yard-board ${o.instant ? 'down' : ''}` },
       h('div', { class: 'yb-face px-sk px-sk-board' }, inner),
       UI.img(roller, 2, 'position:absolute;left:0;top:-6px'),
-      canBack ? h('button', { class: 'yb-pull px-hot', title: '收起黑板，回院子（Esc）', onclick: closeBoard }, UI.img(ring, 2)) : null);
+      canBack ? h('button', { class: 'yb-pull px-hot', title: SA.Config.text("home_499efc09e582"), onclick: closeBoard }, UI.img(ring, 2)) : null);
     // 回院子：黑板右下拉杆往左扳（js/arena.js）、黑板下沿的拉环、Esc
     stage.append(h('div', { class: 'yard-dim' }), brd);
     if (!o.instant) setTimeout(() => brd.classList.add('down'), 30);   // 先挂上去再下拉，过渡才会播放
@@ -94,14 +94,14 @@ SA.Home = (() => {
     paintCar();
     const probs = stats.problems;
     const br = UI.brackets(cw + 24, chh + 24); br.classList.add('home-br');
-    const carEl = h('div', { class: 'ab home-car', style: `left:${cx - 12}px;top:${cy - 12}px;width:${cw + 24}px;height:${chh + 24}px;padding:12px`, title: '进车间改装', onclick: () => SA.nav('garage') },
+    const carEl = h('div', { class: 'ab home-car', style: `left:${cx - 12}px;top:${cy - 12}px;width:${cw + 24}px;height:${chh + 24}px;padding:12px`, title: SA.Config.text("home_eb748b3c9f79"), onclick: () => SA.nav('garage') },
       carCv, br,
-      h('div', { class: 'home-hint' }, UI.tag(h('span', {}, '进车间改装 →'))),
-      probs.length ? h('div', { style: 'position:absolute;left:0;top:-22px', title: probs.join('\n') }, UI.stamp(`待修 · ${probs.length}`, 'background:#efe4c6')) : null);
+      h('div', { class: 'home-hint' }, UI.tag(h('span', {}, SA.Config.text("home_a9aec0ff1676")))),
+      probs.length ? h('div', { style: 'position:absolute;left:0;top:-22px', title: probs.join('\n') }, UI.stamp(SA.Config.text("home_8b8b24c3d896", `${probs.length}`), 'background:#efe4c6')) : null);
     const cshadow = HS.carShadow(crop(), WX);
     const carShadow = ab(cx + pad + cshadow.ox * cs, cy + pad + cshadow.oy * cs, UI.img(cshadow.c, cs));
     // ---------- 路标：只留出战（街头赛、锦标赛都在出战页里）、车间（朝左指着铺子）、银行 ----------
-    const SIGNS = [['出战', () => SA.nav('arena'), true, true, 1], ['车间', () => SA.nav('garage'), has('garage'), false, -1], ['银行', () => SA.UI.openBank(), has('bank'), false, 1]].filter(s => s[2]);
+    const SIGNS = [[SA.Config.text("arena_a7caf88fcaa9"), () => SA.nav('arena'), true, true, 1], [SA.Config.text("home_98d39d5eed3f"), () => SA.nav('garage'), has('garage'), false, -1], [SA.Config.text("home_920e88c5a602"), () => SA.UI.openBank(), has('bank'), false, 1]].filter(s => s[2]);
     const PX = 1010, POST_TOP = 256, POST_FOOT = 664;
     const signs = SIGNS.map(([t, fn, , go, dir], i) => { const w = 96 + [...t].length * 10 + (go ? 8 : 0);
       return ab(dir > 0 ? PX + 2 : PX - w * 2 + 18, POST_TOP + 20 + i * 96, UI.sign(t, dir, w, { go, onclick: fn, seed: 3 + i * 7 })); });
@@ -121,7 +121,7 @@ SA.Home = (() => {
       return k.c;
     })();
     const ORDER = HS.ORDER, nextWx = ORDER[(ORDER.indexOf(WX) + 1) % ORDER.length];
-    const vaneEl = h('div', { class: 'ab px-hot home-vane', style: `left:${HS.L.vane[0] * 2 - 18}px;top:${HS.L.vane[1] * 2 - 64}px`, title: `天气：${HS.NAME[WX]}（点一下换成${HS.NAME[nextWx]}）`, onclick: () => open(nextWx) }, UI.img(vane, 2));
+    const vaneEl = h('div', { class: 'ab px-hot home-vane', style: `left:${HS.L.vane[0] * 2 - 18}px;top:${HS.L.vane[1] * 2 - 64}px`, title: SA.Config.text("home_8bbca228b6eb", `${HS.NAME[WX]}`, `${HS.NAME[nextWx]}`), onclick: () => open(nextWx) }, UI.img(vane, 2));
     // ---------- 人物（脚落在站位线上）----------
     const fxCv = document.createElement('canvas'); fxCv.width = HS.W; fxCv.height = HS.H; fxCv.className = 'px-img'; fxCv.style.cssText = 'position:absolute;left:0;top:0;width:1280px;height:720px;pointer-events:none';
     const fxG = fxCv.getContext('2d'), t0fx = performance.now();
@@ -134,7 +134,7 @@ SA.Home = (() => {
       who[key] = { box: el, set(f) { const g = cv.getContext('2d'); g.clearRect(0, 0, 56, 56); g.drawImage(f, 0, 0); } }; who[key].set(frame);
       return el;
     };
-    const TOM = '铁匠 老汤姆', REL = '远房亲戚', TIM = '学徒 小提米';
+    const TOM = SA.Config.text("home_8a44e806c998"), REL = SA.Config.text("home_d095d42ab435"), TIM = SA.Config.text("home_21b8ff00a6c9");
     const F_TOM = { up: coal(TOM, { pose: 'cheer', look: 1 }), hit: coal(TOM, { pose: 'point', look: 1 }), rest: coal(TOM, { pose: 'hold', look: 1 }), talk: coal(TOM, { pose: 'hold', look: -1, expr: 'happy' }), blink: coal(TOM, { pose: 'hold', look: 1, expr: 'blink' }) };
     const F_REL = { idle: coal(REL, { pose: 'idle', look: 1 }), blink: coal(REL, { pose: 'idle', look: 1, expr: 'blink' }), talk: coal(REL, { pose: 'salute', look: 1, expr: 'happy' }), sleep: coal(REL, { pose: 'idle', look: 1, expr: 'sleepy' }), jolt: coal(REL, { pose: 'cheer', look: 1, expr: 'surprise' }) };
     // 雨天 / 夜里人回屋（home-scene.js 的 indoor）：老汤姆在门里打铁，一个人在门口台阶上、雨棚底下，一个人在窗后只剩剪影；晴天、雾天都在院子里
@@ -174,13 +174,13 @@ SA.Home = (() => {
     const bubbleAt = (key, yard) => { const w = at(key); if (w === 'yard') return yard(); const b = who[key].box, x0 = parseInt(b.style.left), y0 = parseInt(b.style.top);
       return w === 'window' ? UI.bubble(x0 - 20, y0 - 80, 40) : UI.bubble(x0 + 10, y0 - (w === 'forge' ? 60 : 84), 30); };
     const bubbles = { rel: bubbleAt('rel', () => UI.bubble(30, relTop - 84, 30)), tom: bubbleAt('tom', () => UI.bubble(TOM_X + 30, tomTop - 60, 30)), tim: bubbleAt('tim', () => UI.bubble(timX - 120, timTop - 84, 150)) };
-    const gearBtn = UI.btn(null, { title: '设置', icon: UI.img(X.gear(6, 8, X.RAMP.brass, 0.1)), onclick: () => SA.UI.settings() }); gearBtn.style.padding = '0 2px';
+    const gearBtn = UI.btn(null, { title: SA.Config.text("home_df3d58c7d84b"), icon: UI.img(X.gear(6, 8, X.RAMP.brass, 0.1)), onclick: () => SA.UI.settings() }); gearBtn.style.padding = '0 2px';
     const ingots = Object.entries(D.ingots || {}).filter(([, n]) => n > 0).map(([k, n]) => [k === 'aether' ? 'aether' : 'wootz', n]);
     stage.append(...[
       sparks.map(s => (at('tom') === 'forge' ? ab(SP.anvil[0] * 2 + 16, SP.anvil[1] * 2 - 10, s) : ab(ANVIL_X + 24, FEET - 58, s))), zz,
       bubbles.rel, bubbles.tom, bubbles.tim,
-      h('div', { class: 'ab yb-keep', style: 'left:300px;top:14px' }, h('div', { title: has('bank') ? '银行：借款 / 还款' : '资金', onclick: has('bank') ? () => SA.UI.openBank() : null }, UI.counter({ money: D.money, rep: D.rep, ingotList: ingots, onclick: has('bank') })),
-        D.debt ? h('div', { style: 'margin:6px 0 0 8px' }, UI.tag([h('span', {}, '欠银行'), UI.num(SA.UI.money(D.debt), X.RED)])) : null),
+      h('div', { class: 'ab yb-keep', style: 'left:300px;top:14px' }, h('div', { title: has('bank') ? SA.Config.text("home_285c90f90398") : SA.Config.text("home_4cd1c821039a"), onclick: has('bank') ? () => SA.UI.openBank() : null }, UI.counter({ money: D.money, rep: D.rep, ingotList: ingots, onclick: has('bank') })),
+        D.debt ? h('div', { style: 'margin:6px 0 0 8px' }, UI.tag([h('span', {}, SA.Config.text("home_ffb37d8b01c4")), UI.num(SA.UI.money(D.debt), X.RED)])) : null),
       h('div', { class: 'ab yb-keep', style: 'left:1206px;top:14px' }, gearBtn),
     ].flat(Infinity).filter(Boolean));
     // 闲谈的抽取、章节继承和时间参数由 YardChat 管；这里仅负责原有气泡和人物动画。

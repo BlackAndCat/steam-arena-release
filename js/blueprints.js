@@ -11,25 +11,25 @@ SA.Blueprints = (() => {
   function apply(bp, done) {
     const p = plan(bp);
     if (p.blocked.length) {
-      SA.UI.dialog('蓝图无法应用', [h('p', { style: 'margin-top:0' }, p.blocked.join('；')), h('p', { class: 'muted' }, '唯一件不能购买，只能在对应战斗中缴获。')], [{ label: '知道了', primary: true }]);
+      SA.UI.dialog(SA.Config.text("blueprints_257e2665f40c"), [h('p', { style: 'margin-top:0' }, p.blocked.join('；')), h('p', { class: 'muted' }, SA.Config.text("blueprints_3d0d1595f7f2"))], [{ label: SA.Config.text("ui_de32e20193ad"), primary: true }]);
       return;
     }
     const run = () => {
       SA.S.Blueprints.applyPlan(p);
-      SA.UI.toast(`已按「${bp.name}」改装${p.scrap ? `，损毁件回收 ${money(p.scrap)}` : ''}`);
+      SA.UI.toast(SA.Config.text("blueprints_bc64624ea5d9", `${bp.name}`, `${p.scrap ? SA.Config.text("blueprints_b556bb92bc09", `${money(p.scrap)}`) : ''}`));
       if (done) done();
     };
     const lines = [
-      h('p', {}, `车上现有的模块会先拆回库存，再按蓝图「${bp.name}」重新组装。`),
+      h('p', {}, SA.Config.text("blueprints_3f1f91257f45", `${bp.name}`)),
       Object.keys(p.buy).length ? h('div', { class: 'list', style: 'margin-bottom:8px' }, Object.entries(p.buy).map(([id, n]) =>
         h('div', { class: 'dlg-item', style: 'margin:0' }, SA.SPR.moduleCanvas(id, 0.6), `${M[id].name} ×${n}`, h('span', { class: 'gold', style: 'margin-left:auto' }, money(SA.buyPrice(id) * n))))) : null,
-      p.fixCost ? h('p', { class: 'muted' }, `用不上的受损模块修好后放回库存：${money(p.fixCost)}`) : null,
+      p.fixCost ? h('p', { class: 'muted' }, SA.Config.text("blueprints_4cc91b2dcf71", `${money(p.fixCost)}`)) : null,
     ];
     if (!p.cost) {
-      SA.UI.dialog(`应用蓝图`, [lines, h('p', { class: 'muted' }, '库存够用，不需要花钱。')], [{ label: '应用', primary: true, onClick: run }]);
+      SA.UI.dialog(SA.Config.text("blueprints_3bf632c1c10b"), [lines, h('p', { class: 'muted' }, SA.Config.text("blueprints_fcfecbaed27e"))], [{ label: SA.Config.text("editor_63c73c4730f4"), primary: true, onClick: run }]);
       return;
     }
-    SA.UI.pay({ title: '应用蓝图', amount: p.cost, lines, okLabel: '应用', onPaid: run });
+    SA.UI.pay({ title: SA.Config.text("blueprints_3bf632c1c10b"), amount: p.cost, lines, okLabel: SA.Config.text("editor_63c73c4730f4"), onPaid: run });
   }
 
   return { all, save, overwrite, del, rename, mine, official, plan, apply, importCode, share };

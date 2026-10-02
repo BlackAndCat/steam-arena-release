@@ -3,36 +3,44 @@
   "game": "steam-arena",
   "locale": "zh-CN",
   "values": {
-    "dom:main::screen:arena::div#app/main#screen/div.arena.px-ui:n1/section.ar-board.px-sk:n1/div.ch-list:n1/button:key:arena%3Acamp%3A0%2C0/span.who:n3::text:0": "",
-    "dom:main::screen:garage::div#app/main#screen/div.ed:n1/div.ed-main:n1/div.ed-dock:n2/div.dock-ctx:n1/div.info:n1/div.sub:n2::text:0": "左键放置模块；右键取消",
     "story:opening": "[{\"text\":\"你正在睡觉，伦敦的春季酷烈无情，冷风像一颗颗钉子从门缝吹进来。你像无数普通人一样背井离乡，身无分文。\",\"scene\":\"sleep\"},{\"text\":\"就在你于梦中探寻着家中的厨房时，你的窝棚门突然被打开了——\",\"scene\":\"roof\"},{\"text\":\"许久未见的远房亲戚滚了进来……还有你的房东铁匠。\",\"scene\":\"roll\"},{\"text\":\"为了女皇的寿辰！现在继承我的战车，赢取荣耀吧！\",\"who\":\"uncle\",\"scene\":\"car\"},{\"text\":\"……和奖金！\",\"who\":\"smith\"}]",
     "story:tutorial.intro": "[{\"text\":\"女皇的寿辰在即，十年一遇的大竞技赛就要开始了。我们得抓紧时间训练，好在生日宴那天出现在竞技场上。\",\"who\":\"uncle\"},{\"text\":\"我给你找来了我的徒弟提米对练，小心别把他打伤了！\",\"who\":\"smith\"}]",
     "story:tutorial.parts.0": "[{\"text\":\"驾驶舱：一切的核心，就像心脏。失去了它你就输了。\",\"who\":\"uncle\"}]",
     "story:tutorial.parts.1": "[{\"text\":\"履带：本世纪最好的发明。\"},{\"text\":\"……上个世纪的。\",\"who\":\"smith\"}]",
     "story:tutorial.parts.2": "[{\"text\":\"锅炉：一切的核心，就像心脏。失去了它你就输了。\",\"who\":\"uncle\"},{\"text\":\"……我刚刚是不是这么说过？\",\"who\":\"uncle\"}]",
     "story:tutorial.parts.3": "[{\"text\":\"机枪：别担心，这是训练用弹！\"},{\"text\":\"只是打在身上……会有点疼。\",\"who\":\"smith\"}]",
-    "home:chat:pool:stage:0:1": "[]",
-    "home:chat:settings": "{\"intervalSec\":6,\"bubbleSec\":6,\"replySec\":3.3}",
-    "home:chat:pool:stage:0:0": "[]",
-    "home:chat:pool:chapter:0": "[]",
-    "home:chat:pool:global": "[]",
-    "story:before.0,2": "[{\"text\":\"哦——老家伙，你的小朋友还真是有两把刷子，这回该换我上场了！\",\"who\":\"smith\"}]",
     "story:stage.0,0.win": "[]",
     "story:stage.0,0.lose": "[]",
     "story:stage.0,1.win": "[]",
+    "story:stage.0,1.lose": "[]",
+    "story:stage.0,2.win": "[]",
+    "story:stage.0,2.lose": "[]",
+    "story:before.0,2": "[{\"text\":\"哦——老家伙，你的小朋友还真是有两把刷子，这回该换我上场了！\",\"who\":\"smith\"}]",
     "story:feat.garage": "[{\"text\":\"你现在可以使用车间了，为了大不列颠女皇的荣耀！\",\"who\":\"uncle\"},{\"text\":\"我们得有一辆好车。\",\"who\":\"uncle\"},{\"text\":\"所以你的车为什么这么破？\",\"who\":\"smith\"},{\"text\":\"说来话长……说来话长……\",\"who\":\"uncle\"}]",
     "story:feat.shop": "[{\"text\":\"商店开张了：你可以从汤姆那里直接买到新零件，当然要付钱……\",\"who\":\"uncle\"},{\"text\":\"真是个吝啬鬼（小声）\",\"who\":\"uncle\"},{\"text\":\"你还欠着我的钱呢！\",\"who\":\"smith\"}]",
     "story:feat.street": "[]",
     "story:feat.bank": "[{\"text\":\"哦！看看这是什么？伦敦银行的开户信息，现在你可以借钱了！\",\"who\":\"uncle\"},{\"text\":\"那我的欠款……\",\"who\":\"smith\"},{\"text\":\"哦！瞧我这记性，该去喝酒了！\",\"who\":\"uncle\"}]",
-    "story:stage.0,2.win": "[]",
-    "story:stage.0,2.lose": "[]",
-    "story:stage.0,1.lose": "[]",
+    "story:feat.side": "[\"侧挂层开放了：车身侧面也能挂零件了。\"]",
     "story:feat.upgrade": "[]",
-    "story:feat.blueprints": "[]",
-    "story:feat.bet": "[]",
     "story:feat.orders": "[]",
+    "story:feat.bet": "[]",
+    "story:feat.blueprints": "[]",
     "story:feat.friendly": "[]",
     "story:feat.season": "[]",
+    "home:chat:pool:default": "[{\"id\":\"base-1\",\"name\":\"想当年在孟买，我们的蒸汽车能拖动一整个炮\",\"weight\":1,\"cooldownSec\":0,\"weather\":\"any\",\"lines\":[{\"who\":\"rel\",\"text\":\"想当年在孟买，我们的蒸汽车能拖动一整个炮兵连！\",\"action\":\"talk\"}]},{\"id\":\"rain-1\",\"name\":\"下雨天我这老寒腿就知道——要打仗了！\",\"weight\":1,\"cooldownSec\":0,\"weather\":\"rain\",\"lines\":[{\"who\":\"rel\",\"text\":\"下雨天我这老寒腿就知道——要打仗了！\",\"action\":\"talk\"}]},{\"id\":\"night-1\",\"name\":\"我来守夜！……就是院子有点黑。\",\"weight\":1,\"cooldownSec\":0,\"weather\":\"night\",\"lines\":[{\"who\":\"tim\",\"text\":\"我来守夜！……就是院子有点黑。\",\"action\":\"talk\"}]},{\"id\":\"base-2\",\"name\":\"你那台车？早锈成门把手了。\",\"weight\":1,\"cooldownSec\":0,\"weather\":\"any\",\"lines\":[{\"who\":\"tom\",\"text\":\"你那台车？早锈成门把手了。\",\"action\":\"talk\"}]},{\"id\":\"base-3\",\"name\":\"师傅！锅炉又在漏气！\",\"weight\":1,\"cooldownSec\":0,\"weather\":\"any\",\"lines\":[{\"who\":\"tim\",\"text\":\"师傅！锅炉又在漏气！\",\"action\":\"yelp\"}]},{\"id\":\"rain-2\",\"name\":\"师傅，雨什么时候停呀？\",\"weight\":1,\"cooldownSec\":0,\"weather\":\"rain\",\"lines\":[{\"who\":\"tim\",\"text\":\"师傅，雨什么时候停呀？\",\"action\":\"talk\"}]},{\"id\":\"night-2\",\"name\":\"夜里看火色最准。\",\"weight\":1,\"cooldownSec\":0,\"weather\":\"night\",\"lines\":[{\"who\":\"tom\",\"text\":\"夜里看火色最准。\",\"action\":\"talk\"}]},{\"id\":\"base-4\",\"name\":\"拿扳手拧紧，别拿脑袋顶着。\",\"weight\":1,\"cooldownSec\":0,\"weather\":\"any\",\"lines\":[{\"who\":\"tom\",\"text\":\"拿扳手拧紧，别拿脑袋顶着。\",\"action\":\"talk\"}]},{\"id\":\"base-5\",\"name\":\"……\",\"weight\":1,\"cooldownSec\":0,\"weather\":\"any\",\"lines\":[{\"who\":\"rel\",\"text\":\"……\",\"action\":\"sleep\"}]},{\"id\":\"rain-3\",\"name\":\"雨天淬火，连水都不用挑。\",\"weight\":1,\"cooldownSec\":0,\"weather\":\"rain\",\"lines\":[{\"who\":\"tom\",\"text\":\"雨天淬火，连水都不用挑。\",\"action\":\"talk\"}]},{\"id\":\"night-3\",\"name\":\"……呼……\",\"weight\":1,\"cooldownSec\":0,\"weather\":\"night\",\"lines\":[{\"who\":\"rel\",\"text\":\"……呼……\",\"action\":\"sleep\"}]},{\"id\":\"base-6\",\"name\":\"谁？！谁在开炮？！\",\"weight\":1,\"cooldownSec\":0,\"weather\":\"any\",\"lines\":[{\"who\":\"rel\",\"text\":\"谁？！谁在开炮？！\",\"action\":\"jolt\"}]},{\"id\":\"base-7\",\"name\":\"「{关卡名}」？别慌，车顶住了就行。\",\"weight\":1,\"cooldownSec\":0,\"weather\":\"any\",\"lines\":[{\"who\":\"tom\",\"text\":\"「{关卡名}」？别慌，车顶住了就行。\",\"action\":\"talk\"}]},{\"id\":\"base-8\",\"name\":\"我在锅炉上画了个笑脸！\",\"weight\":1,\"cooldownSec\":0,\"weather\":\"any\",\"lines\":[{\"who\":\"tim\",\"text\":\"我在锅炉上画了个笑脸！\",\"action\":\"talk\"}]}]",
+    "home:chat:settings": "{\"intervalSec\":6,\"bubbleSec\":6,\"replySec\":3.3}",
+    "home:tip:template:tomProblems": "车还有问题：{问题}。先去车间弄好。",
+    "home:tip:template:tomStage": "下一场是「{关卡名}」，{车手}开的。车况不错，去吧。",
+    "home:tip:template:tomComplete": "车况不错。锦标赛就等你了。",
+    "home:tip:template:rel": "要打哪场，去路标那儿拉下黑板看！打过的我给你划掉了！",
+    "home:tip:template:tim": "要改装就点车！",
+    "home:tip:template:noStage": "锦标赛可不比后巷，别给我丢人。",
+    "dom:main::screen:arena::div#app/main#screen/div.arena.px-ui:n1/section.ar-board.px-sk:n1/div.ch-list:n1/button:key:arena%3Acamp%3A0%2C0/span.who:n3::text:0": "",
+    "dom:main::screen:garage::div#app/main#screen/div.ed:n1/div.ed-main:n1/div.ed-dock:n2/div.dock-ctx:n1/div.info:n1/div.sub:n2::text:0": "左键放置模块；右键取消",
+    "home:chat:pool:stage:0:1": "[]",
+    "home:chat:pool:stage:0:0": "[]",
+    "home:chat:pool:chapter:0": "[]",
+    "home:chat:pool:global": "[]",
     "story:after.0,0": "[{\"text\":\"哦看看我忘记了什么，水罐！虽说没有水也能运行一阵子，时间久了锅炉会把你烤熟的！就像我在孟买的那次……\",\"who\":\"uncle\"},{\"text\":\"老朋友……你的破车为什么连水罐都没有就开过来了？\",\"who\":\"smith\"},{\"text\":\"你的车也没有水罐啊！\",\"who\":\"uncle\"},{\"text\":\"那是我徒弟的车，他才刚刚开始学呢！\",\"who\":\"smith\"}]",
     "dom:main::screen:garage::div#modal/div.panel:n1/div.panel-body:n2/div.help:n1/p:n1::text:0": "1. 从模块清单选择模块，移动到格子上使用左键放置。",
     "dom:main::screen:garage::div#modal/div.panel:n1/div.panel-body:n2/div.help:n1/p:n2::text:0": "2. 选中时，使用右键取消当前操作。",
@@ -72,6 +80,34 @@
     "main::screen:garage::div#app/main#screen/div.ed:n1/div.ed-main:n1/div.ed-dock:n2/div.dock-ctx:n1/div.info:n1/div:n1/span.chip.rp-chip:n2",
     "main::screen:garage::div#modal/div.panel:n1/div.panel-body:n2/div.help:n1/p:n3"
   ],
-  "updatedAt": "2026-10-02T00:41:52.826631+00:00",
-  "edited": true
+  "storyMeta": {
+    "cast": {
+      "uncle": {
+        "name": "远房亲戚",
+        "coal": "远房亲戚"
+      },
+      "smith": {
+        "name": "铁匠 老汤姆",
+        "coal": "铁匠 老汤姆"
+      }
+    },
+    "tutorialParts": [
+      {
+        "part": "cockpit",
+        "label": "驾驶舱"
+      },
+      {
+        "part": "track",
+        "label": "履带"
+      },
+      {
+        "part": "boiler",
+        "label": "锅炉"
+      },
+      {
+        "part": "mg",
+        "label": "机枪"
+      }
+    ]
+  }
 }

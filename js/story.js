@@ -1,66 +1,25 @@
 // 剧情：开始界面、开场、像素风对话框（galgame 式）、第一关战斗教程的台词、过关后的提示。
-// 画面都是程序化像素画；台词集中在 SA.STORY，改文案只改这里。
+// 画面都是程序化像素画；台词从 config/text.json 读取。
 // 看过哪些剧情单独记在 localStorage（steam_arena_story_v1），不动存档格式；SA.reset() 时一起清掉。
 window.SA = window.SA || {};
 
-SA.STORY = {
-  // coal = js/coal.js 阵容里的名字（头像和小人按它画）。铁匠总是和远房亲戚成双入对：只要有他的台词，对话框就同时摆出两个人的头像
-  cast: { uncle: { name: '远房亲戚', coal: '远房亲戚' }, smith: { name: '铁匠 老汤姆', coal: '铁匠 老汤姆' } },
-  // 开场：scene 是开场画面的分镜（见 drawScene）
-  opening: [
-    { text: '你从睡梦中醒来，身无分文。', scene: 'sleep' },
-    { text: '你的窝棚突然被掀开了——', scene: 'roof' },
-    { text: '许久未见的远房亲戚骨碌碌滚了进来，后面还跟着一个独眼铁匠。', scene: 'roll' },
-    { who: 'uncle', text: '我老了，现在继承我的战车吧！', scene: 'car' },
-    { who: 'smith', text: '……车是我拿铁匠铺的边角料拼的。锅炉已经给你烧热了。' },
-    { who: 'uncle', text: '这是老汤姆，我的老战友。他说话少，焊得好。' },
-  ],
-  // 第一关开战前：先旁白，再用箭头逐个指着玩家初始车上的四件部件讲解。
-  tutorial: {
-    // intro / lines 里的字符串默认是远房亲戚说的；{ who: 'smith' } 是老汤姆在旁边补的一句
-    intro: ['我找来了小提米和你对练，作为大英帝国的军人，我相信实战是最好的老师！',
-      { who: 'smith', text: '车是我拼的，小提米是我徒弟。两个都别给我打坏了。' }],
-    parts: [
-      { part: 'cockpit', label: '驾驶舱', lines: ['这是你的驾驶舱。它被毁，战斗就输了。'] },
-      { part: 'track', label: '履带', lines: ['这是你的履带。用 A/D 驾车移动，断了履带就走不动了。'] },
-      { part: 'boiler', label: '锅炉', lines: ['这是你的锅炉，给车提供动力。', { who: 'smith', text: '我已经烧热了。记得留意给水和机组温度。' }] },
-      { part: 'mg', label: '机枪', lines: ['这是你的机枪。移动鼠标瞄准，按住左键稳住准星；蓄满会自动开火，松手也能开火。', { who: 'smith', text: '训练弹是我拿铆钉磨圆的。' }] },
-    ],
-  },
-  // 过关提示：stage 按「章,场」写专属台词；feat 按新开放的功能写（战役顺序调整后也跟着功能走）
-  stage: {
-    '0,0': {
-      win: ['好！小提米已经哭着跑回铁匠铺了。这才像我们家的人。', { who: 'smith', text: '我徒弟没哭。……他只是眼睛进了煤灰。' }],
-      lose: ['训练弹打不死人——你看，你还活着。', { who: 'smith', text: '车我拖回去了。天亮之前给你焊好。' }, '把车修一修，再去和小提米打一场！'],
-    },
-    '0,1': {
-      win: ['看见没有？甲片挡住的地方打不动，就绕过去打它没挡住的地方。兵法！', { who: 'smith', text: '那块甲片是我给艾达焊的。……焊歪了一点，你打的就是那一点。' }],
-      lose: [{ who: 'smith', text: '甲片是我焊的。驾驶舱上面那块，左边薄。' }, '听见没有？找缝！我当年在克里米亚就是这么……', { who: 'smith', text: '……他在克里米亚管的是伙房。' }],
-    },
-    '0,2': {
-      win: ['连老汤姆都服了你。铁匠铺后院已经装不下你了。', { who: 'smith', text: '……铲斗归你了。别拿它铲我的煤堆。' }, '他的意思是：去后巷吧，那儿才有真正的比赛。'],
-      lose: ['汤姆！对自家孩子也下这么重的手？', { who: 'smith', text: '战场上没有自家孩子。车拖回来，我给你修，不收钱。' }],
-    },
-  },
-  // 战前插入（「章,场」）：和 before.* 剧情插入点对应，只在第一次打这一场时播；开发者模式下可以在剧情编辑器里改。这里的字符串算旁白，角色台词要写 who
-  before: {
-    '0,2': [{ who: 'uncle', text: '最后一场。你的对手是——' }, { who: 'smith', text: '我。' }, { who: 'uncle', text: '……汤姆，你不是说你退休了吗？' }, { who: 'smith', text: '铁匠不退休。上车吧，孩子。我的机炮从不卡壳。' }],
-  },
-  feat: {
-    garage: ['车间现在归你了。首胜领到的小水罐放在库存里，把它装到车上练习冷却。',
-      { who: 'smith', text: '车间就在我铺子后头。工具随便用，别碰我的铁砧。' }],
-    shop: ['商店开张了：库存里没有的零件，直接放上车就是买下来。钱要花在刀刃上！', { who: 'smith', text: '缺零件先问我。……我这儿也收钱。' }],
-    street: ['街头赛开放了：输赢都快，赚点零花钱正好。'],
-    bank: ['银行也肯借钱给你了。我年轻时借过一次，还了二十年。你自己掂量。'],
-    side: ['侧挂层开放了：车身侧面也能挂零件了。'],
-    upgrade: ['改装开放了：给零件加炮盾、加附加装甲，老零件也能再上场。'],
-    orders: ['有人来下委托了：车满足他们的要求，就能交付图纸拿钱，车还是你的。'],
-    bet: ['竞技场开始收赌注了。押自己赢——我当年就是这么输掉半个庄园的。'],
-    blueprints: ['蓝图库开放了：把满意的方案存下来，改坏了一键就能换回来。'],
-    friendly: ['云车库开放了：可以用分享码和别人交换战车的设计。'],
-    season: ['伦敦蒸汽大奖赛给你发请柬了！连胜六轮，你就是全伦敦最好的车手。'],
-  },
-};
+// 正式剧情、角色和教程目标都由统一配置提供；已读进度仍留在玩家本机。
+SA.STORY = (() => {
+  const doc = SA.Config.get('text');
+  const rows = key => JSON.parse(doc.values[`story:${key}`] || '[]');
+  const data = { cast: doc.storyMeta.cast, opening: rows('opening'),
+    tutorial: { intro: rows('tutorial.intro'), parts: doc.storyMeta.tutorialParts.map((part, i) =>
+      ({ ...part, lines: rows(`tutorial.parts.${i}`) })) }, stage: {}, before: {}, after: {}, feat: {} };
+  for (const key of Object.keys(doc.values)) {
+    let match = /^story:stage\.(\d+,\d+)\.(win|lose)$/.exec(key);
+    if (match) { (data.stage[match[1]] ||= {})[match[2]] = rows(key.slice(6)); continue; }
+    match = /^story:(before|after)\.(.+)$/.exec(key);
+    if (match) { data[match[1]][match[2]] = rows(key.slice(6)); continue; }
+    match = /^story:feat\.(.+)$/.exec(key);
+    if (match) data.feat[match[1]] = rows(key.slice(6));
+  }
+  return data;
+})();
 
 SA.Story = (() => {
   const h = SA.h, P = SA.PAL;
@@ -548,7 +507,7 @@ SA.Story = (() => {
   }
 
   // ---------- 流程 ----------
-  // 台词一律经 SA.StoryData.get 读（开发者编辑过的覆盖值优先，SA.STORY 是默认值）；取不到就用默认
+  // 台词一律经 SA.StoryData.get 读；SA.STORY 只是同一配置的结构化运行时视图。
   const lines = (id, fb) => { try { return SA.StoryData ? SA.StoryData.get(id) : fb; } catch (e) { return fb; } };
   // 开场试播使用正式分镜，但结束后只执行编辑器回调，不写进度或进入战斗。
   function previewOpening(rows, next) {

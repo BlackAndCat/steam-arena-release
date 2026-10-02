@@ -2,7 +2,7 @@
 window.SA = window.SA || {};
 
 SA.Street = (() => {
-  const M = SA.MODULES, K = SA.K;
+  const M = SA.MODULES, R = SA.Config.get('rules').street;
   const ri = (n) => Math.floor(Math.random() * n);
   const rnd = (a, b) => a + Math.random() * (b - a);
   const pick = (a) => a[ri(a.length)];
@@ -17,31 +17,31 @@ SA.Street = (() => {
   // 随手拼一台小车：底盘 2~4 格，上面 1~3 层逐层变窄；直射武器只放在每行最前端，不会被己方挡住
   // 按大格（6 × 8）拼，最后换算成子格
   function build(name, big, mt = SA.Camp.maxMat()) {
-    const bg = () => Array.from({ length: 6 }, () => Array(8).fill(null));
+    const bg = () => Array.from({ length: R.gridRows }, () => Array(R.gridCols).fill(null));
     const v = { body: bg(), side: bg() };
-    const last = 5, c0 = 2;
+    const last = R.chassisRow, c0 = R.startCol;
     const maxMt = mt;
-    const chassis = pick(pool(['track', 'quad', 'biped'], maxMt));
+    const chassis = pick(pool(R.chassisPool, maxMt));
     if (!chassis) return null;
-    const w = big ? 3 + ri(3) : 2 + ri(3);
+    const w = (big ? R.bigWidthBase : R.smallWidthBase) + ri(R.widthRange);
     for (let c = c0; c < c0 + w; c++) v.body[last][c] = cell(chassis);
     const spots = [];
     let width = w;
-    const levels = big ? 2 + ri(3) : 1 + ri(3);
+    const levels = (big ? R.bigLevelBase : R.smallLevelBase) + ri(R.levelRange);
     for (let i = 0; i < levels && width > 0; i++) {
       const r = last - 1 - i;
       for (let c = c0; c < c0 + width; c++) {
         const front = c === c0 + width - 1;
-        const structural = pool(['armor', 'armor', 'armor', 'water', 'boiler', 'armor_heavy', 'plate'], maxMt);
+        const structural = pool(R.structurePool, maxMt);
         let id = pick(structural.length ? structural : ['plate']);
-        const weapons = pool(['mg', 'mg', 'cannon', 'cannon_m', 'mortar', 'steamjet', 'flamer', 'harpoon', 'rocket_rack'], maxMt);
-        const indirect = pool(['mortar'], maxMt);
-        if (front && weapons.length && Math.random() < 0.65) id = pick(weapons);
-        else if (!front && indirect.length && Math.random() < 0.1) id = pick(indirect);
+        const weapons = pool(R.weaponPool, maxMt);
+        const indirect = pool(R.indirectPool, maxMt);
+        if (front && weapons.length && Math.random() < R.frontWeaponChance) id = pick(weapons);
+        else if (!front && indirect.length && Math.random() < R.indirectChance) id = pick(indirect);
         v.body[r][c] = cell(id);
         if (!SA.isWeapon(id)) spots.push([r, c]);
       }
-      width -= ri(2);
+      width -= ri(R.narrowRange);
     }
     // 必须有驾驶舱和锅炉
     if (spots.length < 2) return null;
@@ -53,17 +53,16 @@ SA.Street = (() => {
     v.body[kr][kc] = cell(cockpit);
     if (!v.body.some(row => row.some(x => x && x.id === 'boiler'))) { const [br, bc] = spots.pop(); v.body[br][bc] = cell('boiler'); }
     // 偶尔加点花样：车头铲斗 / 撞角 / 侧炮
-    if (chassis !== 'biped' && unlocked('bucket', maxMt) && Math.random() < 0.15) v.body[last][c0 + w] = cell('bucket');
+    if (chassis !== 'biped' && unlocked('bucket', maxMt) && Math.random() < R.bucketChance) v.body[last][c0 + w] = cell('bucket');
     const r1 = last - 1, fr = v.body[r1].reduce((a, x, c) => (x ? c : a), -1);
-    if (fr >= 0 && /^armor/.test(v.body[r1][fr].id) && unlocked('spike', maxMt) && Math.random() < 0.3) v.body[r1][fr + 1] = cell('spike');
-    if (spots.length && unlocked('side_cannon', maxMt) && Math.random() < 0.15) { const [sr, sc] = pick(spots); if (v.body[sr][sc].id !== cockpit) v.side[sr][sc] = cell('side_cannon'); }
+    if (fr >= 0 && /^armor/.test(v.body[r1][fr].id) && unlocked('spike', maxMt) && Math.random() < R.spikeChance) v.body[r1][fr + 1] = cell('spike');
+    if (spots.length && unlocked('side_cannon', maxMt) && Math.random() < R.sideCannonChance) { const [sr, sc] = pick(spots); if (v.body[sr][sc].id !== cockpit) v.side[sr][sc] = cell('side_cannon'); }
     return SA.V.fromBig(name, v.body, v.side);
   }
 
   const myRating = () => SA.V.stats(d().vehicle).rating;
   // 评分上限随战役放大：材料越好，同一档比赛的车也越强
-  const CAP_MUL = [1, 1, 1.35, 1.8, 2.4, 3.1];
-  const cap = (ti) => Math.round(SA.STREET_TIERS[ti].cap * (SA.Camp.done() ? 3.8 : CAP_MUL[SA.Camp.chIndex()] || 1) / 10) * 10;
+  const cap = (ti) => Math.round(SA.STREET_TIERS[ti].cap * (SA.Camp.done() ? R.completedCapMultiplier : R.capMultipliers[SA.Camp.chIndex()] || 1) / R.capStep) * R.capStep;
   const baseFor = (ti) => Math.min(myRating(), cap(ti));
   // 街头小车的材料：已解锁的最好材料，或者低一级
   const withMat = (v, mt) => { SA.V.each(v, (cell) => { if (mt > 1) { cell.mt = mt; cell.hp = SA.mod(cell).hp; } SA.fixCell(cell); }); return v; };
@@ -73,28 +72,25 @@ SA.Street = (() => {
   function makeOffer(ti, used = []) {
     const top = cap(ti);
     const base = baseFor(ti);
-    const goal = Math.min(top, base * rnd(0.88, 1.08));
+    const goal = Math.min(top, base * rnd(R.goalMinimum, R.goalMaximum));
     const maxMt = SA.Camp.maxMat();
     let best = null;
-    for (let k = 0; k < 200; k++) {
+    for (let k = 0; k < R.offerAttempts; k++) {
       const mt = Math.max(1, maxMt - (k % 2));
-      const v = build('', goal / SA.MATS[mt].mul > 280 && k % 4 < 2, mt);
+      const v = build('', goal / SA.MATS[mt].mul > R.largeRatingThreshold && k % 4 < 2, mt);
       if (!v) continue;
       withMat(v, mt);
       const s = SA.V.stats(v);
       if (!s.canDeploy || s.blocked.length || s.rating > top) continue;
       const diff = Math.abs(s.rating - goal);
       if (!best || diff < best.diff) best = { diff, v, mt, rating: s.rating };
-      if (diff < goal * 0.03) break;
+      if (diff < goal * R.earlyStopErrorRatio) break;
     }
     if (!best) {   // 兜底：最朴素的小双足
       const fallbackCockpit = unlocked('cockpit', SA.Camp.maxMat()) ? 'K' : 'k';
       const fallbackWeapon = unlocked('cannon', SA.Camp.maxMat()) ? 'C' : 'M';
       const fallbackChassis = unlocked('biped', SA.Camp.maxMat()) ? 'B' : 'T';
-      const fallbackRows = [
-        '........', '........', '........',
-        `...K${fallbackWeapon}...`, '...OA...', `...${fallbackChassis}${fallbackChassis}...`,
-      ];
+      const fallbackRows = R.fallbackRows.map(row => row.replaceAll('{weapon}', fallbackWeapon).replaceAll('{chassis}', fallbackChassis));
       // 兜底蓝图中的每个字母都来自当前解锁池；材料不足时 fromAscii 会按 lowAlt 换成合法小炮。
       fallbackRows[3] = fallbackRows[3].replace('K', fallbackCockpit);
       const v = SA.V.fromAscii('', fallbackRows);
@@ -103,10 +99,10 @@ SA.Street = (() => {
     const pool = SA.STREET_PILOTS.filter(p => !used.includes(p[0]));
     const [pilot, name] = pick(pool.length ? pool : SA.STREET_PILOTS);
     return {
-      tier: ti, pilot, name, base, rating: best.rating, aim: +rnd(0.55, 0.75).toFixed(2),
-      prize: Math.round(best.rating * 0.4 / 5) * 5,   // 奖金只看对手强弱
+      tier: ti, pilot, name, base, rating: best.rating, aim: +rnd(R.aimMinimum, R.aimMaximum).toFixed(2),
+      prize: Math.round(best.rating * R.prizeRatingFactor / R.prizeStep) * R.prizeStep,   // 奖金只看对手强弱
       layout: SA.V.layout(best.v), mt: best.mt,
-      terrain: Math.random() < 0.5 ? 'flat' : pick(SA.TERRAIN_ORDER),   // 街头赛场地随缘
+      terrain: Math.random() < R.flatTerrainChance ? 'flat' : pick(SA.TERRAIN_ORDER),   // 街头赛场地随缘
     };
   }
 
@@ -116,7 +112,7 @@ SA.Street = (() => {
     SA.STREET_TIERS.forEach((tier, ti) => {
       const o = st.offers[ti];
       const base = baseFor(ti);
-      if (force || !o || Math.abs(o.base - base) > base * 0.15) {
+      if (force || !o || Math.abs(o.base - base) > base * R.reofferRatingChange) {
         st.offers[ti] = makeOffer(ti, st.offers.filter((x, j) => x && j !== ti).map(x => x.pilot));
       }
     });

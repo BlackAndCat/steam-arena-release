@@ -28,7 +28,7 @@ SA.BattleView.create = function createBattleView(api) {
     vpart('glance', x, y, back * Math.cos(a) * sp, -Math.sin(a) * sp, 0.3);
     for (let i = 0; i < 2; i++) { const b = vr(0.2, 1.3), v = vr(220, 360); vpart('glance', x, y, back * Math.cos(b) * v * (i ? 1 : -0.6), -Math.sin(b) * v, 0.16); }
     for (let i = 0; i < 9; i++) vpart('spark', x, y, back * vr(20, 190), vr(-220, -20), vr(0.12, 0.3), i % 3 ? P.white : P.brass[3]);
-    B.texts.push({ str: '弹开', x: x + vr(-6, 6), y: y - 34, life: 1, max: 1, col: P.iron[4], plaque: P.glass[2] });
+    B.texts.push({ str: SA.Config.text('battle_view_ricochet'), x: x + vr(-6, 6), y: y - 34, life: 1, max: 1, col: P.iron[4], plaque: P.glass[2] });
   }
   function shatterFx(x, y, cell) {
     if (B.headless || !SHARDS[cell.id]) return;
@@ -49,11 +49,11 @@ SA.BattleView.create = function createBattleView(api) {
     else if (type === 'surrender') {
       surrenderHint(false);
       const e = B.e, why = data.why;
-      SA.UI.dialog(`「${e.name}」挂出了白旗`, [
-        h('p', { style: 'margin-top:0' }, `对手${why}，已经没法再打，请求投降。`),
-        h('p', {}, h('b', {}, '接受：'), '立即获胜，对手剩下的零件原样保留（缴获的选择更多），体面收场额外 ', h('b', {}, '声望 +1'), '。'),
-        h('p', { class: 'muted' }, '拒绝：比赛继续，你可以把它拆得更彻底；这场不会再问第二次。'),
-      ], [{ label: '接受投降', primary: true, onClick: () => api.acceptSurrender() }], '拒绝，继续打', () => api.refuseSurrender());
+      SA.UI.dialog(SA.Config.text('battle_view_surrender_title', e.name), [
+        h('p', { style: 'margin-top:0' }, SA.Config.text('battle_view_surrender_reason', why)),
+        h('p', {}, h('b', {}, SA.Config.text('battle_view_accept_prefix')), SA.Config.text('battle_view_accept_detail'), h('b', {}, SA.Config.text('battle_view_reputation')), SA.Config.text('battle_view_period')),
+        h('p', { class: 'muted' }, SA.Config.text('battle_view_refuse_detail')),
+      ], [{ label: SA.Config.text('battle_view_accept_button'), primary: true, onClick: () => api.acceptSurrender() }], SA.Config.text('battle_view_refuse_button'), () => api.refuseSurrender());
     }
   }
   // ---------- 背景：按场次换场景（js/scenes.js）----------
@@ -270,7 +270,7 @@ SA.BattleView.create = function createBattleView(api) {
     gearReticle(x, y, p.focus, aimT, { fast, ticks, flash, rl });
     if (aimT && aimT.layer === 'side') {   // 瞄的是侧挂层的侧炮：标一下
       g.font = 'bold 13px sans-serif'; g.textAlign = 'left';
-      g.fillStyle = P.black; g.fillText('侧炮', x + 29, y - 13); g.fillStyle = P.white; g.fillText('侧炮', x + 28, y - 14);
+      g.fillStyle = P.black; g.fillText(SA.Config.text('battle_view_side_cannon'), x + 29, y - 13); g.fillStyle = P.white; g.fillText(SA.Config.text('battle_view_side_cannon'), x + 28, y - 14);
     }
   }
 
@@ -569,7 +569,7 @@ SA.BattleView.create = function createBattleView(api) {
     if (hud.sur) { hud.sur.remove(); hud.sur = null; }
     if (!on || !wrap) return;
     hud.sur = h('div', { class: 'bt-sur px-sk px-sk-kraft px-drop' }, SA.PX && SA.PX.ui ? SA.PX.ui.img(SA.PX.pin(), 2, 'position:absolute;left:50%;top:-14px;margin-left:-8px') : '',
-      h('i', {}, '电 报'), h('b', {}, `「${B.e.name}」挂白旗了`), h('span', {}, '点击画面跳过'));
+      h('i', {}, SA.Config.text('battle_view_telegram')), h('b', {}, SA.Config.text('battle_view_surrender_banner', B.e.name)), h('span', {}, SA.Config.text('battle_view_skip_click')));
     hud.stage.append(hud.sur);
   }
 
@@ -832,7 +832,7 @@ SA.BattleView.create = function createBattleView(api) {
     if (c.width !== src.width || c.height !== src.height) { c.width = src.width; c.height = src.height; c.style.width = `${src.width * 2}px`; c.style.height = `${src.height * 2}px`; }
     const x = c.getContext('2d'); x.clearRect(0, 0, c.width, c.height); x.drawImage(src, 0, 0);
   }
-  const LAMPS = [['heat', '过热', P.fire[2]], ['water', '缺水', '#46c2c9'], ['power', '动力', P.fire[2]], ['track', '履带', P.fire[2]], ['gun', '武器', P.fire[2]]];
+  const LAMPS = [['heat', SA.Config.text('battle_view_lamp_heat'), P.fire[2]], ['water', SA.Config.text('battle_view_lamp_water'), '#46c2c9'], ['power', SA.Config.text('battle_view_lamp_power'), P.fire[2]], ['track', SA.Config.text('battle_view_lamp_track'), P.fire[2]], ['gun', SA.Config.text('battle_view_lamp_weapon'), P.fire[2]]];
   function dashboard() {
     const fig = (c, label, cls = '') => h('div', { class: `dash-fig ${cls}` }, c, label ? h('span', {}, label) : null);
     hud.gauge = pxCanvas(); hud.tube = pxCanvas(); hud.hpNum = pxCanvas(); hud.plates = pxCanvas();
@@ -841,31 +841,31 @@ SA.BattleView.create = function createBattleView(api) {
     hud.note = h('div', { class: 'dash-note px-sk px-sk-paper' });
     hud.keys = h('div', { class: 'dash-keys' });
     hud.keySig = null;
-    hud.vent = PXI().btn('紧急泄压', { kind: 'dng', title: '一次性打开安全阀：热量大降，限一次', onclick: () => { if (api.vent()) { hud.vent.disabled = true; hud.vent.className = 'px-btn off'; } } });
+    hud.vent = PXI().btn(SA.Config.text('battle_view_vent'), { kind: 'dng', title: SA.Config.text('battle_view_vent_title'), onclick: () => { if (api.vent()) { hud.vent.disabled = true; hud.vent.className = 'px-btn off'; } } });
     return h('div', { class: 'bt-dash px-sk px-sk-iron' },
       h('div', { class: 'dash-car' },
-        hud.gaugeFig = fig(hud.gauge, '锅炉'), hud.tubeFig = fig(hud.tube, '水'),
+        hud.gaugeFig = fig(hud.gauge, SA.Config.text('battle_view_boiler')), hud.tubeFig = fig(hud.tube, SA.Config.text('battle_view_water')),
         h('div', { class: 'dash-hull' },
-          h('div', { class: 'dash-hp' }, h('span', {}, '装甲'), hud.hpNum), hud.plates,
+          h('div', { class: 'dash-hp' }, h('span', {}, SA.Config.text('battle_view_armor')), hud.hpNum), hud.plates,
           h('div', { class: 'dash-lamps' }, LAMPS.map((_, i) => h('div', { class: 'dash-lamp' }, hud.lamps[i], hud.lampLabels[i]))))),
       h('div', { class: 'dash-mid' }, hud.note, hud.keys),
       h('div', { class: 'dash-act' },
-        h('div', { class: 'dash-vent' }, hud.vent, h('span', { class: 'px-cap' }, '限一次')),
-        PXI().btn('撤退', { title: '撤出比赛（判负）', onclick: () => { if (!B.p.dead) SA.UI.dialog('撤出比赛', h('p', {}, '确定撤出？这会判负。'), [{ label: '撤退', primary: true, onClick: () => { endIntro(); api.retreat(); } }], '继续比赛'); } }),
+        h('div', { class: 'dash-vent' }, hud.vent, h('span', { class: 'px-cap' }, SA.Config.text('battle_view_once'))),
+        PXI().btn(SA.Config.text('battle_view_retreat'), { title: SA.Config.text('battle_view_retreat_title'), onclick: () => { if (!B.p.dead) SA.UI.dialog(SA.Config.text('battle_view_retreat_title_short'), h('p', {}, SA.Config.text('battle_view_retreat_confirm')), [{ label: SA.Config.text('battle_view_retreat'), primary: true, onClick: () => { endIntro(); api.retreat(); } }], SA.Config.text('battle_view_continue')); } }),
         speedSlider()),
-      h('div', { class: 'bt-touch' }, holdBtn('◀ 后退', 'left'), holdBtn('前进 ▶', 'right'), holdBtn('开火', 'fire')));
+      h('div', { class: 'bt-touch' }, holdBtn(SA.Config.text('battle_view_backward'), 'left'), holdBtn(SA.Config.text('battle_view_forward'), 'right'), holdBtn(SA.Config.text('battle_view_fire'), 'fire')));
   }
   // 你的车现在的警报（按紧急程度）：亮哪几盏灯 + 纸条上的红字
   function alertsOf(s) {
     if (s.dead) return [];
     const out = [];
-    if (s.heat / s.heatMax > T.HEAT_ALERT) out.push(['heat', '锅炉过热']);
-    if (s.hold) out.push(['heat', '停火降温中']);
-    if (s.waterMax && s.water <= 0) out.push(['water', '没水了']);
-    else if (s.waterMax && s.water / s.waterMax < T.WATER_LOW_RATIO) out.push(['water', '水快没了']);
-    if (s.supply <= 0) out.push(['power', '失去动力']);
-    if (s.thrown) out.push(['track', '履带掉链，动不了']);
-    if (!s.weapons.some(w => !w.blocked)) out.push(['gun', '没有能开火的武器']);
+    if (s.heat / s.heatMax > T.HEAT_ALERT) out.push(['heat', SA.Config.text('battle_view_alert_heat')]);
+    if (s.hold) out.push(['heat', SA.Config.text('battle_view_alert_cooling')]);
+    if (s.waterMax && s.water <= 0) out.push(['water', SA.Config.text('battle_view_alert_no_water')]);
+    else if (s.waterMax && s.water / s.waterMax < T.WATER_LOW_RATIO) out.push(['water', SA.Config.text('battle_view_alert_low_water')]);
+    if (s.supply <= 0) out.push(['power', SA.Config.text('battle_view_alert_no_power')]);
+    if (s.thrown) out.push(['track', SA.Config.text('battle_view_alert_track')]);
+    if (!s.weapons.some(w => !w.blocked)) out.push(['gun', SA.Config.text('battle_view_alert_no_weapon')]);
     return out;
   }
   // 操作提示属于教程：目前只在序章第一关出现
@@ -873,24 +873,24 @@ SA.BattleView.create = function createBattleView(api) {
   // 纸条：警报（红）> 瞄准出了问题（墨）> 教程提示 > 瞄准的目标和命中率（淡墨）
   function noteOf() {
     const p = B.p;
-    if (p.dead) return ['alert', p.reason || '车瘫了'];
+    if (p.dead) return ['alert', p.reason || SA.Config.text('battle_view_disabled')];
     const al = alertsOf(p);
     if (al.length) return ['alert', [...new Set(al.map(a => a[1]))].join(' · ')];
-    if (!p.sel) return ['warn', '没有可用的武器 · 可以用 A / D 冲撞对手'];
+    if (!p.sel) return ['warn', SA.Config.text('battle_view_no_weapon')];
     const pi = B.previewInfo, aimT = B.aim ? targetAt(B.e, B.aim[0], B.aim[1]) : null;
-    const alt = p.groups.includes('mortar') && p.sel !== 'mortar' ? ' · 换高抛火炮试试' : '';
-    if (pi && pi.blocked) return ['warn', '这组武器全被自己的模块挡住了 · 换一组'];
-    if (pi && pi.over) return ['warn', pi.over === 'high' ? `超出射界：目标太高或太近，炮管抬不到 ${M[p.sel].elev[1]}° 以上${alt}` : '超出射界：炮管压不了那么低'];
-    if (pi && !pi.reach) return ['warn', '超出射程 · 靠近一些'];
-    if (aimT && pi && pi.cover && !pi.hit) return ['warn', pi.cover === 'crate' ? '弹道被货箱挡住 · 打烂它、绕过去，或者换高抛' : `弹道打在土坡上 · 靠近一些${alt || '，或者换高抛'}`];
-    if (aimT && pi && pi.hit && !sameCell(pi.hit, aimT)) return ['warn', `弹道中心会先打到「${M[B.e.v[pi.hit.layer][pi.hit.r][pi.hit.c].id].name}」（橙色角框）${alt}`];
-    if (p.spooling) return ['warn', '锅炉加压中…'];
-    if (tutorialHint()) return ['tut', `A / D 移动 · 鼠标瞄准 · 按住左键稳住准星，松手开火${p.groups.length > 1 ? ' · 数字键换武器' : ''}`];
+    const alt = p.groups.includes('mortar') && p.sel !== 'mortar' ? SA.Config.text('battle_view_try_mortar') : '';
+    if (pi && pi.blocked) return ['warn', SA.Config.text('battle_view_blocked')];
+    if (pi && pi.over) return ['warn', pi.over === 'high' ? SA.Config.text('battle_view_too_high', M[p.sel].elev[1], alt) : SA.Config.text('battle_view_too_low')];
+    if (pi && !pi.reach) return ['warn', SA.Config.text('battle_view_out_of_range')];
+    if (aimT && pi && pi.cover && !pi.hit) return ['warn', pi.cover === 'crate' ? SA.Config.text('battle_view_crate_cover') : SA.Config.text('battle_view_hill_cover', alt || SA.Config.text('battle_view_try_mortar_alt'))];
+    if (aimT && pi && pi.hit && !sameCell(pi.hit, aimT)) return ['warn', SA.Config.text('battle_view_hit_other', M[B.e.v[pi.hit.layer][pi.hit.r][pi.hit.c].id].name, alt)];
+    if (p.spooling) return ['warn', SA.Config.text('battle_view_spooling')];
+    if (tutorialHint()) return ['tut', SA.Config.text('battle_view_tutorial_hint', p.groups.length > 1 ? SA.Config.text('battle_view_weapon_keys') : '')];
     if (!aimT) return ['info', ''];
-    const parts = [aimT.layer === 'side' ? '瞄准 敌方侧炮（只打侧炮）' : `瞄准 敌方${M[B.e.v[aimT.layer][aimT.r][aimT.c].id].name}`];
-    if (pi && pi.chance != null) parts.push(`命中率约 ${pi.chance}%`);
-    else if (pi && M[p.sel].indirect) parts.push(M[p.sel].spread ? '高抛齐射：保留散布' : '高抛：指哪打哪');
-    if (p.fireHeld) parts.push(p.focus >= 1 ? '准星稳住了！' : `稳住 ${Math.round(p.focus * 100)}%`);
+    const parts = [aimT.layer === 'side' ? SA.Config.text('battle_view_aim_side_cannon') : SA.Config.text('battle_view_aim_enemy', M[B.e.v[aimT.layer][aimT.r][aimT.c].id].name)];
+    if (pi && pi.chance != null) parts.push(SA.Config.text('battle_view_hit_chance', pi.chance));
+    else if (pi && M[p.sel].indirect) parts.push(M[p.sel].spread ? SA.Config.text('battle_view_indirect_spread') : SA.Config.text('battle_view_indirect_exact'));
+    if (p.fireHeld) parts.push(p.focus >= 1 ? SA.Config.text('battle_view_focus_ready') : SA.Config.text('battle_view_focus_progress', Math.round(p.focus * 100)));
     return ['info', parts.join(' · ')];
   }
   function updDash() {
@@ -899,11 +899,11 @@ SA.BattleView.create = function createBattleView(api) {
     const heat = p.heat / p.heatMax, hot = heat > T.HEAT_ALERT;
     paint(hud.gauge, `${Math.round(heat * 60)}|${hot && blink}`, () => X.gauge(22, heat, T.HEAT_ALERT, hot && blink));
     hud.gaugeFig.classList.toggle('bad', hot);
-    hud.gaugeFig.title = `锅炉 ${SA.Phys.fmtTemp(SA.Phys.temp(p.heat, p.heatCapacity))} · 热量 ${SA.Phys.fmtHeat(p.heat)} / ${SA.Phys.fmtHeat(p.heatMax)}`;
+    hud.gaugeFig.title = SA.Config.text('battle_view_heat_title', SA.Phys.fmtTemp(SA.Phys.temp(p.heat, p.heatCapacity)), SA.Phys.fmtHeat(p.heat), SA.Phys.fmtHeat(p.heatMax));
     const wf = p.waterMax ? p.water / p.waterMax : 0, low = !p.waterMax || wf < T.WATER_LOW_RATIO;
     paint(hud.tube, `${Math.round(wf * 40)}|${low && blink}`, () => X.tube(46, wf, P.water, low && blink));
     hud.tubeFig.classList.toggle('bad', low);
-    hud.tubeFig.title = p.waterMax ? `冷却水 ${SA.Phys.fmtWater(p.water)} / ${SA.Phys.fmtWater(p.waterMax)}` : '没有水箱';
+    hud.tubeFig.title = p.waterMax ? SA.Config.text('battle_view_water_title', SA.Phys.fmtWater(p.water), SA.Phys.fmtWater(p.waterMax)) : SA.Config.text('battle_view_no_tank');
     let a = 0, m = 0;
     SA.V.each(p.v, (cell) => { a += Math.max(0, cell.hp); m += SA.V.maxHp(cell); });
     const hp = a / Math.max(1, m), pct = Math.round(hp * 100);
@@ -945,7 +945,7 @@ SA.BattleView.create = function createBattleView(api) {
         const n = p.weapons.filter(w => w.cell.id === id).length, isCo = co.includes(id), sel = p.sel === id;
         const bar = h('i');
         hud.bars[id] = bar;
-        hud.keys.append(h('button', { class: `dash-key ${sel ? 'on' : ''} ${off(id) ? 'off' : ''} ${isCo ? 'co' : ''}`, title: `${keyOf(i)} 键 · ${M[id].name} ×${n}${isCo ? ' · 另一名驾驶员在操作' : ''}`, onclick: () => { p.sel = id; } },
+        hud.keys.append(h('button', { class: `dash-key ${sel ? 'on' : ''} ${off(id) ? 'off' : ''} ${isCo ? 'co' : ''}`, title: SA.Config.text('battle_view_weapon_title', keyOf(i), M[id].name, n, isCo ? SA.Config.text('battle_view_copilot') : ''), onclick: () => { p.sel = id; } },
           PXI().num(keyOf(i), sel ? '#2a1a05' : off(id) ? '#6f7a8e' : '#e4e0d6'),
           h('span', { class: 't' }, M[id].name), n > 1 ? h('span', { class: 'c' }, `×${n}`) : null,
           h('b', { class: 'rl' }, bar)));
@@ -987,10 +987,10 @@ SA.BattleView.create = function createBattleView(api) {
   function gameSpeed() { try { const v = parseFloat(localStorage.getItem(SPEED_KEY)); return v > 0 ? v : K.GAME_SPEED; } catch (e) { return K.GAME_SPEED; } }
   function speedSlider() {
     const out = h('b', {}, `${gameSpeed().toFixed(2)}×`);
-    const range = h('input', { type: 'range', min: T.GAME_SPEED_MIN, max: T.GAME_SPEED_MAX, step: T.GAME_SPEED_STEP, value: gameSpeed(), 'aria-label': '游戏速度',
+    const range = h('input', { type: 'range', min: T.GAME_SPEED_MIN, max: T.GAME_SPEED_MAX, step: T.GAME_SPEED_STEP, value: gameSpeed(), 'aria-label': SA.Config.text('battle_view_speed_aria'),
       oninput: () => { B.speed = +range.value; out.textContent = `${B.speed.toFixed(2)}×`; try { localStorage.setItem(SPEED_KEY, String(B.speed)); } catch (e) { /* ignore */ } },
       onchange: () => range.blur() });
-    return h('label', { class: 'bt-speed', title: '游戏速度：拖动试试什么节奏合适' }, '速度', range, out);
+    return h('label', { class: 'bt-speed', title: SA.Config.text('battle_view_speed_title') }, SA.Config.text('battle_view_speed'), range, out);
   }
 
   function holdBtn(label, key) {
@@ -1245,16 +1245,16 @@ SA.BattleView.create = function createBattleView(api) {
       dg.scale(sc, sc);
       dg.font = '900 64px "Microsoft YaHei", "PingFang SC", sans-serif';
       dg.textAlign = 'center'; dg.textBaseline = 'middle';
-      dg.lineJoin = 'miter'; dg.lineWidth = 12; dg.strokeStyle = P.black; dg.strokeText('开 战 ！', 0, 0);
-      dg.fillStyle = P.brass[0]; dg.fillText('开 战 ！', 4, 4);
-      dg.fillStyle = P.brass[3]; dg.fillText('开 战 ！', 0, 0);
+      dg.lineJoin = 'miter'; dg.lineWidth = 12; dg.strokeStyle = P.black; dg.strokeText(SA.Config.text('battle_view_start'), 0, 0);
+      dg.fillStyle = P.brass[0]; dg.fillText(SA.Config.text('battle_view_start'), 4, 4);
+      dg.fillStyle = P.brass[3]; dg.fillText(SA.Config.text('battle_view_start'), 0, 0);
       dg.restore();
       dg.globalAlpha = 1;
     }
     // 右下角提示：可以跳过
     if (t < CINE.fade) {
       dg.font = '12px "Microsoft YaHei", sans-serif'; dg.textAlign = 'right'; dg.textBaseline = 'alphabetic';
-      dg.fillStyle = P.steam[1]; dg.fillText('点击或按空格跳过', W - 16, H - 16);
+      dg.fillStyle = P.steam[1]; dg.fillText(SA.Config.text('battle_view_skip_intro'), W - 16, H - 16);
       dg.textAlign = 'start';
     }
   }
@@ -1274,10 +1274,10 @@ SA.BattleView.create = function createBattleView(api) {
     const hasPX = !!(SA.PX && SA.PX.ui);
     if (hasPX) SA.PX.init();
     hud.drum = pxCanvas();
-    const where = `${B.opts.mode === 'side' ? '竞技场外 · ' : B.opts.replay ? '重打 · ' : ''}${B.ter.def.name}`;
+    const where = `${B.opts.mode === 'side' ? SA.Config.text('battle_view_outside_prefix') : B.opts.replay ? SA.Config.text('battle_view_replay_prefix') : ''}${B.ter.def.name}`;
     // 上方压在画面上：左右两块铁名牌（只有名字）+ 正中计时鼓
     hud.top = h('div', { class: 'bt-top' },
-      h('span', { class: 'bt-plate px-sk px-sk-iron' }, `你 · ${B.p.name}`),
+      h('span', { class: 'bt-plate px-sk px-sk-iron' }, SA.Config.text('battle_view_player_name', B.p.name)),
       h('div', { class: 'bt-clock' }, hud.drum, h('span', {}, where)),
       h('span', { class: 'bt-plate px-sk px-sk-iron' }, B.e.name));
     hud.stage = h('div', { class: 'bt-stage' }, cv, hud.top);

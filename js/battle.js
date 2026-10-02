@@ -15,9 +15,10 @@ SA.Battle = (() => {
     'cannon_s', 'cannon_heavy', 'cannon_giant', 'rocket_rack', 'harpoon', 'flamer', 'steamjet', 'mg_s', 'mg_heavy'];
   let B = null;
   let view = null;
-  const CAMERA_ZMIN = 0.62;
+  const CAMERA_ZMIN = SA.Config.get('rules').battle.cameraMinZoom;
   // 投降演出按真实秒数推进，不受战斗倍速影响；先伸杆，再升旗。
-  const SURRENDER_DURATION = 3.5, SURRENDER_POLE_TIME = 1.2;
+  const SURRENDER_DURATION = SA.Config.get('rules').battle.surrenderDurationSec,
+    SURRENDER_POLE_TIME = SA.Config.get('rules').battle.surrenderPoleSec;
 
   // 无画面模拟可以注入固定种子；正常游戏仍使用浏览器的随机数。
   let random = Math.random;
@@ -137,13 +138,13 @@ SA.Battle = (() => {
     if (!s.groups.includes(s.sel)) s.sel = s.groups[0] || null;
     s.pistons = [];
     SA.V.each(s.v, (cell, r, c, layer) => { if (layer === 'body' && alive(cell) && (cell.id === 'piston' || M[cell.id].special === 'hydraulic-bite')) s.pistons.push({ cell, r, c }); });
-    if (!cock) kill(s, '驾驶舱全部被摧毁');
+    if (!cock) kill(s, SA.Config.text("battle_d45a8a5771ea"));
   }
 
   function kill(s, reason) {
     if (s.dead) return;
     s.dead = true; s.reason = reason; s.failureAt = B.t;
-    s.failureType = reason.includes('过热') || reason.includes('锅炉烧干') ? 'overheat' : (reason.includes('水') ? 'dry' : null);
+    s.failureType = reason.includes(SA.Config.text("battle_fe1b451306a3")) || reason.includes(SA.Config.text("battle_9ffc666969e6")) ? 'overheat' : (reason.includes(SA.Config.text("battle_327b54d04f71")) ? 'dry' : null);
     s.fireHeldAtFailure = !!s.fireHeld; s.holdAtFailure = !!s.hold; s.ventAtFailure = !!s.vented;
     s.dir = 0; s.fireHeld = false;
     for (let i = 0; i < 50; i++) emit('part', { type: 'steam', x: s.x + VW / 2 + rnd(-120, 120), y: VY + (s.yo || 0) + 120 + rnd(-90, 90), vx: rnd(-30, 30), vy: rnd(-90, -24), life: rnd(1, 2.2), col: undefined });
@@ -916,7 +917,7 @@ SA.Battle = (() => {
     s.maxHeat = Math.max(s.maxHeat, s.heat);
     s.minWater = Math.min(s.minWater, s.water);
     markTelemetry(s);
-    if (s.heat >= s.heatMax) { kill(s, '机组过热停摆'); return; }
+    if (s.heat >= s.heatMax) { kill(s, SA.Config.text("battle_39f68a635696")); return; }
     const aimPt = isHuman(s) ? B.aim : aiAimPoint(s, o);
     const aiming = s.fireHeld && aimPt && s.power > 0 && !s.hold && !o.dead;
     // 玩家松开按键的这一帧也算开火（提前松手 = 用当前稳定度打出去）
@@ -1084,8 +1085,8 @@ SA.Battle = (() => {
 
   // 失去战斗力：没有动力（锅炉全毁），或者没有能开火的武器。返回原因，否则为 null
   function crippled(s) {
-    if (s.supply <= 0) return '失去动力';
-    if (!s.weapons.some(w => !w.blocked)) return '没有能开火的武器';
+    if (s.supply <= 0) return SA.Config.text("battle_e35b14a75262");
+    if (!s.weapons.some(w => !w.blocked)) return SA.Config.text("battle_3992a84f4604");
     return null;
   }
   // 彻底没法打：开不了火，也撞不了人（有撞击件、有动力、能开动就还算能打）
@@ -1101,8 +1102,8 @@ SA.Battle = (() => {
     if (helpless(e)) return crippled(e);
     if (e.boss) return null;
     const fe = hpFrac(e);
-    if (crippled(e) && fe < T.SURRENDER_CRIPPLED_HP) return `${crippled(e)}，只剩撞击件`;
-    if (fe < T.SURRENDER_LOW_HP && hpFrac(p) >= fe * T.SURRENDER_HP_MULTIPLIER) return '伤得太重，打不下去了';
+    if (crippled(e) && fe < T.SURRENDER_CRIPPLED_HP) return SA.Config.text("battle_92c305567d28", `${crippled(e)}`);
+    if (fe < T.SURRENDER_LOW_HP && hpFrac(p) >= fe * T.SURRENDER_HP_MULTIPLIER) return SA.Config.text("battle_c1e99faef1e7");
     return null;
   }
 
@@ -1169,7 +1170,7 @@ SA.Battle = (() => {
     const why = helpless(p) ? null : quitReason(e, p);
     B.surT = why ? (B.surT || 0) + dt : 0;
     if (B.surT < T.SURRENDER_HOLD_TIME) return;
-    if (B.headless) { B.surrender = 'accepted'; kill(e, `${why}，挂白旗投降`); return; }
+    if (B.headless) { B.surrender = 'accepted'; kill(e, SA.Config.text("battle_979e372e75a8", `${why}`)); return; }
     // 旧画面尚未接入升旗时仍使用即时确认，避免冻结后无人推进演出。
     const animated = !!view?.supportsSurrenderAnimation;
     B.surrender = animated ? 'raising' : 'asked';
@@ -1199,17 +1200,17 @@ SA.Battle = (() => {
   function retreat() {
     if (!B || B.p.dead) return false;
     if (B.surrender === 'raising' || B.surrender === 'asked') return false;
-    kill(B.p, '主动撤出比赛');
+    kill(B.p, SA.Config.text("battle_114d47b4788d"));
     return true;
   }
 
   function acceptSurrender() {
     if (!B || B.surrender !== 'asked') return false;
-    const why = B.surrenderWhy || '已经没法再打';
+    const why = B.surrenderWhy || SA.Config.text("battle_ae17083576e8");
     B.frozen = false;
     B.surrender = 'accepted';
-    kill(B.e, why + '，挂白旗投降');
-    emit('text', { str: '投降', x: B.e.x + VW / 2, y: VY + 40, col: P.white, life: 0.9 });
+    kill(B.e, why + SA.Config.text("battle_c7ce70ac076e"));
+    emit('text', { str: SA.Config.text("battle_08f61250ec4d"), x: B.e.x + VW / 2, y: VY + 40, col: P.white, life: 0.9 });
     return true;
   }
 
@@ -1311,15 +1312,15 @@ SA.Battle = (() => {
       // 武器打光：一方开局有武器、现在全被摧毁，而另一方还有 → 判负；两边同时打光走下面的平手
       // 敌方判负：武器打光 + 水烧干 + 没有近战（撞击件）。这条只对敌方生效，玩家不会因此判负
       const e = B.e;
-      if (!e.dead && !B.p.dead && e.armed && !e.weapons.length && e.water <= 0 && !canMelee(e)) kill(e, '武器打光、水也烧干，又没有近战手段，失去战斗力');
+      if (!e.dead && !B.p.dead && e.armed && !e.weapons.length && e.water <= 0 && !canMelee(e)) kill(e, SA.Config.text("battle_605a242d802d"));
       // 自测时两边都是 AI，这条规则对称生效
       const p = B.p;
-      if (p.isAI && !p.dead && !e.dead && p.armed && !p.weapons.length && p.water <= 0 && !canMelee(p)) kill(p, '武器打光、水也烧干，又没有近战手段，失去战斗力');
+      if (p.isAI && !p.dead && !e.dead && p.armed && !p.weapons.length && p.water <= 0 && !canMelee(p)) kill(p, SA.Config.text("battle_605a242d802d"));
       // 平手：双方都没了动力或没有能开火的武器，且场上没有飞行中的炮弹，持续 T.DRAW_HOLD_TIME 秒
       const both = !B.p.dead && !B.e.dead && crippled(B.p) && crippled(B.e) && !B.shots.length;
       B.drawT = both ? (B.drawT || 0) + dt : 0;
       if (B.drawT >= T.DRAW_HOLD_TIME) {
-        B.draw = `双方都${crippled(B.p) === crippled(B.e) ? crippled(B.p) : '失去了战斗力'}，裁判判定平手`;
+        B.draw = SA.Config.text("battle_2a9b09a1ef95", `${crippled(B.p) === crippled(B.e) ? crippled(B.p) : SA.Config.text("battle_43162559f8f3")}`);
         B.ending = T.ENDING_TIME;
       }
       if (!B.draw && B.t >= K.BATTLE_TIME && !B.p.dead && !B.e.dead) {
@@ -1327,9 +1328,9 @@ SA.Battle = (() => {
         const pScore = (B.p.dealt / Math.max(1, B.e.startHp)) * T.SCORE_DAMAGE_WEIGHT + hpFrac(B.p) * T.SCORE_HP_WEIGHT;
         const eScore = (B.e.dealt / Math.max(1, B.p.startHp)) * T.SCORE_DAMAGE_WEIGHT + hpFrac(B.e) * T.SCORE_HP_WEIGHT;
         B.timeout = { p: pScore, e: eScore };
-        if (Math.abs(pScore - eScore) < T.SCORE_TIE_EPSILON) { B.draw = '时间到，双方按伤害与剩余耐久计算后相同，裁判判平手'; B.ending = T.ENDING_TIME; }
-        else if (pScore > eScore) kill(B.e, '时间到，按 60 / 40 评分判负');
-        else kill(B.p, '时间到，按 60 / 40 评分判负');
+        if (Math.abs(pScore - eScore) < T.SCORE_TIE_EPSILON) { B.draw = SA.Config.text("battle_b4c1399f333d"); B.ending = T.ENDING_TIME; }
+        else if (pScore > eScore) kill(B.e, SA.Config.text("battle_62b0dcd35067"));
+        else kill(B.p, SA.Config.text("battle_62b0dcd35067"));
       }
       if (B.p.dead || B.e.dead) B.ending = B.ending || T.ENDING_TIME;
     } else {
@@ -1373,7 +1374,7 @@ SA.Battle = (() => {
       const key = /^(\d+),(\d+)$/.exec(String(opts.storyKey || ''));
       if (!key || !SA.Camp.stage(Number(key[1]), Number(key[2]))) return false;
     }
-    if (!view) throw new Error('BattleView 未加载');
+    if (!view) throw new Error(SA.Config.text("battle_282b507870d1"));
     view.start(opts);
   }
 
@@ -1411,7 +1412,7 @@ SA.Battle = (() => {
     if (view) view.presentResult({
       // 结算规则和结果弹窗都读取顶层 replay；漏传会把重打胜利误当成当前关卡首次通关。
       mode: B.opts.mode, replay: !!B.opts.replay, opts: B.opts, win, draw, prize: B.opts.prize || 0, enemyName: B.e.name,
-      reason: draw ? B.draw : win ? `「${B.e.name}」${B.e.reason}` : `你的「${B.p.name}」${B.p.reason}`, surrendered: win && B.surrender === 'accepted',
+      reason: draw ? B.draw : win ? `「${B.e.name}」${B.e.reason}` : SA.Config.text("battle_31229846c96d", `${B.p.name}`, `${B.p.reason}`), surrendered: win && B.surrender === 'accepted',
       playerVehicle: shiftVeh(B.p.v, -B.pShift), survivors, dealt: B.p.dealt, taken: B.p.taken, time: B.t, flawless: win && flawless,
       humanId,   // 真人记录的 id：结算弹窗的一键评价按钮用它调 SA.HUMAN_BATTLES.feedback
     });
@@ -1440,7 +1441,7 @@ SA.Battle = (() => {
         feedback(id, value) {
           const raw = localStorage.getItem(KEY), payload = raw ? JSON.parse(raw) : { version: 1, records: [] };
           const row = payload.records.find(item => item.id === id);
-          if (!row || !['好玩', '无聊', '不公平'].includes(value)) return false;
+          if (!row || ![SA.Config.text("battle_21c3183d825b"), SA.Config.text("battle_43932aa17701"), SA.Config.text("battle_c42008a148a6")].includes(value)) return false;
           row.feedback = value; localStorage.setItem(KEY, JSON.stringify(payload)); return true;
         },
         clear() { localStorage.removeItem(KEY); },
@@ -1471,7 +1472,7 @@ SA.Battle = (() => {
       B.e.boss = !!o.eBoss;
       const dt = o.dt || 1 / 30;
       while (!B.done && B.t < K.BATTLE_TIME + 10) step(dt);
-      return B.result || { winner: 'draw', t: B.t, reason: '超时', pDealt: B.p.dealt, eDealt: B.e.dealt, effectStats: { p: B.p.effects, e: B.e.effects }, events: { p: B.p.events, e: B.e.events }, metrics: { ...B.metrics } };
+      return B.result || { winner: 'draw', t: B.t, reason: SA.Config.text("battle_e512cf016f96"), pDealt: B.p.dealt, eDealt: B.e.dealt, effectStats: { p: B.p.effects, e: B.e.effects }, events: { p: B.p.events, e: B.e.events }, metrics: { ...B.metrics } };
     } finally { B = keep; random = previousRandom; }
   }
 

@@ -2,12 +2,9 @@
 // 数据在 content.js 的 SA.CAMPAIGN；存档在 SA.S.d.camp
 window.SA = window.SA || {};
 
-// 关卡车先保存到浏览器本机存档，再尽力同步到 js/stage-cars.js。
-// 这样直接打开 index.html 时也能立即把工作台结果同步到已打开的正式游戏页，
-// 不把本地工具服务器当成保存功能的前置条件。
-const STAGE_CARS_LOCAL_KEY = 'steam_arena_stage_cars_local_v1';
+// 作者关卡保存后通知其他已打开的本机游戏页重新读取正式配置。
 const STAGE_CARS_CHANNEL_NAME = 'steam-arena-stage-cars';
-let stageCarsChannel = null;
+let stageCarsBus = null;
 const FIRST_TANK_REWARD = '0:0:tank_s'; // 修正首关固定奖励的持久化领取记号。
 
 // 关卡标题和车辆铭牌分别保存；旧手工记录没有 vehicleName 时仍沿用原来的关卡名。
@@ -68,92 +65,22 @@ function migrateEvolutionReport(report) {
   return result;
 }
 
-function readLocalStageCars(text) {
-  try {
-    const raw = text === undefined
-      ? (typeof localStorage === 'undefined' ? '' : localStorage.getItem(STAGE_CARS_LOCAL_KEY))
-      : text;
-    if (!raw) return null;
-    const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
-    if (!parsed || typeof parsed !== 'object' || !parsed.records || typeof parsed.records !== 'object' || Array.isArray(parsed.records)) return null;
-    return { version: 1, campaignLayout: parsed.campaignLayout, records: parsed.records, updatedAt: parsed.updatedAt || null };
-  } catch (error) {
-    return null;
-  }
-}
-
-function applyLocalStageCars(payload) {
-  if (!SA.STAGE_CARS || !SA.StageCars) return { ok: false, count: 0 };
-  if (!SA.__STAGE_CARS_FILE_RECORDS) {
-    // 老版生成文件会先把旧第二关覆盖到新位置；恢复新关模板后再按新编号应用手工车。
-    if ((SA.STAGE_CARS.campaignLayout || 1) < SA.CAMPAIGN_LAYOUT && SA.STAGE_CARS.records?.['0:1'])
-      SA.CAMPAIGN[0].stages[1] = { ...SA.PROLOGUE_PLATE_STAGE };
-    SA.__STAGE_CARS_FILE_RECORDS = migrateStageRecords(SA.STAGE_CARS.records, SA.STAGE_CARS.campaignLayout);
-    SA.STAGE_CARS.campaignLayout = SA.CAMPAIGN_LAYOUT;
-    // 手工关卡车的目标随现有战役章节生成，工作台可编辑全部已定义关卡。
-    SA.STAGE_CARS.targets = SA.CAMPAIGN.flatMap((ch, ci) => ch.stages.map((_, si) => `${ci}:${si}`));
-  }
-  // 发行包始终以随包关卡车为准，忽略浏览器旧草稿与工作台广播。
-  const local = SA.RELEASE ? null : arguments.length ? payload : readLocalStageCars();
-  SA.STAGE_CARS.records = { ...SA.__STAGE_CARS_FILE_RECORDS, ...migrateStageRecords(local?.records, local?.campaignLayout) };
-  if (typeof SA.StageCars.applyToCampaign === 'function') SA.StageCars.applyToCampaign();
-  return { ok: !!local, count: Object.keys(local?.records || {}).length };
-}
-
-function refreshStageCarsScreen() {
-  // 正式游戏正在战役列表时立即重画；战斗中不强行切屏，下一次进入战役会读到新车。
-  if (SA.current === 'arena' && SA.Arena?.open) SA.Arena.open(undefined, true);
-  else if (SA.current === 'garage' && SA.Editor?.open) SA.Editor.open();
-  if (SA.UI?.topbar) SA.UI.topbar();
-  if (SA.StoryDev?.refreshConsoleLabel) SA.StoryDev.refreshConsoleLabel();
-}
-
-function openStageCarsChannel() {
-  if (stageCarsChannel || typeof BroadcastChannel !== 'function') return stageCarsChannel;
-  try {
-    stageCarsChannel = new BroadcastChannel(STAGE_CARS_CHANNEL_NAME);
-    stageCarsChannel.onmessage = event => {
-      if (event.data?.type !== 'replace') return;
-      applyLocalStageCars(event.data.payload || null);
-      refreshStageCarsScreen();
-    };
-  } catch (error) {
-    stageCarsChannel = null;
-  }
-  return stageCarsChannel;
-}
-
-function saveLocalStageCars(records) {
-  const payload = { version: 1, campaignLayout: SA.CAMPAIGN_LAYOUT, records, updatedAt: new Date().toISOString() };
-  let localPersisted = false;
-  try {
-    if (typeof localStorage !== 'undefined') {
-      localStorage.setItem(STAGE_CARS_LOCAL_KEY, JSON.stringify(payload));
-      localPersisted = true;
-    }
-  } catch (error) {
-    // 隐私模式或 file:// 策略禁止 localStorage 时，仍尝试用同源频道同步已打开的正式游戏页。
-  }
-  const channel = openStageCarsChannel();
-  let channelSent = false;
-  try {
-    if (channel) { channel.postMessage({ type: 'replace', payload }); channelSent = true; }
-  } catch (error) {
-    channelSent = false;
-  }
-  applyLocalStageCars(payload);
-  return { localPersisted, channelSent, payload };
-}
-
-function installStageCarsLocalSync() {
-  if (typeof window === 'undefined' || window.__SA_STAGE_CARS_LOCAL_SYNC__) return;
-  window.__SA_STAGE_CARS_LOCAL_SYNC__ = true;
-  openStageCarsChannel();
-  window.addEventListener('storage', event => {
-    if (event.key !== STAGE_CARS_LOCAL_KEY) return;
-    applyLocalStageCars(readLocalStageCars(event.newValue));
-    refreshStageCarsScreen();
-  });
+function stageCarsChannel() {
+  if (stageCarsBus || typeof BroadcastChannel !== 'function') return stageCarsBus;
+  stageCarsBus = new BroadcastChannel(STAGE_CARS_CHANNEL_NAME);
+  stageCarsBus.onmessage = event => {
+    if (event.data?.type !== 'saved') return;
+    try {
+      SA.Config.clear('stage-cars');
+      const fresh = SA.Config.get('stage-cars');
+      Object.assign(SA.STAGE_CARS, fresh);
+      SA.StageCars.applyToCampaign();
+      if (SA.current === 'arena' && SA.Arena?.open) SA.Arena.open(undefined, true);
+      else if (SA.current === 'garage' && SA.Editor?.open) SA.Editor.open();
+      SA.UI?.topbar?.();
+    } catch (error) { console.error('关卡配置刷新失败', error); }
+  };
+  return stageCarsBus;
 }
 
 SA.Camp = (() => {
@@ -181,11 +108,6 @@ SA.Camp = (() => {
     if (!o) return null;
     const merged = SA.StageCars ? SA.StageCars.merge(o, ci, si) : { ...o, source: 'original', locked: false, stageCar: null };
     if (!merged.vehicle) merged.vehicle = SA.V.fromAscii(merged.name, merged.rows, merged.sides || [], merged.mt || 1, merged.elite || [], merged.subs || []);
-    // 序章第一关是教学战：保留手工关卡车，但驾驶行为不被历史车记录覆盖。
-    if (ci === 0 && si === 0) {
-      merged.style = 'rookie'; merged.aim = 0.18;
-      merged.unlock = { ...merged.unlock, note: '车间开放：首胜领取一只 1×1 小水罐，装上它练习冷却。' }; // 旧手工备注只在运行时更正，不改用户关卡记录。
-    }
     return { ...merged, ci, si, chapter: ch };
   }
   const current = () => (done() ? null : stage());
@@ -224,11 +146,11 @@ SA.Camp = (() => {
   }
   function unlockLines(u) {
     const out = [];
-    if (u.grid) out.push(`改装台扩建到 ${u.grid.cols} 列 × ${u.grid.rows} 层`);
-    if (u.mat) out.push(`材料「${SA.MATS[u.mat].name}」：属性 ×${SA.MATS[u.mat].mul}，选中车上的模块即可升级`);
-    if (u.mods && u.mods.length) out.push(`新模块：${u.mods.map(id => M[id].name).join('、')}`);
-    if (u.feat && u.feat.length) out.push(`新功能：${u.feat.map(f => SA.FEATURES[f]).join('、')}`);
-    for (const k in u.ingots || {}) out.push(`${SA.INGOTS[k].name} ×${u.ingots[k]}`);
+    if (u.grid) out.push(SA.Config.text('camp_unlock_grid', u.grid.cols, u.grid.rows));
+    if (u.mat) out.push(SA.Config.text('camp_unlock_material', SA.MATS[u.mat].name, SA.MATS[u.mat].mul));
+    if (u.mods && u.mods.length) out.push(SA.Config.text('camp_unlock_modules', u.mods.map(id => M[id].name).join('、')));
+    if (u.feat && u.feat.length) out.push(SA.Config.text('camp_unlock_features', u.feat.map(f => SA.FEATURES[f]).join('、')));
+    for (const k in u.ingots || {}) out.push(SA.Config.text('camp_unlock_ingots', SA.INGOTS[k].name, u.ingots[k]));
     return out;
   }
 
@@ -237,21 +159,21 @@ SA.Camp = (() => {
     const C = c(), st = current();
     const out = { lines: [], unlocks: [] };
     if (!st) return out;
-    if (st.unlock) { applyUnlock(st.unlock); out.unlocks.push({ title: '新功能开放', u: st.unlock }); }
+    if (st.unlock) { applyUnlock(st.unlock); out.unlocks.push({ title: SA.Config.text('camp_new_feature'), u: st.unlock }); }
     // 固定模块奖励只由首次通关发放；读档补解锁和重打均不会经过此处。
     for (const item of st.rewardItems || []) {
       SA.S.addInv(item.id, item.count, item.mt);
-      out.lines.push(`获得 ${M[item.id].name} ×${item.count}`);
+      out.lines.push(SA.Config.text('camp_reward_item', M[item.id].name, item.count));
       if (st.ci === 0 && st.si === 0 && item.id === 'tank_s') (C.rewardClaims ||= {})[FIRST_TANK_REWARD] = true;
     }
     if (st.drop) {
       SA.S.addIngots(st.drop);
-      for (const k in st.drop) out.lines.push(`掉落 ${SA.INGOTS[k].name} ×${st.drop[k]}`);
+      for (const k in st.drop) out.lines.push(SA.Config.text('camp_drop_ingot', SA.INGOTS[k].name, st.drop[k]));
     }
     C.st++;
     if (C.st >= st.chapter.stages.length) {
       applyUnlock(st.chapter.unlock);
-      out.unlocks.push({ title: `${st.chapter.name} · 通关`, u: st.chapter.unlock });
+      out.unlocks.push({ title: SA.Config.text('camp_chapter_clear', st.chapter.name), u: st.chapter.unlock });
       if (C.ch + 1 >= SA.CAMPAIGN.length) { C.done = true; C.st = st.chapter.stages.length; }
       else { C.ch++; C.st = 0; }
     }
@@ -396,28 +318,16 @@ SA.Camp = (() => {
     const check = checkStageCar(chapter, stageIndex, record, v);
     if (!check.ok) throw new Error(`关卡车不能保存：${check.errors.join('；')}`);
     if (check.warnings.length) console.warn(`关卡车保存警告（允许保存）：${check.warnings.join('；')}`);
-    const payload = { version: 1, campaignLayout: SA.CAMPAIGN_LAYOUT, records: { ...(SA.STAGE_CARS.records || {}), [record.id]: record } };
-    // 先落浏览器本机存档并广播，正式游戏页无需重启就能看到这辆车。
-    const local = saveLocalStageCars(payload.records);
-    let response = null;
-    let filePersisted = false;
-    let serverError = null;
-    // file:// 页面没有可写的 HTTP 接口，直接跳过请求，避免保存按钮等待或弹出降级文本。
-    const canWriteFile = typeof location === 'undefined' || !['file:', 'about:'].includes(location.protocol);
-    if (canWriteFile) try {
-      response = await fetch('/__stage-cars/save', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      filePersisted = true;
-    } catch (error) {
-      serverError = error;
-      console.info('关卡车已保存到浏览器本机；未同步 js/stage-cars.js。', error);
-    }
-    // 无论文件同步是否成功，都把当前页的战役对象更新到手工车。
-    applyLocalStageCars(local.payload);
-    return { record, stats: check.stats, warnings: check.warnings, response: response && response.status,
-      // HTTP 来源只有正式文件写入成功才算完整保存；本机草稿单独由 localPersisted 表示。
-      persisted: filePersisted || (!canWriteFile && local.localPersisted), localPersisted: local.localPersisted,
-      channelSent: local.channelSent, filePersisted, serverError };
+    // 磁盘写入成功才替换当前页关卡；失败时编辑车辆留在设计模式中供重试。
+    const response = await fetch('/__stage-cars/save', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ record }),
+    });
+    const saved = await response.json();
+    if (!response.ok || !saved.ok) throw new Error(saved.error || `关卡配置保存失败（HTTP ${response.status}）`);
+    SA.STAGE_CARS.records[record.id] = record;
+    SA.StageCars.applyToCampaign();
+    stageCarsChannel()?.postMessage({ type: 'saved', id: record.id });
+    return { record, stats: check.stats, warnings: check.warnings, response: response.status, filePersisted: true };
   }
 
   const dev = {
@@ -449,11 +359,5 @@ SA.Camp = (() => {
 if (!SA.RELEASE) SA.dev = SA.Camp.dev;
 if (SA.StageCars) {
   supportStageVehicleName();
-  if (!SA.RELEASE) {
-    SA.StageCars.localKey = STAGE_CARS_LOCAL_KEY;
-    SA.StageCars.applyLocal = applyLocalStageCars;
-    SA.StageCars.saveLocal = saveLocalStageCars;
-  }
-  applyLocalStageCars();
-  if (!SA.RELEASE) installStageCarsLocalSync();
+  if (!SA.RELEASE) stageCarsChannel();
 }

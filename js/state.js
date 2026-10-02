@@ -1,17 +1,20 @@
 // 存档与经济
 window.SA = window.SA || {};
+// 可调经济、赛季和随机赛事参数的唯一来源；存档结构与版本号仍由规则代码维护。
+SA.RULES = SA.Config.get('rules');
 
 SA.S = (() => {
+  const ECON = SA.RULES.economy, TOUR = SA.RULES.tournament;
   const KEY = 'steam_arena_save_v2';   // v2：战役 + 材料（v1 的旧存档不再读取）
   const DESIGN_KEY = 'steam_arena_design_v1'; // 设计模式的临时存档，与正式进度完全分开
   let d = null;
 
   // 新档与开发者主动替换共用同一份固定的黄铜四件车配置。
-  function starterVehicle() { return SA.V.fromAscii('一号原型机', SA.STARTER.rows, [], 1, [], SA.STARTER.subs); }
+  function starterVehicle() { return SA.V.fromAscii(SA.RULES.initial.vehicleName, SA.STARTER.rows, [], 1, [], SA.STARTER.subs); }
 
   function fresh() {
     return {
-      money: 300, debt: 0, rep: 0, season: 1, round: 0,
+      money: SA.RULES.initial.money, debt: 0, rep: 0, season: 1, round: 0,
       inv: {}, ingots: {},   // 新档先用四件初始车作教学，首胜再领取小水罐。
       vehicle: starterVehicle(),
       // 领取账本按奖励 key 记；stockCells 保存有身份或迁移耐久的库存实例，inv 仍是供现有车间读取的总件数。
@@ -21,7 +24,7 @@ SA.S = (() => {
       camp: { ch: 0, st: 0, intro: -1, done: false, sideWins: {}, ...JSON.parse(JSON.stringify(SA.CAMP_START)) },
       orders: [], ordersDone: [],
       wins: 0, losses: 0, battles: 0, champion: 0,
-      news: '老汤姆的铁匠铺后院：你的第一台原型机已经点着了锅炉。去「出战」打第一场练习赛。',
+      news: SA.RULES.initial.news,
     };
   }
 
@@ -102,7 +105,7 @@ SA.S = (() => {
 
   // 主动换车时逐件退回原车，保留每件的耐久、等级、唯一身份和外观；其余存档字段不动。
   function replaceWithStarter() {
-    if (!d || !d.vehicle) throw new Error('请先加载存档');
+    if (!d || !d.vehicle) throw new Error(SA.Config.text("state_6082495bfe0b"));
     SA.V.each(d.vehicle, cell => addInv(cell.id, 1, cell.mt || 1, cell));
     d.vehicle = starterVehicle();
     if (SA.Camp?.syncLim) SA.Camp.syncLim();
@@ -154,7 +157,7 @@ SA.S = (() => {
   }
 
   // 银行：每场比赛未还清的债务加收 10% 利息
-  const LOAN_CAP = 1500;
+  const LOAN_CAP = ECON.loanCap;
   const loanRoom = () => Math.max(0, LOAN_CAP - d.debt);
   function borrow(n) {
     if (n <= 0 || n > loanRoom()) return false;
@@ -180,16 +183,16 @@ SA.S = (() => {
   // 终局锦标赛（通关战役后开放）：第 1 赛季对手是镀镍，之后每季升一级材料，封顶以太合金后再加耐久
   function opponent(i = d.round) {
     const o = SA.OPPONENTS[i];
-    const mt = Math.min(SA.MAT_MAX, 3 + d.season);
-    const mul = 1 + Math.max(0, d.season - 3) * 0.2;
-    return { ...o, index: i, hpMul: mul, mt, prize: Math.round(o.prize * (2 + (d.season - 1) * 0.6)), vehicle: SA.V.fromAscii(o.name, o.rows, o.sides, mt) };
+    const mt = Math.min(SA.MAT_MAX, TOUR.materialSeasonOffset + d.season);
+    const mul = 1 + Math.max(0, d.season - TOUR.extraHpAfterSeason) * TOUR.extraHpPerSeason;
+    return { ...o, index: i, hpMul: mul, mt, prize: Math.round(o.prize * (TOUR.prizeBaseMultiplier + (d.season - 1) * TOUR.prizePerSeason)), vehicle: SA.V.fromAscii(o.name, o.rows, o.sides, mt) };
   }
 
   // 赔率：对手评分 / 我方评分
   function odds(ev, hpMul = 1) {
     const me = SA.V.stats(d.vehicle).rating;
     const them = SA.V.stats(SA.V.battleCopy(ev, hpMul, true)).rating;
-    return Math.max(1.15, Math.min(5, +(1.1 + (them / Math.max(1, me)) * 0.9).toFixed(2)));
+    return Math.max(TOUR.oddsMinimum, Math.min(TOUR.oddsMaximum, +(TOUR.oddsBase + (them / Math.max(1, me)) * TOUR.oddsRatingFactor).toFixed(2)));
   }
 
   // 分享码示例：只读内置数据，不写本地“云端”存储；玩家车辆通过蓝图库导入 / 导出分享码。
@@ -249,7 +252,7 @@ SA.S = (() => {
     let scrap = 0;
     const blocked = [];
     SA.V.each(d().vehicle, (cell) => {
-      if (cell.hp <= 0) scrap += Math.round(SA.cellValue({ id: cell.id, mt: cell.mt }) * 0.1);
+      if (cell.hp <= 0) scrap += Math.round(SA.cellValue({ id: cell.id, mt: cell.mt }) * ECON.scrapRate);
       else { const key = identity(cell); (pool[key] = pool[key] || []).push(cell); }
     });
     // 车上的同款模块：材料好的先用，同材料里受损的先用上（保留原耐久）
@@ -261,8 +264,8 @@ SA.S = (() => {
       stock[key] = [];
       for (let mt = SA.MAT_MAX; mt >= 1; mt--) stock[key].push(...stockOptions(id, mt).filter(x => identity(x) === key));
       const miss = Math.max(0, need[key] - (pool[key] || []).length - stock[key].length);
-      if (miss && SA.isUnique(cell)) blocked.push(`${SA.uniqueRule(cell).name || M[id].name}是唯一件，只能通过缴获获得`);
-      else if (miss && ['steamjet', 'flamer'].includes(id) && !SA.S.buyable(id)) blocked.push(`${M[id].name}还没解锁或材料尚未开放`);
+      if (miss && SA.isUnique(cell)) blocked.push(SA.Config.text("state_d1bd62c1d982", `${SA.uniqueRule(cell).name || M[id].name}`));
+      else if (miss && ['steamjet', 'flamer'].includes(id) && !SA.S.buyable(id)) blocked.push(SA.Config.text("state_6514d6c49044", `${M[id].name}`));
       else if (miss) { buy[id] = (buy[id] || 0) + miss; buyCost += miss * SA.buyPrice(id); }
     }
     // 用不上的受损模块要修好才能放回库存
@@ -288,7 +291,7 @@ SA.S = (() => {
         if (cell.unique) restored.unique = cell.unique;
         if (cell.look) restored.look = cell.look;
         SA.S.addInv(cell.id, 1, cell.mt || 1, SA.isUnique(cell) ? restored : null);
-        for (let k = 1; k <= (cell.lv || 0); k++) d().money += Math.round(SA.upCost(cell.id, k) * 0.5);
+        for (let k = 1; k <= (cell.lv || 0); k++) d().money += Math.round(SA.upCost(cell.id, k) * ECON.upgradeRefundRate);
       }
       d().money += p.scrap;
       d().vehicle = p.target;
@@ -338,14 +341,14 @@ SA.S = (() => {
         if (!beaten && !next) return [];
         const stage = SA.Camp.stage(chapterIndex, i);
         const replay = beaten;
-        return [{ key: `${chapterIndex},${i}`, name: stage.name, pilot: stage.pilot, blurb: stage.blurb, v: stage.vehicle, raw: stage.vehicle, hpMul: 1, rating: SA.V.stats(stage.vehicle).rating, prize: replay || stage.rewardMoney === false ? 0 : stage.prize, boss: stage.boss, terrain: stage.terrain || 'flat', bounds: stage.chapter.bounds, replay, next,
-          tag: replay ? ['ok', '可重打'] : next ? ['next', stage.boss ? 'Boss' : '下一场'] : ['no', stage.boss ? 'Boss' : `第 ${i + 1} 场`],
-          title: `第 ${chapterIndex + 1} 章 · 第 ${i + 1} 场 · ${stage.name}`, lock: replay || next ? null : '先完成前面的战役',
+        return [{ key: `${chapterIndex},${i}`, name: stage.name, pilot: stage.pilot, blurb: stage.blurb, v: stage.vehicle, raw: stage.vehicle, hpMul: 1, rating: SA.V.stats(stage.vehicle).rating, prize: replay || !stage.rewardMoney ? 0 : stage.prize, boss: stage.boss, terrain: stage.terrain || 'flat', bounds: stage.chapter.bounds, replay, next,
+          tag: replay ? ['ok', SA.Config.text("state_f75385ead4d2")] : next ? ['next', stage.boss ? 'Boss' : SA.Config.text("state_6439bf33ade5")] : ['no', stage.boss ? 'Boss' : SA.Config.text("state_d3be2b71cc13", `${i + 1}`)],
+          title: SA.Config.text("state_535d83469241", `${chapterIndex + 1}`, `${i + 1}`, `${stage.name}`), lock: replay || next ? null : SA.Config.text("state_0d93414f72c8"),
           // 战前控制台可修改当前关卡；真正开战时再取一次最新数据，剧情编号和重打规则仍固定。
           start: () => {
             const latest = SA.Camp.stage(chapterIndex, i);
             // 本场经济规则随战斗选项固定，结算时不再读取可能已被工作台修改的关卡。
-            SA.Battle.start({ mode: 'campaign', storyKey: `${chapterIndex},${i}`, replay, enemyVehicle: latest.vehicle, enemyName: latest.vehicle?.name || latest.name, aim: latest.aim, style: latest.style, terrain: latest.terrain, bounds: latest.chapter.bounds, boss: latest.boss, hpMul: 1, prize: replay || latest.rewardMoney === false ? 0 : latest.prize, rewardMoney: latest.rewardMoney !== false, victoryRepairFree: latest.victoryRepairFree === true, uniqueLoot: latest.uniqueLoot || [] });
+            SA.Battle.start({ mode: 'campaign', storyKey: `${chapterIndex},${i}`, replay, enemyVehicle: latest.vehicle, enemyName: latest.vehicle?.name || latest.name, aim: latest.aim, style: latest.style, terrain: latest.terrain, bounds: latest.chapter.bounds, boss: latest.boss, hpMul: 1, prize: replay || !latest.rewardMoney ? 0 : latest.prize, rewardMoney: latest.rewardMoney, victoryRepairFree: latest.victoryRepairFree, uniqueLoot: latest.uniqueLoot || [] });
           } }];
       }));
     }
@@ -354,8 +357,8 @@ SA.S = (() => {
       const bv = SA.V.battleCopy(op.vehicle, op.hpMul, true);
       const terrain = SA.TERRAIN_ORDER[i % SA.TERRAIN_ORDER.length];   // 终局锦标赛：六轮六种场地
       return { key: i, name: op.name, pilot: op.pilot, blurb: op.blurb, v: bv, raw: op.vehicle, hpMul: op.hpMul, rating: SA.V.stats(bv).rating, prize: op.prize, terrain,
-        tag: i < D.round ? ['ok', '已击败'] : i === D.round ? ['next', '下一场'] : ['no', `第 ${i + 1} 轮`],
-        title: `第 ${i + 1} 轮 · ${op.name}`, lock: i !== D.round ? (i < D.round ? '已经击败过了' : `先打完第 ${D.round + 1} 轮`) : null,
+        tag: i < D.round ? ['ok', SA.Config.text("state_730671f5a683")] : i === D.round ? ['next', SA.Config.text("state_6439bf33ade5")] : ['no', SA.Config.text("state_1fbfe75a20c3", `${i + 1}`)],
+        title: SA.Config.text("state_f98b29d88349", `${i + 1}`, `${op.name}`), lock: i !== D.round ? (i < D.round ? SA.Config.text("state_5c9b23250da9") : SA.Config.text("state_fa78a106f818", `${D.round + 1}`)) : null,
         start: () => SA.Battle.start({ mode: 'tournament', enemyVehicle: op.vehicle, enemyName: op.name, aim: op.aim, terrain, boss: i === SA.OPPONENTS.length - 1, hpMul: op.hpMul, prize: op.prize }) };
     });
     if (mode === 'street') {
@@ -363,8 +366,8 @@ SA.S = (() => {
       return SA.Street.offers().map((o, i) => {
         const tier = SA.STREET_TIERS[i];
         const v = SA.Street.vehicleOf(o), cap = SA.Street.cap(i);
-        return { key: i, name: o.name, pilot: o.pilot, blurb: '街坊邻居随手拼的小车。赢了拿奖金，不计声望、不影响赛程；损伤照常带回车间。', v, rating: o.rating, prize: o.prize, terrain: o.terrain || 'flat',
-          tag: ['', `上限 ${cap}`], title: `${tier.name} · ${o.name}`, lock: me > cap ? `你的评分 ${me} 超过上限 ${cap}` : null,
+        return { key: i, name: o.name, pilot: o.pilot, blurb: SA.Config.text("state_72c6ba1f6c5b"), v, rating: o.rating, prize: o.prize, terrain: o.terrain || 'flat',
+          tag: ['', SA.Config.text("state_2b94bb840fd2", `${cap}`)], title: `${tier.name} · ${o.name}`, lock: me > cap ? SA.Config.text("state_4ef28d7ca4c7", `${me}`, `${cap}`) : null,
           start: () => SA.Battle.start({ mode: 'street', streetTier: i, enemyVehicle: v, enemyName: o.name, aim: o.aim, terrain: o.terrain, hpMul: 1, prize: o.prize }) };
       });
     }
@@ -377,7 +380,7 @@ SA.S = (() => {
   function cancelBet() { d.money += d.bet.amount; d.bet = null; save(); }
 
   // 战斗结算只更新存档并返回原提示；缴获与解锁弹窗由视觉层按顺序呈现。
-  const drawFee = (prize) => Math.max(5, Math.round(prize * 0.1 / 5) * 5);
+  const drawFee = (prize) => Math.max(ECON.drawFeeMinimum, Math.round(prize * ECON.drawFeeRate / ECON.drawFeeStep) * ECON.drawFeeStep);
   function settleBattle(res) {
     const lines = [], pre = [], money0 = d.money;
     // 旧链接或脚本传入已取消的遭遇战时，不结算战损、奖励或旧档进度。
@@ -388,7 +391,7 @@ SA.S = (() => {
       if (!key || !SA.Camp.stage(Number(key[1]), Number(key[2]))) return { lines, pre, money0 };
     }
     if (res.replay) {
-      d.news = res.win ? `「${d.vehicle.name}」重打击败了「${res.enemyName}」。` : `「${d.vehicle.name}」完成了与「${res.enemyName}」的重打。`;
+      d.news = res.win ? SA.Config.text("state_418ea32bb605", `${d.vehicle.name}`, `${res.enemyName}`) : SA.Config.text("state_fff0caf5f77d", `${d.vehicle.name}`, `${res.enemyName}`);
       save();
       return { lines, pre, money0 };
     }
@@ -407,69 +410,69 @@ SA.S = (() => {
       if (res.draw) {
         const fee = drawFee(res.prize);
         d.money += fee;
-        lines.push(`平手：双方各拿出场费 ${formatMoney(fee)}`);
-        d.news = `「${d.vehicle.name}」在${tier.name}和「${res.enemyName}」打成平手。`;
+        lines.push(SA.Config.text("state_5c577430044b", `${formatMoney(fee)}`));
+        d.news = SA.Config.text("state_573d02ff78fc", `${d.vehicle.name}`, `${tier.name}`, `${res.enemyName}`);
       } else if (res.win) {
         d.money += res.prize; d.wins++;
-        lines.push(`奖金 +${formatMoney(res.prize)}`);
-        d.news = `「${d.vehicle.name}」在${tier.name}赢了「${res.enemyName}」，进账 ${formatMoney(res.prize)}。`;
+        lines.push(SA.Config.text("state_290a6c1d1bac", `${formatMoney(res.prize)}`));
+        d.news = SA.Config.text("state_7c0c433fd8e0", `${d.vehicle.name}`, `${tier.name}`, `${res.enemyName}`, `${formatMoney(res.prize)}`);
       } else {
         d.losses++;
-        d.news = `「${d.vehicle.name}」在${tier.name}输给了「${res.enemyName}」。`;
+        d.news = SA.Config.text("state_473121b65de9", `${d.vehicle.name}`, `${tier.name}`, `${res.enemyName}`);
       }
-      lines.push('街头赛不计声望，也不影响战役进度。');
+      lines.push(SA.Config.text("state_b1f7494b85c2"));
       SA.Street.consume(res.opts.streetTier);
     } else if (res.mode === 'campaign' || res.mode === 'tournament') {
       const camp = res.mode === 'campaign';
-      if (d.debt) { const add = Math.ceil(d.debt * 0.1); d.debt += add; lines.push(`银行利息 +${formatMoney(add)}`); }
+      if (d.debt) { const add = Math.ceil(d.debt * ECON.interestRate); d.debt += add; lines.push(SA.Config.text("state_36815345bf25", `${formatMoney(add)}`)); }
       // 关卡关闭金币时，平局也不发最低 5 金币的出场费；赌注仍按原规则退回。
-      const rewardMoney = !camp || res.opts?.rewardMoney !== false;
+      const rewardMoney = !camp || res.opts?.rewardMoney;
       if (res.draw) {
         if (rewardMoney) {
           const fee = drawFee(res.prize);
           d.money += fee;
-          lines.push(`平手：双方各拿出场费 ${formatMoney(fee)}，这一场要重赛`);
-        } else lines.push('平手：这一场要重赛');
-        if (d.bet) { d.money += d.bet.amount; lines.push(`平局退还赌注 ${formatMoney(d.bet.amount)}`); }
-        d.news = `「${d.vehicle.name}」和「${res.enemyName}」打成平手，择日重赛。`;
+          lines.push(SA.Config.text("state_a6ac8369e030", `${formatMoney(fee)}`));
+        } else lines.push(SA.Config.text("state_d9a135d78404"));
+        if (d.bet) { d.money += d.bet.amount; lines.push(SA.Config.text("state_eff3661cdc95", `${formatMoney(d.bet.amount)}`)); }
+        d.news = SA.Config.text("state_dbdf2560827e", `${d.vehicle.name}`, `${res.enemyName}`);
       } else if (res.win) {
         if (rewardMoney) d.money += res.prize;
         d.wins++;
-        const rep = (res.flawless ? 2 : 1) + (res.surrendered ? 1 : 0);
+        const rep = (res.flawless ? TOUR.flawlessReputation : TOUR.winReputation) + (res.surrendered ? TOUR.surrenderReputation : 0);
         d.rep += rep;
-        if (rewardMoney) lines.push(`奖金 +${formatMoney(res.prize)}`);
-        lines.push(`声望 +${rep}${[res.flawless ? '驾驶舱毫发无损' : '', res.surrendered ? '接受投降，体面收场' : ''].filter(Boolean).map(x => `（${x}）`).join('')}`);
-        if (d.bet) { const pay = Math.round(d.bet.amount * d.bet.odds); d.money += pay; lines.push(`赌注兑现 +${formatMoney(pay)}`); }
+        if (rewardMoney) lines.push(SA.Config.text("state_290a6c1d1bac", `${formatMoney(res.prize)}`));
+        lines.push(SA.Config.text("state_7b32c1800380", `${rep}`, `${[res.flawless ? SA.Config.text("state_d0f66ceb762f") : '', res.surrendered ? SA.Config.text("state_8494a30bb010") : ''].filter(Boolean).map(x => `（${x}）`).join('')}`));
+        if (d.bet) { const pay = Math.round(d.bet.amount * d.bet.odds); d.money += pay; lines.push(SA.Config.text("state_38a6f36039cc", `${formatMoney(pay)}`)); }
         // 缴获：只有你还没有的零件或史诗 / 传奇件；什么都没有就说一声
         const loot = SA.Camp.salvageOptions(res.survivors || []);
         if (loot.length) pre.push({ kind: 'salvage', survivors: res.survivors || [] });
-        else lines.push('对手车上没有你缺的零件，这次没什么可缴获的。');
+        else lines.push(SA.Config.text("state_af3d68d7645f"));
         if (camp) {
           const r = SA.Camp.win();
           lines.push(...r.lines);
           for (const u of r.unlocks) pre.push({ kind: 'unlock', unlock: u });
           const st = SA.Camp.current();
-          d.news = SA.Camp.done() ? (SA.RELEASE ? `「${d.vehicle.name}」完成了当前开放的战役，可以重打已开放的关卡。` : `「${d.vehicle.name}」击败女王号，夺得帝国蒸汽大奖赛冠军！`)
-            : `「${d.vehicle.name}」击败了「${res.enemyName}」。下一场：${SA.CAMPAIGN[st.ci].name} · ${st.name}。`;
+          d.news = SA.Camp.done() ? (SA.RELEASE ? SA.Config.text("state_09092100c0bb", `${d.vehicle.name}`) : SA.Config.text("state_dacfe49efade", `${d.vehicle.name}`))
+            : SA.Config.text("state_affd2276d447", `${d.vehicle.name}`, `${res.enemyName}`, `${SA.CAMPAIGN[st.ci].name}`, `${st.name}`);
         } else {
           d.round++;
           if (d.round >= SA.OPPONENTS.length) {
             d.champion++; d.season++; d.round = 0;
-            SA.S.addIngots({ aether: 1 });
-            lines.push(`🏆 你赢得了第 ${d.season - 1} 赛季冠军！奖励 ${SA.INGOTS.aether.name} ×1。新赛季的对手会换上更好的材料。`);
-            d.news = `「${d.vehicle.name}」夺得伦敦蒸汽大奖赛第 ${d.season - 1} 赛季冠军！`;
+            SA.S.addIngots({ aether: TOUR.championAether });
+            lines.push(SA.Config.text("state_22bb495c0f1e", `${d.season - 1}`, `${SA.INGOTS.aether.name}`));
+            d.news = SA.Config.text("state_ffbd8f26ec18", `${d.vehicle.name}`, `${d.season - 1}`);
           } else {
-            d.news = `「${d.vehicle.name}」击败了「${res.enemyName}」，晋级第 ${d.round + 1} 轮。`;
+            d.news = SA.Config.text("state_86eae551bda0", `${d.vehicle.name}`, `${res.enemyName}`, `${d.round + 1}`);
           }
         }
       } else {
         d.losses++;
-        if (d.bet) lines.push(`赌注 ${formatMoney(d.bet.amount)} 输光了`);
-        d.news = `「${d.vehicle.name}」败给了「${res.enemyName}」。${SA.Camp.has('garage') ? '回车间对症改装，再来。' : '再来一次。'}`;
+        if (d.bet) lines.push(SA.Config.text("state_606dd2cb5e39", `${formatMoney(d.bet.amount)}`));
+        d.news = SA.Config.text("state_5a7f94983b30", `${d.vehicle.name}`, `${res.enemyName}`, `${SA.Camp.has('garage') ? SA.Config.text("state_92ef37250041") : SA.Config.text("state_94a8c6ec0f16")}`);
       }
       d.bet = null;
     } else {
-      lines.push('友谊赛：不结算奖金，也不留下损伤。');
+      lines.push(SA.Config.text("state_19588cbff97b"));
     }
     SA.S.save();
     return { lines, pre, money0 };
@@ -477,8 +480,8 @@ SA.S = (() => {
 
   function stashCell(cell) {
     let back = 0;
-    for (let k = 1; k <= (cell.lv || 0); k++) back += Math.round(SA.upCost(cell.id, k) * 0.5);
-    if (cell.hp <= 0) back += Math.round(SA.cellValue({ id: cell.id, mt: cell.mt }) * 0.1);
+    for (let k = 1; k <= (cell.lv || 0); k++) back += Math.round(SA.upCost(cell.id, k) * ECON.upgradeRefundRate);
+    if (cell.hp <= 0) back += Math.round(SA.cellValue({ id: cell.id, mt: cell.mt }) * ECON.scrapRate);
     else {
       const stock = SA.newCell(cell.id, cell.mt || 1);
       if (cell.unique) stock.unique = cell.unique;
@@ -491,15 +494,15 @@ SA.S = (() => {
 
   // 材料升级：黄铜 → 熟铁 → 钢 → 镀镍（花钱，随战役解锁）→ 乌兹钢 / 以太合金（还要消耗锭 / 结晶）
   function matUpInfo(cell) {
-    if (SA.isUnique(cell)) return { max: true, why: '唯一件材料固定' };
+    if (SA.isUnique(cell)) return { max: true, why: SA.Config.text("state_8c15ed80eb61") };
     const to = (cell.mt || 1) + 1;
-    if (to > SA.maxMt(cell.id)) return { max: true, why: cell.id === 'steamjet' ? '蒸汽喷射器最高为钢材料（T3）；喷火器从镀镍（T4）起另行获得' : '' };
+    if (to > SA.maxMt(cell.id)) return { max: true, why: cell.id === 'steamjet' ? SA.Config.text("state_bf1e5125711d") : '' };
     const mat = SA.MATS[to], cost = SA.matUpCost(cell.id, to);
     if (mat.ingot) {
       const n = d.ingots[mat.ingot] || 0;
-      return { to, mat, cost, ok: n > 0, why: n > 0 ? '' : `需要 ${SA.INGOTS[mat.ingot].name}（Boss 掉落）` };
+      return { to, mat, cost, ok: n > 0, why: n > 0 ? '' : SA.Config.text("state_6f8536e8e182", `${SA.INGOTS[mat.ingot].name}`) };
     }
-    if (to > SA.Camp.maxMat()) return { to, mat, cost, ok: false, why: `${mat.name}还没解锁（推进战役）` };
+    if (to > SA.Camp.maxMat()) return { to, mat, cost, ok: false, why: SA.Config.text("state_e66b1f675beb", `${mat.name}`) };
     return { to, mat, cost, ok: true };
   }
 
@@ -542,12 +545,12 @@ SA.S = (() => {
     cell.lv = lv;
     if (cell.hp > 0) cell.hp += SA.V.maxHp(cell) - before;
   }
-  function renameVehicle(name) { d.vehicle.name = name.trim() || '原型机'; save(); }
+  function renameVehicle(name) { d.vehicle.name = name.trim() || SA.Config.text("state_3a7baff38a97"); save(); }
   function sellStock(id, mt, uniqueKey) {
     // 旧库存行未展示唯一身份；未明确指定 key 时只出售普通件，避免合并行误卖不可再次领取的奖励。
     const cell = takeStock(id, mt, uniqueKey === undefined ? null : uniqueKey);
     if (!cell) return 0;
-    const x = Math.round(SA.cellValue(cell) * 0.5);
+    const x = Math.round(SA.cellValue(cell) * ECON.sellRate);
     d.money += x;
     return x;
   }

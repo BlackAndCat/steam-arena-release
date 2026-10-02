@@ -1,0 +1,1261 @@
+{
+  "version": 1,
+  "campaignLayout": 2,
+  "targets": [
+    "0:0",
+    "0:1",
+    "0:2",
+    "1:0",
+    "1:1",
+    "1:2",
+    "2:0",
+    "2:1",
+    "2:2",
+    "3:0",
+    "3:1",
+    "3:2",
+    "4:0",
+    "4:1",
+    "4:2",
+    "5:0",
+    "5:1",
+    "5:2"
+  ],
+  "records": {
+    "0:0": {
+      "name": "破铜烂铁号",
+      "pilot": "学徒 小提米",
+      "prize": 60,
+      "rewardMoney": false,
+      "victoryRepairFree": true,
+      "aim": 0.35,
+      "style": "rush",
+      "blurb": "铁匠铺学徒拿废料拼的练习车，只有一门机炮，枪法也很烂。放心开火。",
+      "spec": {
+        "terrain": "flat",
+        "reward": "tank_s",
+        "lesson": "认识车间、锅炉和机炮：先学会让车动起来并保护驾驶舱。",
+        "targetStrength": [
+          0.65,
+          0.8
+        ],
+        "performanceMin": 35
+      },
+      "rewardItems": [
+        {
+          "id": "tank_s",
+          "count": 1,
+          "mt": 1
+        }
+      ],
+      "unlock": {
+        "feat": [
+          "garage"
+        ],
+        "mods": [
+          "tank_s"
+        ],
+        "note": "车间开放：库存里有一门机炮和四块铁装甲，再给你一只小水罐练习冷却。"
+      },
+      "version": 1,
+      "id": "0:0",
+      "cells": [
+        [
+          0,
+          8,
+          9,
+          "boiler_s",
+          1,
+          0
+        ],
+        [
+          0,
+          8,
+          10,
+          "mg_s",
+          1,
+          0
+        ],
+        [
+          0,
+          9,
+          10,
+          "helmet",
+          1,
+          0
+        ],
+        [
+          0,
+          10,
+          9,
+          "track",
+          1,
+          0
+        ]
+      ],
+      "code": "SA2.eyJuIjoi6L+b5YyW5YCZ6YCJwrcxLTEtODQwNDLCt+WPmOW8gjQ3MTYxIiwiYiI6W1s4LDksNDRdLFs4LDEwLDQyXSxbOSwxMCwxNl0sWzEwLDksMF1dLCJzIjpbXSwiYSI6MiwicHYiOjIsIm1zIjpbXX0=",
+      "terrain": "flat",
+      "boss": false,
+      "uniqueLoot": [],
+      "weakness": "",
+      "source": "manual",
+      "locked": true,
+      "updatedAt": "2026-09-29T13:25:25.658Z",
+      "rules": "2026-09-28-giant-indirect-module-family",
+      "analysis": {
+        "rating": 73,
+        "value": 340,
+        "weight": 1435,
+        "drive": 0.4,
+        "water": 0,
+        "overheat": 43.5,
+        "dps": 3.733333333333333,
+        "hp": 408
+      },
+      "vehicleName": "破铜烂铁号"
+    },
+    "0:1": {
+      "name": "钉子号",
+      "pilot": "铆工 小艾达",
+      "prize": 0,
+      "rewardMoney": false,
+      "victoryRepairFree": true,
+      "aim": 0.45,
+      "style": "rush",
+      "blurb": "驾驶舱上方焊着一块甲片。观察它护住了哪里，再试着从薄弱处打进去。",
+      "spec": {
+        "terrain": "flat",
+        "reward": "plate",
+        "lesson": "用少量甲片保护驾驶舱和锅炉，认识装甲的位置比堆叠数量更重要。",
+        "targetStrength": [
+          0.65,
+          0.8
+        ],
+        "performanceMin": 35
+      },
+      "unlock": {
+        "mods": [
+          "plate"
+        ],
+        "note": "获得一块甲片：回到车间，把它装在要害受到攻击的一侧。",
+        "feat": []
+      },
+      "rewardItems": [
+        {
+          "id": "plate",
+          "count": 1,
+          "mt": 1
+        }
+      ],
+      "version": 1,
+      "id": "0:1",
+      "cells": [
+        [
+          0,
+          7,
+          8,
+          "boiler_s",
+          1,
+          0
+        ],
+        [
+          0,
+          7,
+          9,
+          "tank_s",
+          1,
+          0
+        ],
+        [
+          0,
+          8,
+          9,
+          "plate",
+          1,
+          0
+        ],
+        [
+          0,
+          9,
+          8,
+          "helmet",
+          1,
+          0
+        ],
+        [
+          0,
+          9,
+          9,
+          "mg_s",
+          1,
+          0
+        ],
+        [
+          0,
+          10,
+          8,
+          "track",
+          1,
+          0
+        ]
+      ],
+      "code": "SA2.eyJuIjoi6L+b5YyW5YCZ6YCJwrcxLTItOTYzMjQiLCJiIjpbWzcsOCw0NF0sWzcsOSwxOF0sWzgsOSwxN10sWzksOCwxNl0sWzksOSw0Ml0sWzEwLDgsMF1dLCJzIjpbXSwiYSI6Mn0=",
+      "terrain": "flat",
+      "boss": false,
+      "uniqueLoot": [],
+      "weakness": "",
+      "source": "manual",
+      "locked": true,
+      "updatedAt": "2026-09-29T08:47:16.961Z",
+      "rules": "2026-09-28-giant-indirect-module-family",
+      "analysis": {
+        "rating": 86,
+        "value": 372,
+        "weight": 1725,
+        "drive": 0.5,
+        "water": 36,
+        "overheat": 68.5,
+        "dps": 3.733333333333333,
+        "hp": 481
+      },
+      "vehicleName": "钉子号"
+    },
+    "0:2": {
+      "name": "进化候选·1-3-1064·变异48369·变异74536",
+      "pilot": "铁匠 老汤姆",
+      "prize": 120,
+      "rewardMoney": false,
+      "victoryRepairFree": true,
+      "aim": 0.6,
+      "blurb": "老汤姆的机炮从不卡壳，专扫你没有装甲的锅炉和驾驶舱；车头铲斗会把你推出去。用装甲护住要害，再贴近它。",
+      "spec": {
+        "terrain": "flat",
+        "reward": "bucket",
+        "lesson": "铲斗近战：没有好炮时，用动力和铲斗贴身推倒早期薄甲车。",
+        "targetStrength": [
+          0.65,
+          0.8
+        ],
+        "performanceMin": 35
+      },
+      "unlock": {
+        "mods": [
+          "bucket"
+        ],
+        "note": "缴获铲斗：前期瞄准困难时，先用动力和铲斗贴近解决战斗。",
+        "feat": []
+      },
+      "version": 1,
+      "id": "0:2",
+      "cells": [
+        [
+          0,
+          8,
+          8,
+          "boiler_s",
+          1,
+          0
+        ],
+        [
+          0,
+          8,
+          9,
+          "tank_s",
+          1,
+          0
+        ],
+        [
+          0,
+          8,
+          10,
+          "plate",
+          1,
+          0
+        ],
+        [
+          0,
+          9,
+          9,
+          "helmet",
+          1,
+          0
+        ],
+        [
+          0,
+          9,
+          10,
+          "mg_s",
+          1,
+          0
+        ],
+        [
+          0,
+          10,
+          8,
+          "track",
+          1,
+          0
+        ],
+        [
+          0,
+          10,
+          10,
+          "bucket",
+          1,
+          0
+        ]
+      ],
+      "code": "SA2.eyJuIjoi6L+b5YyW5YCZ6YCJwrcxLTMtMTA2NMK35Y+Y5byCNDgzNjnCt+WPmOW8gjc0NTM2IiwiYiI6W1s4LDgsNDRdLFs4LDksMThdLFs4LDEwLDE3XSxbOSw5LDE2XSxbOSwxMCw0Ml0sWzEwLDgsMF0sWzEwLDEwLDEyXV0sInMiOltdLCJhIjoyfQ==",
+      "style": "turtle",
+      "terrain": "flat",
+      "boss": false,
+      "uniqueLoot": [],
+      "weakness": "",
+      "source": "manual",
+      "locked": true,
+      "updatedAt": "2026-09-29T08:46:44.184Z",
+      "rules": "2026-09-28-giant-indirect-module-family",
+      "analysis": {
+        "rating": 122,
+        "value": 482,
+        "weight": 2425,
+        "drive": 0.7,
+        "water": 36,
+        "overheat": 67,
+        "dps": 3.733333333333333,
+        "hp": 741
+      }
+    },
+    "1:0": {
+      "name": "铁皮罐头",
+      "pilot": "锅炉工 胖哈利",
+      "prize": 130,
+      "terrain": "crates",
+      "aim": 0.55,
+      "style": "turtle",
+      "blurb": "车头糊满了铁皮，机炮打上去只冒火星（装甲每发减伤）。用直射火炮把铁皮凿穿，再打它的火炮。",
+      "spec": {
+        "terrain": "crates",
+        "reward": null,
+        "lesson": "推与挡的第一题：货箱能挡低平火力，薄甲应由直射火炮先打开缺口。",
+        "targetStrength": [
+          0.65,
+          0.8
+        ],
+        "performanceMin": 35
+      },
+      "unlock": {
+        "feat": [
+          "street",
+          "bank"
+        ],
+        "note": "街头赛和银行开放：先用短赛补足改装预算，再决定把钱投到武器还是冷却。",
+        "mods": []
+      },
+      "version": 1,
+      "id": "1:0",
+      "cells": [
+        [
+          0,
+          7,
+          7,
+          "cannon_s",
+          1,
+          0
+        ],
+        [
+          0,
+          8,
+          4,
+          "boiler_s",
+          1,
+          0
+        ],
+        [
+          0,
+          8,
+          5,
+          "tank_s",
+          1,
+          0
+        ],
+        [
+          0,
+          8,
+          7,
+          "armor",
+          1,
+          0
+        ],
+        [
+          0,
+          9,
+          5,
+          "tank_s",
+          1,
+          0
+        ],
+        [
+          0,
+          9,
+          6,
+          "helmet",
+          1,
+          0
+        ],
+        [
+          0,
+          10,
+          4,
+          "track",
+          1,
+          0
+        ],
+        [
+          0,
+          10,
+          6,
+          "track",
+          1,
+          0
+        ]
+      ],
+      "code": "SA2.eyJuIjoi6ZOB55qu572Q5aS0IiwiYiI6W1s3LDcsMjFdLFs4LDQsNDRdLFs4LDUsMThdLFs4LDcsNl0sWzksNSwxOF0sWzksNiwxNl0sWzEwLDQsMF0sWzEwLDYsMF1dLCJzIjpbXSwiYSI6MiwicHYiOjIsIm1zIjpbXX0=",
+      "boss": false,
+      "uniqueLoot": [],
+      "weakness": "",
+      "source": "manual",
+      "locked": true,
+      "updatedAt": "2026-09-29T13:27:28.684Z",
+      "rules": "2026-09-28-giant-indirect-module-family",
+      "analysis": {
+        "rating": 126,
+        "value": 574,
+        "weight": 2885,
+        "drive": 0.9,
+        "water": 72,
+        "overheat": 137.5,
+        "dps": 4.438888888888889,
+        "hp": 758
+      },
+      "rewardMoney": true,
+      "victoryRepairFree": false
+    },
+    "1:1": {
+      "name": "双管哨兵",
+      "pilot": "扒手 机灵杰克",
+      "prize": 150,
+      "aim": 0.65,
+      "style": "kite",
+      "blurb": "上下两门机炮一起扫，跑得还快，专挑没护甲的模块。把锅炉、驾驶舱藏到装甲后面，拉近了打。",
+      "rows": [
+        "........",
+        "........",
+        "...M....",
+        "..KAM...",
+        "..OWA...",
+        "..TTT..."
+      ],
+      "subs": [
+        [
+          4,
+          10,
+          "periscope"
+        ],
+        [
+          4,
+          12,
+          "autoloader"
+        ]
+      ],
+      "spec": {
+        "terrain": "flat",
+        "reward": "periscope",
+        "lesson": "观察与装填：先用辅助件改善瞄准和装填，再处理会拉扯距离的机炮车。",
+        "targetStrength": [
+          0.65,
+          0.8
+        ],
+        "performanceMin": 35
+      },
+      "unlock": {
+        "mods": [
+          "periscope",
+          "autoloader"
+        ],
+        "note": "观察镜和装弹机开放：装到车上即可改善瞄准和装填，被击毁后效果消失。"
+      },
+      "version": 1,
+      "id": "1:1",
+      "source": "original",
+      "locked": false,
+      "rewardMoney": true,
+      "victoryRepairFree": false
+    },
+    "1:2": {
+      "name": "煤灰寡妇",
+      "pilot": "玛莎·布莱克",
+      "prize": 220,
+      "terrain": "crates",
+      "aim": 0.75,
+      "boss": true,
+      "blurb": "【宿敌】玛莎把四足炮台的车头换成重装甲，顶层火炮和侧炮从高处往下压；车头的铲斗仍会把你铲出去。她说后巷只容得下一个人。",
+      "rows": [
+        "........",
+        "........",
+        "...P....",
+        "...KZ...",
+        "..WOHH..",
+        "..Q.U..."
+      ],
+      "sides": [
+        [
+          3,
+          4
+        ]
+      ],
+      "elite": [
+        [
+          3,
+          4,
+          2
+        ]
+      ],
+      "subs": [
+        [
+          4,
+          14,
+          "boss_lens"
+        ]
+      ],
+      "uniqueLoot": [
+        {
+          "id": "boss_lens",
+          "mt": 5,
+          "once": true,
+          "source": "salvage"
+        }
+      ],
+      "spec": {
+        "terrain": "crates",
+        "reward": "side_cannon",
+        "lesson": "推与挡的 Boss：厚重车头克制纯近战，侧炮和高抛火力逼你从正面以外规划攻击。",
+        "targetStrength": [
+          0.6,
+          0.7
+        ],
+        "performanceMin": 35
+      },
+      "unlock": {
+        "feat": [
+          "side"
+        ],
+        "mods": [
+          "side_cannon",
+          "armor_heavy"
+        ],
+        "note": "缴获侧炮和重装甲：侧挂层能从装甲外侧射击，重装甲则把正面推撞的成本降下来。"
+      },
+      "version": 1,
+      "id": "1:2",
+      "source": "original",
+      "locked": false,
+      "rewardMoney": true,
+      "victoryRepairFree": false
+    },
+    "2:0": {
+      "name": "推土机",
+      "pilot": "码头工 大块头比尔",
+      "prize": 180,
+      "terrain": "mud",
+      "aim": 0.6,
+      "style": "rush",
+      "mt": 2,
+      "blurb": "宽履带加车头铲斗，一门心思往前推；车尾还挂着一只小臼炮，示范如何在泥地里用间接火力补近战的空档。",
+      "rows": [
+        "........",
+        "........",
+        "........",
+        "...KM...",
+        "..WOAA..",
+        "..TTTTU."
+      ],
+      "subs": [
+        [
+          4,
+          10,
+          "mortar_s"
+        ]
+      ],
+      "spec": {
+        "terrain": "mud",
+        "reward": "mortar_s",
+        "lesson": "抛射入门：泥地会拖慢冲锋车，小臼炮可以越过货箱补上平射死角。",
+        "targetStrength": [
+          0.65,
+          0.8
+        ],
+        "performanceMin": 35
+      },
+      "unlock": {
+        "feat": [
+          "blueprints"
+        ],
+        "mods": [
+          "mortar_s",
+          "condenser"
+        ],
+        "note": "小臼炮和冷凝器开放：保存一套冷却蓝图，开始把热量和抛射角度当作构筑预算管理。"
+      },
+      "version": 1,
+      "id": "2:0",
+      "source": "original",
+      "locked": false,
+      "rewardMoney": true,
+      "victoryRepairFree": false
+    },
+    "2:1": {
+      "name": "独角兽",
+      "pilot": "邮差 老乔",
+      "prize": 200,
+      "aim": 0.65,
+      "style": "rush",
+      "mt": 2,
+      "blurb": "双足轻骑，装甲前焊着撞角全速冲锋，身子晃得很难打中。等它冲到脸上再开火，它的装甲很薄。",
+      "rows": [
+        "........",
+        "........",
+        "........",
+        "...KM...",
+        "...OAX..",
+        "...B...."
+      ],
+      "spec": {
+        "terrain": "flat",
+        "reward": "biped",
+        "lesson": "双足近战：摇摆底盘很难被命中，但正面只有轻甲，侧炮配撞击件能快速结束贴身战。",
+        "targetStrength": [
+          0.65,
+          0.8
+        ],
+        "performanceMin": 35
+      },
+      "unlock": {
+        "mods": [
+          "biped",
+          "pressure_chamber"
+        ],
+        "note": "双足底盘和加压舱开放：每个小格换来一点动力，但双足走起来更晃，热量压力也会上升。"
+      },
+      "version": 1,
+      "id": "2:1",
+      "source": "original",
+      "locked": false,
+      "rewardMoney": true,
+      "victoryRepairFree": false
+    },
+    "2:2": {
+      "name": "码头齐射",
+      "pilot": "钟表匠 老维克",
+      "prize": 300,
+      "terrain": "mud",
+      "aim": 0.85,
+      "style": "turtle",
+      "boss": true,
+      "mt": 3,
+      "blurb": "【抛射 Boss】前排重装甲挡住平射，后排两门臼炮越过货箱连续落弹，联合驾驶舱让它能同时压制近处和远处。",
+      "rows": [
+        "....P.P.",
+        "........",
+        "...K....",
+        "...OHH..",
+        "..WOHH..",
+        "..Q....."
+      ],
+      "elite": [
+        [
+          3,
+          4,
+          3
+        ]
+      ],
+      "subs": [
+        [
+          4,
+          10,
+          "cockpit_pair"
+        ],
+        [
+          4,
+          12,
+          "mortar_s"
+        ]
+      ],
+      "spec": {
+        "terrain": "mud",
+        "reward": "mortar",
+        "lesson": "抛射 Boss：厚前装甲与后排臼炮迫使玩家改变站位，联合驾驶舱展示多组武器协同。",
+        "targetStrength": [
+          0.6,
+          0.7
+        ],
+        "performanceMin": 35
+      },
+      "unlock": {
+        "mods": [
+          "mortar",
+          "cockpit_pair"
+        ],
+        "note": "缴获高抛火炮和双人联合驾驶舱：臼炮越过正面装甲，两个驾驶员可以同时操作两组武器。"
+      },
+      "version": 1,
+      "id": "2:2",
+      "source": "original",
+      "locked": false,
+      "rewardMoney": true,
+      "victoryRepairFree": false
+    },
+    "3:0": {
+      "name": "烟囱",
+      "pilot": "扫烟囱的汤米",
+      "prize": 260,
+      "terrain": "yard",
+      "aim": 0.7,
+      "style": "turtle",
+      "mt": 2,
+      "blurb": "车头两层重装甲，高抛炮从墙后面往你头上砸；两支喷射器会在贴身后持续加热和推开你。直射打不穿？用撞角把墙顶开。",
+      "rows": [
+        "........",
+        "........",
+        "...P....",
+        "..KOH...",
+        "..WOHH..",
+        "..TTTT.."
+      ],
+      "subs": [
+        [
+          4,
+          10,
+          "flamer"
+        ],
+        [
+          4,
+          12,
+          "steamjet"
+        ]
+      ],
+      "spec": {
+        "terrain": "yard",
+        "reward": "spike",
+        "lesson": "缠斗入门：重甲会挡住平射，撞角和蒸汽喷射器把贴身后的推挤与持续伤害连起来。",
+        "targetStrength": [
+          0.65,
+          0.8
+        ],
+        "performanceMin": 35
+      },
+      "unlock": {
+        "mods": [
+          "spike",
+          "steamjet"
+        ],
+        "note": "撞角和蒸汽喷射器开放：贴身后持续升温，蒸汽喷射还能把对手推开。"
+      },
+      "version": 1,
+      "id": "3:0",
+      "source": "original",
+      "locked": false,
+      "rewardMoney": true,
+      "victoryRepairFree": false
+    },
+    "3:1": {
+      "name": "齐射",
+      "pilot": "钟表匠 老维克",
+      "prize": 300,
+      "terrain": "hills",
+      "aim": 0.75,
+      "style": "kite",
+      "mt": 3,
+      "blurb": "四足炮台装上鱼叉和蒸汽喷射器，先用山坡拉开距离，再把你拽回蒸汽锥和撞角的有效范围。",
+      "rows": [
+        "........",
+        "........",
+        "..P.....",
+        "..KAC...",
+        "..OWAA..",
+        "..Q....."
+      ],
+      "subs": [
+        [
+          0,
+          14,
+          "harpoon"
+        ],
+        [
+          4,
+          10,
+          "flamer"
+        ]
+      ],
+      "spec": {
+        "terrain": "hills",
+        "reward": "harpoon",
+        "lesson": "缠斗的距离控制：鱼叉把风筝车拉回近战距离，蒸汽喷射器和撞角在坡地上形成连续压力。",
+        "targetStrength": [
+          0.65,
+          0.8
+        ],
+        "performanceMin": 35
+      },
+      "unlock": {
+        "mods": [
+          "harpoon",
+          "flamer"
+        ],
+        "note": "鱼叉开放，喷火器图纸获得：第三章通关开放镀镍（T4）后可购买喷火器；蒸汽喷射器最高为钢（T3）。"
+      },
+      "version": 1,
+      "id": "3:1",
+      "source": "original",
+      "locked": false,
+      "rewardMoney": true,
+      "victoryRepairFree": false
+    },
+    "3:2": {
+      "name": "工厂缠斗王",
+      "pilot": "车间领班 沃德豪斯",
+      "prize": 400,
+      "terrain": "hills",
+      "aim": 0.85,
+      "boss": true,
+      "mt": 3,
+      "blurb": "【缠斗 Boss】公爵的旧侧炮仍挂在层架上，车头新增蒸汽撞锤和鱼叉；它会先拉你进坡，再用活塞和喷射器连续逼退。",
+      "rows": [
+        "........",
+        "........",
+        "....K...",
+        "...OAZ..",
+        "..WOAAC.",
+        "..TTTTT."
+      ],
+      "sides": [
+        [
+          3,
+          4
+        ]
+      ],
+      "elite": [
+        [
+          3,
+          4,
+          4,
+          "side"
+        ]
+      ],
+      "subs": [
+        [
+          4,
+          14,
+          "harpoon"
+        ],
+        [
+          4,
+          12,
+          "steamjet"
+        ],
+        [
+          6,
+          14,
+          "piston"
+        ]
+      ],
+      "spec": {
+        "terrain": "hills",
+        "reward": "piston",
+        "lesson": "缠斗 Boss：鱼叉、蒸汽喷射器和蒸汽撞锤把接近、拉回和反震连成一套连续考题。",
+        "targetStrength": [
+          0.6,
+          0.7
+        ],
+        "performanceMin": 35
+      },
+      "unlock": {
+        "mods": [
+          "piston"
+        ],
+        "note": "蒸汽撞锤开放：贴身后每隔一段时间自动活塞打击，不再只依赖冲撞速度。"
+      },
+      "version": 1,
+      "id": "3:2",
+      "source": "original",
+      "locked": false,
+      "rewardMoney": true,
+      "victoryRepairFree": false
+    },
+    "4:0": {
+      "name": "矿车",
+      "pilot": "矿工头 霍布斯",
+      "prize": 380,
+      "terrain": "mine",
+      "aim": 0.75,
+      "style": "rush",
+      "mt": 3,
+      "blurb": "重装甲履带车，车头装着蒸汽撞锤，贴上来就一下一下猛砸。别跟它顶牛，高抛炮越过装甲砸它的锅炉。",
+      "rows": [
+        "........",
+        "........",
+        "....K...",
+        "..WOHHY.",
+        "..WOOAC.",
+        "..TTTTT."
+      ],
+      "subs": [
+        [
+          6,
+          14,
+          "harpoon"
+        ]
+      ],
+      "spec": {
+        "terrain": "mine",
+        "reward": "pressure_tank",
+        "lesson": "综合压力一：矿坑泥地限制冲撞，重炮和蓄压罐要求同时管理动力、热量和空间。",
+        "targetStrength": [
+          0.65,
+          0.8
+        ],
+        "performanceMin": 35
+      },
+      "unlock": {
+        "mods": [
+          "pressure_tank",
+          "cannon_heavy"
+        ],
+        "note": "蓄压罐和重炮开放：动力富余时储蒸汽，留出大块空间换取更高的穿透力。"
+      },
+      "version": 1,
+      "id": "4:0",
+      "source": "original",
+      "locked": false,
+      "rewardMoney": true,
+      "victoryRepairFree": false
+    },
+    "4:1": {
+      "name": "夜枭",
+      "pilot": "猎场看守 格雷",
+      "prize": 420,
+      "terrain": "hills",
+      "aim": 0.85,
+      "style": "kite",
+      "mt": 3,
+      "blurb": "两门侧炮躲在装甲后面，四足平台稳得像块石头，一直往后退。冲上去撞它，或者先敲掉侧炮。",
+      "rows": [
+        "........",
+        "........",
+        "...K....",
+        "..OAM...",
+        "..WOAC..",
+        "..Q.U..."
+      ],
+      "sides": [
+        [
+          3,
+          3
+        ],
+        [
+          4,
+          3
+        ]
+      ],
+      "subs": [
+        [
+          0,
+          14,
+          "harpoon"
+        ]
+      ],
+      "spec": {
+        "terrain": "hills",
+        "reward": "rocket_rack",
+        "lesson": "综合压力二：土坡和侧炮迫使你选择接近路线，抛射架用高抛齐射和散布换取中距离压制。",
+        "targetStrength": [
+          0.65,
+          0.8
+        ],
+        "performanceMin": 35
+      },
+      "unlock": {
+        "mods": [
+          "rocket_rack",
+          "rangefinder"
+        ],
+        "note": "抛射架和测距仪开放：高抛齐射越过正面遮挡，散布换来中距离压制，测距仪让直射火力更稳定。"
+      },
+      "version": 1,
+      "id": "4:1",
+      "source": "original",
+      "locked": false,
+      "rewardMoney": true,
+      "victoryRepairFree": false
+    },
+    "4:2": {
+      "name": "铁甲圣堂",
+      "pilot": "圣殿骑士团",
+      "prize": 550,
+      "terrain": "mine",
+      "aim": 0.88,
+      "boss": true,
+      "mt": 4,
+      "blurb": "【综合 Boss】重装甲堆到第五层，顶上是一门乌兹钢高抛炮，车头还有蒸汽撞锤和圣堂压力核心。赢了以后，剩余的大部分装备都会开放。",
+      "rows": [
+        "........",
+        "....KP..",
+        "..WOHHY.",
+        "..WOHIC.",
+        ".WOOHAM.",
+        ".TTTTTT."
+      ],
+      "sides": [
+        [
+          3,
+          4
+        ],
+        [
+          2,
+          4
+        ]
+      ],
+      "elite": [
+        [
+          1,
+          5,
+          5
+        ]
+      ],
+      "subs": [
+        [
+          0,
+          14,
+          "rocket_rack"
+        ],
+        [
+          8,
+          14,
+          "boss_core"
+        ]
+      ],
+      "drop": {
+        "wootz": 1
+      },
+      "spec": {
+        "terrain": "mine",
+        "reward": "cockpit",
+        "lesson": "综合 Boss：高抛、重甲、撞击和压力核心同时出现，要求切换前几章学过的解法。",
+        "targetStrength": [
+          0.6,
+          0.7
+        ],
+        "performanceMin": 35
+      },
+      "unlock": {
+        "mods": [
+          "cockpit",
+          "boss_core"
+        ],
+        "note": "联合驾驶舱和圣堂压力核心开放：四个驾驶员协同操作，核心提供动力、储压、储水和持续冷却。"
+      },
+      "version": 1,
+      "id": "4:2",
+      "source": "original",
+      "locked": false,
+      "rewardMoney": true,
+      "victoryRepairFree": false
+    },
+    "5:0": {
+      "name": "差分机",
+      "pilot": "皇家工程师 惠特克",
+      "prize": 500,
+      "terrain": "crates",
+      "aim": 0.9,
+      "mt": 4,
+      "blurb": "三门机炮、一组双联机枪加一门火炮，火力网密不透风，但全是镀镍的轻家伙。重装甲顶上去，机炮就只能冒火星。",
+      "rows": [
+        "........",
+        "........",
+        "....M...",
+        "...KAM..",
+        "..WOOAM.",
+        "..B....."
+      ],
+      "subs": [
+        [
+          4,
+          10,
+          "mg2"
+        ]
+      ],
+      "spec": {
+        "terrain": "crates",
+        "reward": null,
+        "lesson": "综合考试一：重装甲、机炮与双联机枪火力网和双足机动同时出现，检验前几章的防守与接近。",
+        "targetStrength": [
+          0.65,
+          0.8
+        ],
+        "performanceMin": 35
+      },
+      "version": 1,
+      "id": "5:0",
+      "source": "original",
+      "locked": false,
+      "rewardMoney": true,
+      "victoryRepairFree": false
+    },
+    "5:1": {
+      "name": "煤灰寡妇 · 复仇",
+      "pilot": "玛莎·布莱克",
+      "prize": 600,
+      "terrain": "yard",
+      "aim": 0.9,
+      "boss": true,
+      "mt": 4,
+      "blurb": "【宿敌】玛莎把她的四足换成了乌兹钢火炮，顶上加了高抛炮。这次她是认真的。",
+      "rows": [
+        "........",
+        "........",
+        "...PK...",
+        "..WOAC..",
+        "..WOAAC.",
+        "..Q.U..."
+      ],
+      "elite": [
+        [
+          4,
+          6,
+          5
+        ],
+        [
+          3,
+          5,
+          5
+        ]
+      ],
+      "subs": [
+        [
+          6,
+          14,
+          "boss_ram"
+        ]
+      ],
+      "uniqueLoot": [
+        {
+          "id": "boss_ram",
+          "mt": 5,
+          "once": true,
+          "source": "salvage"
+        }
+      ],
+      "spec": {
+        "terrain": "yard",
+        "reward": "boss_ram",
+        "lesson": "综合考试二：宿敌把高抛和近战放在同一辆四足车上，胜利后缴获带故事的液压撞头。",
+        "targetStrength": [
+          0.6,
+          0.7
+        ],
+        "performanceMin": 35
+      },
+      "unlock": {
+        "mods": [
+          "boss_ram"
+        ],
+        "note": "缴获寡妇液压撞头：把冲撞和短周期活塞打击合成一件高风险近战件。"
+      },
+      "version": 1,
+      "id": "5:1",
+      "source": "original",
+      "locked": false,
+      "rewardMoney": true,
+      "victoryRepairFree": false
+    },
+    "5:2": {
+      "name": "维多利亚女王号",
+      "pilot": "卫冕冠军 哈灵顿爵士",
+      "prize": 1000,
+      "aim": 0.98,
+      "boss": true,
+      "mt": 3,
+      "blurb": "六层高的移动堡垒：多座锅炉、一门侧炮、顶层高抛炮和巨炮，驾驶舱是乌兹钢。打赢它，你就是帝国冠军。",
+      "rows": [
+        ".....K..",
+        "....OHP.",
+        "..WOHHM.",
+        ".WWOHKC.",
+        "WWOOHAM.",
+        "TTTTTTTU"
+      ],
+      "sides": [
+        [
+          3,
+          4
+        ]
+      ],
+      "subs": [
+        [
+          0,
+          0,
+          "cannon_giant"
+        ],
+        [
+          0,
+          14,
+          "pressure_tank"
+        ]
+      ],
+      "elite": [
+        [
+          0,
+          5,
+          6
+        ],
+        [
+          1,
+          6,
+          5
+        ],
+        [
+          3,
+          6,
+          5
+        ]
+      ],
+      "drop": {
+        "aether": 1
+      },
+      "uniqueLoot": [
+        {
+          "id": "cannon_giant",
+          "mt": 6,
+          "once": true,
+          "source": "salvage"
+        }
+      ],
+      "spec": {
+        "terrain": "flat",
+        "reward": "cannon_giant",
+        "lesson": "终局考试：女王号综合使用侧炮、高抛、巨炮和厚甲，唯一的目标是稳定拆解移动堡垒。",
+        "targetStrength": [
+          0.6,
+          0.7
+        ],
+        "performanceMin": 35
+      },
+      "version": 1,
+      "id": "5:2",
+      "source": "original",
+      "locked": false,
+      "rewardMoney": true,
+      "victoryRepairFree": false
+    }
+  }
+}

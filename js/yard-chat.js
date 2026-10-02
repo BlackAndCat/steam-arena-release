@@ -4,40 +4,22 @@ window.SA = window.SA || {};
 SA.YardChat = (() => {
   const KEY = 'home:chat:';
   const ABSENT = '\u0000yard-chat-absent\u0000';
-  const DEFAULT_SETTINGS = { intervalSec: 3.3, bubbleSec: 3.3, replySec: 3.3 };
+  // 闲谈默认池与参数只读正式文本配置，不在代码中保留第二份台词。
   const cooldowns = new Map(); // 同一游戏会话内重建院子时仍记住各组上次开始时间。
   const clone = value => JSON.parse(JSON.stringify(value));
-  const one = (id, who, text, action = 'talk', weather = 'any') =>
-    ({ id, name: text.slice(0, 20), weight: 1, cooldownSec: 0, weather, lines: [{ who, text, action }] });
-  // 默认顺序沿用旧院子的 splice(1 + k * 3)：天气三句分别在 base-1、base-3、base-5 后。
-  const DEFAULT_GROUPS = [
-    one('base-1', 'rel', '想当年在孟买，我们的蒸汽车能拖动一整个炮兵连！'),
-    one('rain-1', 'rel', '下雨天我这老寒腿就知道——要打仗了！', 'talk', 'rain'),
-    one('night-1', 'tim', '我来守夜！……就是院子有点黑。', 'talk', 'night'),
-    one('base-2', 'tom', '你那台车？早锈成门把手了。'),
-    one('base-3', 'tim', '师傅！锅炉又在漏气！', 'yelp'),
-    one('rain-2', 'tim', '师傅，雨什么时候停呀？', 'talk', 'rain'),
-    one('night-2', 'tom', '夜里看火色最准。', 'talk', 'night'),
-    one('base-4', 'tom', '拿扳手拧紧，别拿脑袋顶着。'),
-    one('base-5', 'rel', '……', 'sleep'),
-    one('rain-3', 'tom', '雨天淬火，连水都不用挑。', 'talk', 'rain'),
-    one('night-3', 'rel', '……呼……', 'sleep', 'night'),
-    one('base-6', 'rel', '谁？！谁在开炮？！', 'jolt'),
-    one('base-7', 'tom', '「{关卡名}」？别慌，车顶住了就行。'),
-    one('base-8', 'tim', '我在锅炉上画了个笑脸！'),
-  ];
+  const defaultSettings = () => JSON.parse(SA.Text.get(`${KEY}settings`, '{}'));
 
-  // 三个人物的点击台词共用这一份默认值；工作台独立打开时没有存档，老汤姆使用通用提示。
+  // 三个人物的点击提示模板在配置中；工作台独立打开时，老汤姆使用通用提示。
   function clickTips() {
     const data = SA.S?.d;
     const problems = data && SA.V?.stats ? SA.V.stats(data.vehicle).problems : [];
     const stage = data && SA.Camp?.current ? SA.Camp.current() : null;
+    const tip = name => SA.Text.get(`home:tip:template:${name}`);
     const defaults = {
-      tom: problems?.length ? `车还有问题：${problems[0]}。先去车间弄好。`
-        : stage ? `下一场是「${stage.name}」，${stage.pilot}开的。车况不错，去吧。`
-        : '车况不错。锦标赛就等你了。',
-      rel: '要打哪场，去路标那儿拉下黑板看！打过的我给你划掉了！',
-      tim: '要改装就点车！',
+      tom: problems?.length ? tip('tomProblems').replace('{问题}', problems[0])
+        : stage ? tip('tomStage').replace('{关卡名}', stage.name).replace('{车手}', stage.pilot)
+        : tip('tomComplete'),
+      rel: tip('rel'), tim: tip('tim'),
     };
     return SA.Text?.homeTips ? SA.Text.homeTips(defaults) : defaults;
   }
@@ -71,15 +53,14 @@ SA.YardChat = (() => {
     validScope(scope);
     for (const candidate of fallbackScopes(scope)) {
       const raw = SA.Text.get(scopeKey(candidate), ABSENT);
-      // 未覆盖才继承上级或默认池；作者显式保存空字符串表示清空该池。
+      // 缺少该范围配置才继承上级；作者显式保存空数组表示清空该池。
       if (raw !== ABSENT) return { source: candidate, groups: raw === '' ? [] : clone(JSON.parse(raw)) };
     }
-    return { source: 'default', groups: clone(DEFAULT_GROUPS) };
+    return { source: 'default', groups: clone(JSON.parse(SA.Text.get(scopeKey('default'), '[]'))) };
   }
 
   function settings() {
-    const raw = SA.Text.get(`${KEY}settings`, '');
-    return raw ? { ...DEFAULT_SETTINGS, ...JSON.parse(raw) } : { ...DEFAULT_SETTINGS };
+    return defaultSettings();
   }
 
   function checkSeconds(value, label, positive = false) {
@@ -87,10 +68,10 @@ SA.YardChat = (() => {
       throw new Error(`${label}必须是${positive ? '0.1～3600' : '0～3600'}秒`);
   }
 
-  // 纯校验供工作台在任何文本草稿写入前检查全部范围。
+  // 纯校验供工作台在写入配置前检查全部范围。
   function validateSettings(next) {
     if (!next || typeof next !== 'object' || Array.isArray(next)) throw new Error('整体聊天设置格式无效');
-    if (Object.keys(next).some(key => !Object.hasOwn(DEFAULT_SETTINGS, key))) throw new Error('整体聊天设置包含未知项目');
+    if (Object.keys(next).some(key => !['intervalSec', 'bubbleSec', 'replySec'].includes(key))) throw new Error('整体聊天设置包含未知项目');
     const result = { intervalSec: next.intervalSec, bubbleSec: next.bubbleSec, replySec: next.replySec };
     checkSeconds(result.intervalSec, '聊天间隔', true);
     checkSeconds(result.bubbleSec, '气泡留存时间');
@@ -136,7 +117,7 @@ SA.YardChat = (() => {
 
   function inherit(scope) {
     validScope(scope);
-    SA.Text.set(scopeKey(scope), '');
+    SA.Text.remove(scopeKey(scope));
     return read(scope);
   }
 
@@ -154,7 +135,7 @@ SA.YardChat = (() => {
   function formatLine(line) {
     const stage = SA.Camp?.current?.();
     return { ...line, text: line.text.includes('{关卡名}')
-      ? stage ? line.text.replaceAll('{关卡名}', stage.name) : '锦标赛可不比后巷，别给我丢人。'
+      ? stage ? line.text.replaceAll('{关卡名}', stage.name) : SA.Text.get('home:tip:template:noStage')
       : line.text };
   }
 
@@ -205,7 +186,7 @@ SA.YardChat = (() => {
     return { step, force };
   }
 
-  // 发行包只读随包文案，忽略开发工作台的广播草稿。
+  // 发行包只读随包配置，开发页只广播已落盘的正式配置。
   if (!SA.RELEASE && typeof BroadcastChannel === 'function') {
     const channel = new BroadcastChannel('sa-yard-chat');
     channel.onmessage = event => {

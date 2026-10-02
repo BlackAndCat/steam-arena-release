@@ -11,16 +11,16 @@ SA.CampUI = (() => {
     const opts = salvageOptions(survivors);
     if (!opts.length) { next(); return; }
     const name = (x) => (x.mt > 1 ? `${SA.MATS[x.mt].name}${M[x.id].name}` : M[x.id].name);
-    SA.UI.dialog('缴获战利品', [
-      h('p', { style: 'margin-top:0' }, '按赛会规矩，胜者可以从对手车上拆走一件你还没有的零件：'),
+    SA.UI.dialog(SA.Config.text("camp_ui_5cbdfd1def9d"), [
+      h('p', { style: 'margin-top:0' }, SA.Config.text("camp_ui_18e94f859d05")),
       // 唯一件单独一张金边卡片排在最前：只能在这里拿到，而且每个存档只有一次
       h('div', { class: 'salvage' }, opts.slice().sort((a, b) => !!b.unique - !!a.unique).map(x => h('div', { class: `dlg-item ${x.unique ? 'uniq-card' : ''}` }, SA.SPR.moduleCanvas(x.id, 1, x.mt),
-        h('div', {}, x.unique ? h('span', { class: 'chip uniq big' }, '★ 唯一件') : null, x.unique ? ' ' : null, h('b', {}, name(x)), ' ', matChip(x.mt),
+        h('div', {}, x.unique ? h('span', { class: 'chip uniq big' }, SA.Config.text("camp_ui_b98b7fd2b55b")) : null, x.unique ? ' ' : null, h('b', {}, name(x)), ' ', matChip(x.mt),
           h('div', { class: 'muted' }, SA.UI.statLine(x.id, x.mt)),
-          x.unique ? h('div', { class: 'uniq-note' }, '不能购买，只能缴获；这次不拿，以后重打也不会再掉。') : null)))),
-    ],opts.map(x => ({ label: `拿走 ${x.unique ? '★ ' : ''}${name(x)}`, primary: x.mt >= 5 || !!x.unique, onClick: () => {
-      if (!SA.Camp.claimSalvage(x)) { SA.UI.toast(`${name(x)}已经领取过了`); next(); return; }
-      SA.UI.toast(`缴获 ${name(x)}，放进库存`);
+          x.unique ? h('div', { class: 'uniq-note' }, SA.Config.text("camp_ui_a42c41f45f38")) : null)))),
+    ],opts.map(x => ({ label: SA.Config.text("camp_ui_88cd706e4c17", `${x.unique ? '★ ' : ''}`, `${name(x)}`), primary: x.mt >= 5 || !!x.unique, onClick: () => {
+      if (!SA.Camp.claimSalvage(x)) { SA.UI.toast(SA.Config.text("camp_ui_b4532df81ba6", `${name(x)}`)); next(); return; }
+      SA.UI.toast(SA.Config.text("camp_ui_758a9a07c654", `${name(x)}`));
       next();
     } })), false, next);
   }
@@ -31,7 +31,7 @@ SA.CampUI = (() => {
     SA.UI.dialog(title, [
       u.note ? h('p', { style: 'margin-top:0' }, u.note) : null,
       h('div', { class: 'unlocks' }, lines.map(l => h('div', { class: 'warn', style: 'border-left-color:var(--gauge2)' }, l))),
-    ], [{ label: '好', primary: true, onClick: next }], false, next);
+    ], [{ label: SA.Config.text("camp_ui_f867f3417859"), primary: true, onClick: next }], false, next);
   }
 
   // 章节开场：进入出战页时，新章节先弹一次介绍
@@ -41,9 +41,9 @@ SA.CampUI = (() => {
     SA.UI.dialog(ch.name, [
       h('p', { style: 'margin-top:0' }, ch.blurb),
       h('div', { class: 'unlocks' }, ch.stages.map((s, i) => h('div', { class: 'warn', style: 'border-left-color:var(--brass2)' },
-        h('b', {}, `第 ${i + 1} 场 · ${s.name}`), s.boss ? ' 【Boss】' : '', h('span', { class: 'muted' }, ` · ${s.pilot}`)))),
-      h('p', { class: 'muted' }, '每一场都是一道构筑题：点对手看它的车和弱点，再回车间对症改装。'),
-    ], [{ label: '出发', primary: true, onClick: () => {} }], false);
+        h('b', {}, SA.Config.text("camp_ui_0f586f7648f7", `${i + 1}`, `${s.name}`)), s.boss ? ' 【Boss】' : '', h('span', { class: 'muted' }, ` · ${s.pilot}`)))),
+      h('p', { class: 'muted' }, SA.Config.text("camp_ui_d4b04a2fc66d")),
+    ], [{ label: SA.Config.text("camp_ui_efdc22fca1c6"), primary: true, onClick: () => {} }], false);
     return true;
   }
 
@@ -54,51 +54,51 @@ SA.CampUI = (() => {
   // 开发者面板：侧边栏底部的「开发者」按钮。上面是开发工具（新标签页打开），下面是存档调试
   // 新做的工具页 / 预览页加到 DEV_TOOLS 里就会出现在面板上；视觉样机不单独加，登记到 tools/labs.js（视觉样机馆）
   const DEV_TOOLS = [
-    { url: 'tools/console.html', name: '后台 · 全部工具', desc: '关卡、剧情、院子闲聊、视觉样机和游戏调试都在这一页；Ctrl+K 搜任何一关、一幕剧情、一个样机' },
-    { url: 'tools/sim.html', name: '数值自测', desc: 'AI 对 AI 批量对打：战役关卡检验、对战矩阵 + 评分校准、模块性价比' },
-    { url: 'tools/evolve.html', name: '进化报告', desc: '关卡车进化生成器的结果：选关、强度 × 表现散点图、分类网格、毒瘤车与奇特构筑，可复现、可试驾' },
-    { url: 'tools/stage-editor.html', name: '关卡车工作台', desc: '拼装全部章节关卡车，编辑奖励、文字与强度并保存手工锁定版本' },
-    { url: 'tools/module-editor.html', name: '模块属性工作台', desc: '选择模块，修改文字与玩法属性，一键保存到模块数据' },
-    { url: () => `tools/yard-chat-editor.html?scope=${encodeURIComponent(SA.YardChat.currentScope())}`, name: '院子聊天工作台', desc: '按章节关卡编排闲聊和多人对答，调整出现频率与气泡时长' },
-    { url: 'tools/module-candidates.html', name: '模块造型 · 全部进度', desc: '全部模块按计划表分档：已通过的定稿、候选、占位，一页看全' },
-    { url: 'tools/current.html', name: '当前开发', desc: '只放正在开发、等你确认的东西；确认后归档，这里换成下一项' },
-    { url: 'tools/lab.html', name: '视觉样机馆', desc: '全部视觉样机和美术规范：风格参考、精灵表、模块造型探索、底盘演进、地形与悬挂；按类别、版本和状态收纳' },
+    { url: 'tools/console.html', name: SA.Config.text("camp_ui_539b6bdddbc8"), desc: SA.Config.text("camp_ui_47cf65196c5f") },
+    { url: 'tools/sim.html', name: SA.Config.text("camp_ui_97d149dcb1be"), desc: SA.Config.text("camp_ui_6cfad2f5dc0c") },
+    { url: 'tools/evolve.html', name: SA.Config.text("camp_ui_82481210220a"), desc: SA.Config.text("camp_ui_0a4e01b272bd") },
+    { url: 'tools/stage-editor.html', name: SA.Config.text("camp_ui_7c11cb3c2917"), desc: SA.Config.text("camp_ui_272139c80a1e") },
+    { url: 'tools/module-editor.html', name: SA.Config.text("camp_ui_fb225353439f"), desc: SA.Config.text("camp_ui_b3c7072a567e") },
+    { url: () => `tools/yard-chat-editor.html?scope=${encodeURIComponent(SA.YardChat.currentScope())}`, name: SA.Config.text("camp_ui_bab1744a894a"), desc: SA.Config.text("camp_ui_d33460ac22da") },
+    { url: 'tools/module-candidates.html', name: SA.Config.text("camp_ui_31ed0912659c"), desc: SA.Config.text("camp_ui_c7fbdda8d1f8") },
+    { url: 'tools/current.html', name: SA.Config.text("camp_ui_68916e754d56"), desc: SA.Config.text("camp_ui_8858a6eb422d") },
+    { url: 'tools/lab.html', name: SA.Config.text("camp_ui_39cef72c84db"), desc: SA.Config.text("camp_ui_8c8dd8911276") },
   ];
   function devPanel() {
     const act = (label, fn, primary) => h('button', { class: `btn ${primary ? 'primary' : ''}`, onclick: () => { SA.UI.closeModal(); fn(); SA.UI.toast(label); } }, label);
     const sel = h('select', {}, SA.CAMPAIGN.map((ch, i) => h('option', { value: i, selected: i === chIndex() }, ch.name)));
     const row = (...kids) => h('div', { class: 'dialog-actions dev-row' }, kids);
-    SA.UI.openModal('开发者模式', h('div', { class: 'dev-panel' },
-      h('h3', { class: 'help-h' }, '开发工具 · 新标签页打开'),
+    SA.UI.openModal(SA.Config.text("camp_ui_cf048cf5e66b"), h('div', { class: 'dev-panel' },
+      h('h3', { class: 'help-h' }, SA.Config.text("camp_ui_ec2ca169eb2b")),
       h('div', { class: 'dev-tools' }, DEV_TOOLS.map(t => h('a', { class: 'dev-tool', href: typeof t.url === 'function' ? t.url() : t.url, target: '_blank', rel: 'noopener' },
         h('b', {}, t.name, h('span', { class: 'ext' }, ' ↗')), h('span', { class: 'muted' }, t.desc)))),
-      h('h3', { class: 'help-h' }, '存档调试 · 直接改存档'),
-      row(act('一键全部解锁', () => { dev.unlockAll(); dev.money(10000); dev.ingots(5); }, true),
+      h('h3', { class: 'help-h' }, SA.Config.text("camp_ui_c37040ee49f6")),
+      row(act(SA.Config.text("camp_ui_b9da081735b5"), () => { dev.unlockAll(); dev.money(10000); dev.ingots(5); }, true),
         act('+£1000', () => dev.money(1000)),
-        act('乌兹钢锭 / 以太结晶 +3', () => dev.ingots(3))),
-      row(sel, act('跳到这一章', () => dev.goto(+sel.value)), act('清空存档重来', () => SA.reset())),
-      row(h('button', { class: 'btn', onclick: () => SA.UI.dialog('换成简陋初始车', [
-        h('p', { style: 'margin-top:0' }, '把现在这台车整台换成黄铜四件车（履带 / 小锅炉 / 小机枪 / 头盔舱）。'),
-        h('p', { class: 'muted' }, '原车每一件都退回库存，耐久、改装和唯一身份照旧；资金和战役进度不变。'),
-      ], [{ label: '换车', primary: true, onClick: () => { SA.dev.resetVehicle(); SA.UI.refresh(); SA.UI.toast('已换成简陋初始车，原车零件在库存里'); } }]) }, '换成简陋初始车'),
-      h('span', { class: 'muted' }, '原车零件全部退库，不清存档')),
-      SA.StoryDev ? h('h3', { class: 'help-h' }, '剧情 · 编辑与插入') : null,
-      SA.StoryDev && row(h('button', { class: 'btn primary', onclick: () => { SA.UI.closeModal(); SA.StoryDev.browser(); } }, '打开剧情编辑器'),
-        h('label', { class: 'dev-check' }, h('input', { type: 'checkbox', checked: SA.StoryDev.enabled(), onchange: (e) => SA.StoryDev.setEnabled(e.target.checked) }), '出战前 / 战后询问是否插入剧情')) || null,
-      h('h3', { class: 'help-h' }, '试驾场 · 不结算、不留损伤'),
-      row(h('button', { class: 'btn primary', onclick: sandbox }, '打开试驾场'), h('span', { class: 'muted' }, '任选场地、对手、对手材料 / 性格 / 枪法，用你现在的车打一场'))));
+        act(SA.Config.text("camp_ui_0ddfa306526a"), () => dev.ingots(3))),
+      row(sel, act(SA.Config.text("camp_ui_2c3de48a2313"), () => dev.goto(+sel.value)), act(SA.Config.text("camp_ui_06a422a6b529"), () => SA.reset())),
+      row(h('button', { class: 'btn', onclick: () => SA.UI.dialog(SA.Config.text("camp_ui_3634dd543577"), [
+        h('p', { style: 'margin-top:0' }, SA.Config.text("camp_ui_66ff8d11b836")),
+        h('p', { class: 'muted' }, SA.Config.text("camp_ui_9ca4f4cf8cc3")),
+      ], [{ label: SA.Config.text("camp_ui_7bb4853e68bf"), primary: true, onClick: () => { SA.dev.resetVehicle(); SA.UI.refresh(); SA.UI.toast(SA.Config.text("camp_ui_1f40b649e19f")); } }]) }, SA.Config.text("camp_ui_3634dd543577")),
+      h('span', { class: 'muted' }, SA.Config.text("camp_ui_fc390fa4f462"))),
+      SA.StoryDev ? h('h3', { class: 'help-h' }, SA.Config.text("camp_ui_bcb19f0a0cb3")) : null,
+      SA.StoryDev && row(h('button', { class: 'btn primary', onclick: () => { SA.UI.closeModal(); SA.StoryDev.browser(); } }, SA.Config.text("camp_ui_e1a951389c80")),
+        h('label', { class: 'dev-check' }, h('input', { type: 'checkbox', checked: SA.StoryDev.enabled(), onchange: (e) => SA.StoryDev.setEnabled(e.target.checked) }), SA.Config.text("camp_ui_521ea8b0bbb7"))) || null,
+      h('h3', { class: 'help-h' }, SA.Config.text("camp_ui_f95dcccbb04f")),
+      row(h('button', { class: 'btn primary', onclick: sandbox }, SA.Config.text("camp_ui_ab9a20e4e946")), h('span', { class: 'muted' }, SA.Config.text("camp_ui_e0759ef96ec8")))));
   }
 
   // ---------- 试驾场：任选场地和对手 ----------
   // 对手来源：战役各关 / 终局锦标赛 / 官方蓝图 / 我的蓝图 / 分享码示例 / 随机街头车；可以改材料、AI 性格、枪法。
   const SB = { src: 'camp', foe: '1,0', terrain: '', mt: 0, style: '', aim: '', scene: '' };   // 记住上一次的选择
-  const SRC = [['camp', '战役各关'], ['tour', '终局锦标赛'], ['bp', '官方蓝图'], ['mine', '我的蓝图'], ['cloud', '分享码示例'], ['evolve', '进化报告'], ['street', '随机街头车']];
-  const STYLES = [['', '按对手默认'], ['roam', '游走'], ['rush', '冲锋'], ['kite', '放风筝'], ['turtle', '龟缩']];
+  const SRC = [['camp', SA.Config.text("camp_ui_aef74652a522")], ['tour', SA.Config.text("camp_ui_481666d112b2")], ['bp', SA.Config.text("camp_ui_09cf3953e6fb")], ['mine', SA.Config.text("camp_ui_77209467c816")], ['cloud', SA.Config.text("camp_ui_564d439aeaf1")], ['evolve', SA.Config.text("camp_ui_82481210220a")], ['street', SA.Config.text("camp_ui_61da76cd5798")]];
+  const STYLES = [['', SA.Config.text("camp_ui_2c2210ed86d7")], ['roam', SA.Config.text("camp_ui_ddb2fe50fb4b")], ['rush', SA.Config.text("camp_ui_c0d497cf61ab")], ['kite', SA.Config.text("camp_ui_2662eea55207")], ['turtle', SA.Config.text("camp_ui_91ed0ccb46f7")]];
   // 某个来源的对手列表：{ key, name, make() → { v, aim, style, terrain, boss } }
   function foeList(src) {
     if (src === 'camp') return SA.CAMPAIGN.flatMap((ch, ci) => ch.stages.map((o, si) => ({ key: `${ci},${si}`, name: `${ch.name.split(' · ')[0]} · ${o.name}${o.boss ? '【Boss】' : ''}`,
       make: () => ({ v: stage(ci, si).vehicle, aim: o.aim, style: o.style, terrain: o.terrain, boss: o.boss }) })));
-    if (src === 'tour') return SA.OPPONENTS.map((o, i) => ({ key: String(i), name: `第 ${i + 1} 轮 · ${o.name}`,
+    if (src === 'tour') return SA.OPPONENTS.map((o, i) => ({ key: String(i), name: SA.Config.text("state_f98b29d88349", `${i + 1}`, `${o.name}`),
       make: () => { const op = SA.S.opponent(i); return { v: op.vehicle, aim: op.aim, terrain: SA.TERRAIN_ORDER[i % SA.TERRAIN_ORDER.length], boss: i === SA.OPPONENTS.length - 1 }; } }));
     if (src === 'bp') return SA.OFFICIAL_BLUEPRINTS.map((b, i) => ({ key: String(i), name: b.name, make: () => ({ v: SA.V.fromAscii(b.name, b.rows, b.sides || []), aim: 0.8 }) }));
     if (src === 'mine') return SA.Blueprints.mine().map((b, i) => ({ key: String(i), name: b.name, make: () => ({ v: SA.V.fromLayout(b.name, b), aim: 0.8 }) }));
@@ -110,7 +110,7 @@ SA.CampUI = (() => {
       return picks.map((p, i) => ({ key: String(i), name: p.from ? `${p.name}（${p.from}）` : p.name,
         make: () => ({ v: p.cells ? SA.V.fromCells(p.name, p.cells) : SA.V.decode(p.code), aim: 0.8, style: p.style && p.style !== 'wander' ? p.style : null, terrain: p.terrain }) }));
     }
-    return [{ key: 'rand', name: '随手拼一台（每次都不一样）', make: () => { let v = null; for (let k = 0; k < 50 && !v; k++) v = SA.Street.build('街头小车', Math.random() < 0.5); return { v, aim: 0.65 }; } }];
+    return [{ key: 'rand', name: SA.Config.text("camp_ui_52f8d5a7fc8e"), make: () => { let v = null; for (let k = 0; k < SA.RULES.street.trialAttempts && !v; k++) v = SA.Street.build(SA.Config.text("camp_ui_77d99f34e0ae"), Math.random() < SA.RULES.street.trialBigChance); return { v, aim: SA.RULES.street.trialAim }; } }];
   }
   // src：直接打开某个对手来源（进化报告页跳过来时用 'evolve'，并选中最新的那台）
   function sandbox(src) {
@@ -134,31 +134,31 @@ SA.CampUI = (() => {
       const L = list();
       const field = (label, el) => h('label', { class: 'sb-field' }, h('span', { class: 'muted' }, label), el);
       body.append(h('div', { class: 'sb-grid' },
-        field('对手来源', sel(SRC, SB.src, (v) => { SB.src = v; SB.foe = (foeList(v)[0] || {}).key; })),
-        field('对手', L.length ? sel(L.map(f => [f.key, f.name]), SB.foe, (v) => { SB.foe = v; }) : h('span', { class: 'muted' }, '这里还没有车')),
-        field('场地', sel([['', '按对手默认'], ...SA.TERRAIN_ORDER.map(k => [k, SA.TERRAINS[k].name])], SB.terrain, (v) => { SB.terrain = v; })),
-        field('场景', sel([['', '预选赛（默认）'], ...Object.entries(SA.Scenes.NAMES).filter(([k]) => k !== 'qual')], SB.scene, (v) => { SB.scene = v; })),
-        field('对手材料', sel([[0, '保持原样'], ...SA.MATS.slice(1).map((m, i) => [i + 1, m.rank ? `${m.rank} · ${m.name}` : m.name])], SB.mt, (v) => { SB.mt = +v; })),
-        field('AI 性格', sel(STYLES, SB.style, (v) => { SB.style = v; })),
-        field('对手枪法', sel([['', '按对手默认'], ...[0.3, 0.5, 0.65, 0.8, 0.9, 1].map(a => [a, `瞄准 ${a}`])], SB.aim, (v) => { SB.aim = v; }))));
-      if (!foe) { body.append(h('p', { class: 'muted' }, '选一个对手')); return; }
+        field(SA.Config.text("camp_ui_11474bd8ffc9"), sel(SRC, SB.src, (v) => { SB.src = v; SB.foe = (foeList(v)[0] || {}).key; })),
+        field(SA.Config.text("camp_ui_4ea064c4d27d"), L.length ? sel(L.map(f => [f.key, f.name]), SB.foe, (v) => { SB.foe = v; }) : h('span', { class: 'muted' }, SA.Config.text("camp_ui_a3fe69faec8c"))),
+        field(SA.Config.text("camp_ui_e1d28b717f1e"), sel([['', SA.Config.text("camp_ui_2c2210ed86d7")], ...SA.TERRAIN_ORDER.map(k => [k, SA.TERRAINS[k].name])], SB.terrain, (v) => { SB.terrain = v; })),
+        field(SA.Config.text("camp_ui_7f72f06a8877"), sel([['', SA.Config.text("camp_ui_9cda7385a1f3")], ...Object.entries(SA.Scenes.NAMES).filter(([k]) => k !== 'qual')], SB.scene, (v) => { SB.scene = v; })),
+        field(SA.Config.text("camp_ui_6e17d786b77d"), sel([[0, SA.Config.text("camp_ui_90b59fe7f8ac")], ...SA.MATS.slice(1).map((m, i) => [i + 1, m.rank ? `${m.rank} · ${m.name}` : m.name])], SB.mt, (v) => { SB.mt = +v; })),
+        field(SA.Config.text("camp_ui_b4566d6d030d"), sel(STYLES, SB.style, (v) => { SB.style = v; })),
+        field(SA.Config.text("camp_ui_f787b4997419"), sel([['', SA.Config.text("camp_ui_2c2210ed86d7")], ...[0.3, 0.5, 0.65, 0.8, 0.9, 1].map(a => [a, SA.Config.text("camp_ui_c8ae3a7850bc", `${a}`)])], SB.aim, (v) => { SB.aim = v; }))));
+      if (!foe) { body.append(h('p', { class: 'muted' }, SA.Config.text("camp_ui_d44831886e06"))); return; }
       const t = SA.TERRAINS[foe.terrain], st = SA.V.stats(foe.v), me = SA.V.stats(d().vehicle);
       body.append(h('div', { class: 'sb-preview' },
         h('div', { class: 'vs-pic' }, (() => { const cv = SA.UI.vehiclePreview(foe.v, 2); cv.style.transform = 'scaleX(-1)'; return cv; })()),
         h('div', { class: 'sb-info' },
           h('b', {}, foe.name, foe.boss ? ' 【Boss】' : ''),
-          h('div', {}, h('span', { class: 'chip' }, `评分 ${st.rating}`), ' ', h('span', { class: 'chip' }, `你的车 ${me.rating}`), ' ',
-            h('span', { class: 'chip' }, `性格 ${(STYLES.find(x => x[0] === (foe.style || 'roam')) || STYLES[1])[1]}`), ' ', h('span', { class: 'chip' }, `瞄准 ${foe.aim}`)),
-          h('div', { class: 'terrain-note' }, h('b', {}, `场地 · ${t.name}`), h('span', { class: 'muted' }, t.desc)),
-          !me.canDeploy ? h('div', { class: 'warn bad' }, `你的车还不能出战：${me.problems[0]}`) : null)),
+          h('div', {}, h('span', { class: 'chip' }, SA.Config.text("camp_ui_3c474f64f788", `${st.rating}`)), ' ', h('span', { class: 'chip' }, SA.Config.text("camp_ui_fa293fb5cc44", `${me.rating}`)), ' ',
+            h('span', { class: 'chip' }, SA.Config.text("camp_ui_e5e3905101d7", `${(STYLES.find(x => x[0] === (foe.style || 'roam')) || STYLES[1])[1]}`)), ' ', h('span', { class: 'chip' }, SA.Config.text("camp_ui_c8ae3a7850bc", `${foe.aim}`))),
+          h('div', { class: 'terrain-note' }, h('b', {}, SA.Config.text("camp_ui_33c84e18e918", `${t.name}`)), h('span', { class: 'muted' }, t.desc)),
+          !me.canDeploy ? h('div', { class: 'warn bad' }, SA.Config.text("camp_ui_c972b6b78afa", `${me.problems[0]}`)) : null)),
         h('div', { class: 'dialog-actions', style: 'padding:10px 0 0;justify-content:flex-start' },
           h('button', { class: 'btn primary', disabled: !me.canDeploy, onclick: () => {
             SA.UI.closeModal();
             SA.Battle.start({ mode: 'friendly', enemyVehicle: foe.v, enemyName: foe.name, aim: foe.aim, style: foe.style, terrain: foe.terrain, boss: foe.boss, hpMul: 1, scene: SB.scene || undefined });
-          } }, '开打'),
-          SB.src === 'street' ? h('button', { class: 'btn', onclick: () => draw() }, '换一台') : null));
+          } }, SA.Config.text("camp_ui_308605e6e972")),
+          SB.src === 'street' ? h('button', { class: 'btn', onclick: () => draw() }, SA.Config.text("camp_ui_2f07427ad654")) : null));
     }
-    SA.UI.openModal('试驾场', body);
+    SA.UI.openModal(SA.Config.text("camp_ui_fd7105d81b1c"), body);
     draw();
   }
 

@@ -10,7 +10,7 @@ SA.Scenes = (() => {
   const W = 1280, H = 720, GROUND = 648, HZ = 408, GE = 538, F0 = 552;
   const TW = 1248;   // 可平铺纹理的周期
   const SKY0 = -640;   // 天空纹理顶端的世界 y（镜头拉到最远时顶上还是天）
-  const NAMES = { forge: '铁匠铺后院', alley: '后巷', wild: '野地', qual: '预选赛' };
+  const NAMES = { forge: SA.Config.text("scenes_7b027a6f1bfd"), alley: SA.Config.text("scenes_40ce848ef910"), wild: SA.Config.text("scenes_9d0944117539"), qual: SA.Config.text("scenes_4681f19cf96d") };
 
   // 哪一场用哪个场景：序章 → 铁匠铺后院；竞技场外遭遇战 → 野地；其余（战役第一章起、街头赛、锦标赛、试驾场）→ 预选赛。opts.scene 可以直接指定
   function pick(opts = {}) {
@@ -229,7 +229,7 @@ SA.Scenes = (() => {
       for (let k = 0; k < 30; k++) { const x = Math.floor(r() * 1680), hh = 5 + Math.floor(r() * 9); p.line(x, 64, x + (r() - 0.5) * 6, 64 - hh, N); }
     }, [g1, shade(g1, 0.7)]);
     // ---- 每帧 ----
-    const tom = (pose) => coalSprite('铁匠 老汤姆', pose, 'normal', 1), uncle = (pose, expr = 'normal') => coalSprite('远房亲戚', pose, expr, -1);
+    const tom = (pose) => coalSprite(SA.Config.text("home_8a44e806c998"), pose, 'normal', 1), uncle = (pose, expr = 'normal') => coalSprite(SA.Config.text("home_d095d42ab435"), pose, expr, -1);
     // 雨天 / 夜里人回屋（和主页面同一套：home-scene.js 的 indoor / inside）：老汤姆在门里打铁，亲戚雨天站门口雨棚下、夜里在窗后打盹。
     // 屋里 / 门口的人和铁匠铺同一个比例（scene 尺寸），套上天气的轮廓光
     const IN = HS.indoor(wk), homeCache = {};
@@ -256,9 +256,9 @@ SA.Scenes = (() => {
       const tomHere = !(opts && opts.storyKey === '0,2');
       if (IN) spots(S.houseX, rot, MW, vw, 460, (x) => {
         const oy2 = DY - oy, relAt = IN.rel;
-        HS.inside(g, wk, { forge: tomHere ? homeCoal('铁匠 老汤姆', strike < 0.55 ? 'cheer' : 'point', 'normal', 1) : null, window: relAt === 'window' ? homeCoal('远房亲戚', 'idle', 'sleepy', 1) : null }, tt, x, oy2);
+        HS.inside(g, wk, { forge: tomHere ? homeCoal(SA.Config.text("home_8a44e806c998"), strike < 0.55 ? 'cheer' : 'point', 'normal', 1) : null, window: relAt === 'window' ? homeCoal(SA.Config.text("home_d095d42ab435"), 'idle', 'sleepy', 1) : null }, tt, x, oy2);
         if (tomHere && strike > 0.55 && strike < 0.8) { const [ax, ay] = HS.SPOT.anvil; for (let i = 0; i < 7; i++) { const a = -Math.PI / 2 + (i - 3) * 0.4, k = (strike - 0.55) / 0.25, d = 2 + k * (8 + (i % 3) * 4); R(g, x + ax + 8 + Math.cos(a) * d, oy2 + ay - 4 + Math.sin(a) * d + k * k * 5, 1, 1, k < 0.5 ? P.fire[3] : P.fire[2]); } }
-        if (relAt === 'step') { const cheer = !tomHere && Math.floor(tt / 1.6) % 3 === 0; g.drawImage(homeCoal('远房亲戚', cheer ? 'cheer' : Math.floor(tt / 5) % 4 === 3 ? 'salute' : 'idle', cheer ? 'happy' : 'normal', 1), Math.round(x + HS.SPOT.step.x - 28), Math.round(oy2 + HS.SPOT.step.feet - 46)); }
+        if (relAt === 'step') { const cheer = !tomHere && Math.floor(tt / 1.6) % 3 === 0; g.drawImage(homeCoal(SA.Config.text("home_d095d42ab435"), cheer ? 'cheer' : Math.floor(tt / 5) % 4 === 3 ? 'salute' : 'idle', cheer ? 'happy' : 'normal', 1), Math.round(x + HS.SPOT.step.x - 28), Math.round(oy2 + HS.SPOT.step.feet - 46)); }
         if (relAt === 'window') for (let i = 0; i < 3; i++) { const f = (tt * 0.4 + i / 3) % 1; g.globalAlpha = 1 - f; R(g, x + HS.L.window[2] + 3 + f * 10 + i, oy2 + HS.L.window[1] + 4 - f * 16 - i * 4, 3 + i, 1, '#e4e0d6'); } g.globalAlpha = 1;   // 窗边飘出的 z
       });
       if (!IN) spots(S.anvil[0], rot, MW, vw, 80, (x) => {
@@ -853,8 +853,8 @@ SA.Scenes = (() => {
         const n = 1 + Math.floor(r() * 3);
         for (let k = 0; k < n; k++) S.crowd.push({ u: u + k * 13, ch: SA.Coal && SA.Coal.crew(`street${u}-${k}`), ph: r() * TAU, look: r() < 0.5 ? 1 : -1 });
       }
-      const BOOKIE = { id: 'bookie', name: '庄家', tint: 'plum', eyes: 2, iris: 'ink', acc: [['cravat', { color: '#e8e0d0' }], ['monocle'], ['topHat', { color: '#141418', band: '#8a2a2a' }]] };
-      const SHARK = { id: 'shark', name: '放贷的', tint: 'ash', eyes: 2, iris: 'ink', item: 'watch', acc: [['handlebar', { color: '#2a2a2a' }], ['bowler', { color: '#141418' }]] };
+      const BOOKIE = { id: 'bookie', name: SA.Config.text("scenes_1b90bfffb937"), tint: 'plum', eyes: 2, iris: 'ink', acc: [['cravat', { color: '#e8e0d0' }], ['monocle'], ['topHat', { color: '#141418', band: '#8a2a2a' }]] };
+      const SHARK = { id: 'shark', name: SA.Config.text("scenes_cd091c5432fc"), tint: 'ash', eyes: 2, iris: 'ink', item: 'watch', acc: [['handlebar', { color: '#2a2a2a' }], ['bowler', { color: '#141418' }]] };
       S.gang = S.bookies.flatMap((tx) => [
         { u: tx + 4, ch: BOOKIE, role: 'bookie', look: 1 }, { u: tx + 40, ch: SHARK, role: 'shark', look: -1 },
         { u: tx + 64, ch: SA.Coal && SA.Coal.crew(`punter${tx}a`), role: 'punter', look: -1, ph: 1 }, { u: tx + 78, ch: SA.Coal && SA.Coal.crew(`punter${tx}b`), role: 'punter', look: -1, ph: 2.5 },
@@ -1054,7 +1054,7 @@ SA.Scenes = (() => {
     if ((perf.slow > 1 || perf.ema > 1 / 12) && fxLevel > 0) {   // 慢到 12 帧以下立刻降，30 帧以下撑 1 秒再降
       fxLevel--; perf.slow = 0; perf.warm = 0; perf.ema = 0;
       try { sessionStorage.setItem(LVKEY, String(fxLevel)); } catch (e) { /* ignore */ }
-      if (window.console) console.info(`[场景特效] 帧率偏低，自动降到第 ${fxLevel} 档`);
+      if (window.console) console.info(SA.Config.text("scenes_e1e81ed466fe", `${fxLevel}`));
     }
   }
   const can = (w, h) => { const c = document.createElement('canvas'); c.width = Math.max(1, Math.ceil(w)); c.height = Math.max(1, Math.ceil(h)); return c; };

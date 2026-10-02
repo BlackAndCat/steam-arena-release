@@ -8,7 +8,7 @@ SA.Arena = (() => {
   const d = () => SA.S.d;
   const money = (n) => SA.UI.money(n);
   // [页签, 名称, 需要的功能]
-  const MODES = [['camp', '战役', null], ['street', '街头赛', 'street'], ['tour', '锦标赛', 'season']];
+  const MODES = [['camp', SA.Config.text("arena_7ae0219da3ae"), null], ['street', SA.Config.text("arena_dc638f0b9759"), 'street'], ['tour', SA.Config.text("arena_d152ba4020fe"), 'season']];
   const modes = () => MODES.filter(([, , f]) => !f || SA.Camp.has(f));
   // openCh：战役列表展开了哪几章（默认只展开当前这一章和选中的那一场所在的章）
   const st = { mode: 'camp', pick: { camp: null, tour: null, street: null, friendly: null }, bet: null, openCh: null };
@@ -65,7 +65,7 @@ SA.Arena = (() => {
         h('span', { class: 'nm' }, name, done ? UI.img(X.chalkLine(w), 2, 'position:absolute;left:-4px;top:11px') : null,
           next ? UI.img(X.ellipse(w + 10, 17, SA.PAL.fire[3], 0.06), 2, 'position:absolute;left:-14px;top:-4px') : null),
         h('span', { class: 'who' }, e.boss || (e.tag && e.tag[1] === 'Boss') ? 'Boss' : (e.pilot || '').split(' ').pop()),
-        rewardsOf(e).filter(x => !x.claimed).length ? h('span', { class: 'uq', title: '赢了可以缴获唯一件' }, '★') : null);
+        rewardsOf(e).filter(x => !x.claimed).length ? h('span', { class: 'uq', title: SA.Config.text("arena_c99992c3e6ed") }, '★') : null);
     };
     let rows;
     if (st.mode === 'camp') {
@@ -80,10 +80,10 @@ SA.Arena = (() => {
         if (open) rows.push(...rs.map(line));
       }
       const nextCh = SA.CAMPAIGN[SA.Camp.chIndex() + 1];
-      if (nextCh && !SA.Camp.done()) rows.push(h('div', { class: 'ch-row lock' }, h('span', { class: 'ck' }, '?'), h('span', { class: 'nm' }, `下一章：${nextCh.name.split(' · ').pop()}`)));
+      if (nextCh && !SA.Camp.done()) rows.push(h('div', { class: 'ch-row lock' }, h('span', { class: 'ck' }, '?'), h('span', { class: 'nm' }, SA.Config.text("arena_b3dca196e267", `${nextCh.name.split(' · ').pop()}`))));
     } else rows = list.map(line);
-    const foot = st.mode === 'street' ? h('button', { class: 'ch-tab', onclick: () => { SA.Street.offers(true); render(); } }, '↻ 换一批对手')
-      : st.mode === 'camp' ? h('div', { class: 'ch-foot' }, '打过的可以重打，不奖不罚') : null;
+    const foot = st.mode === 'street' ? h('button', { class: 'ch-tab', onclick: () => { SA.Street.offers(true); render(); } }, SA.Config.text("arena_b111553da074"))
+      : st.mode === 'camp' ? h('div', { class: 'ch-foot' }, SA.Config.text("arena_76babf5f99db")) : null;
     return [tabs, h('div', { class: 'ch-list' }, rows), foot];
   }
   // 便签（贴在海报下面）：场地剖面、线人情报、能缴获的唯一件
@@ -92,10 +92,10 @@ SA.Arena = (() => {
     const UI = SA.PX.ui, X = SA.PX, t = e.terrain && SA.TERRAINS[e.terrain], rs = rewardsOf(e);
     const note = (title, ...body) => h('div', { class: 'ar-stick px-sk px-sk-note px-drop' }, UI.img(X.tape(24), 2, 'position:absolute;left:50%;top:-14px;margin-left:-24px'), h('div', { class: 'nt' }, title), ...body);
     return [
-      t ? note(`场地：${t.name}`, UI.img(sketch(t, '#4a3a18', 76), 2), h('div', { class: 'nb', title: t.desc }, t.desc.split(/[。；]/)[0])) : null,
-      e.blurb ? note('情报', h('div', { class: 'nb', title: e.blurb }, UI.hand(`线人：${e.blurb}`, 14, 'white-space:normal'))) : null,
-      rs.length ? note('缴获', ...rs.map(r => h('div', { class: 'nu' }, SA.SPR.moduleCanvas(r.id, 0.5, r.mt),
-        h('div', {}, h('b', {}, `${r.mt > 1 ? SA.MATS[r.mt].name : ''}${M[r.id].name}`), h('div', { class: 'px-small' }, r.claimed ? '已经拿到了' : e.replay ? '重打不掉落' : '头一回赢了能挑它'))))) : null,
+      t ? note(SA.Config.text("arena_ef520ff326a4", `${t.name}`), UI.img(sketch(t, '#4a3a18', 76), 2), h('div', { class: 'nb', title: t.desc }, t.desc.split(/[。；]/)[0])) : null,
+      e.blurb ? note(SA.Config.text("arena_0499bfda46ca"), h('div', { class: 'nb', title: e.blurb }, UI.hand(SA.Config.text("arena_741522735269", `${e.blurb}`), 14, 'white-space:normal'))) : null,
+      rs.length ? note(SA.Config.text("arena_c51834a41645"), ...rs.map(r => h('div', { class: 'nu' }, SA.SPR.moduleCanvas(r.id, 0.5, r.mt),
+        h('div', {}, h('b', {}, `${r.mt > 1 ? SA.MATS[r.mt].name : ''}${M[r.id].name}`), h('div', { class: 'px-small' }, r.claimed ? SA.Config.text("arena_260e1d99c461") : e.replay ? SA.Config.text("arena_8c9eaa468201") : SA.Config.text("arena_1c589341288b")))))) : null,
     ];
   }
   // 场地剖面（便签上用墨线画）：地面一条线，土坡是鼓包，货箱是方块（带一道斜撑），泥地是点点
@@ -131,20 +131,20 @@ SA.Arena = (() => {
   };
   function poster(e, s) {
     const D = d(), UI = SA.PX.ui, X = SA.PX;
-    if (!e) return h('p', {}, '这里还没有比赛。');
-    const where = st.mode === 'camp' ? (() => { const [ci, si] = String(e.key).split(',').map(Number); return `${SA.CAMPAIGN[ci].name} · 第 ${si + 1} 场`; })() : st.mode === 'tour' ? `伦敦蒸汽大奖赛 · 第 ${Number(e.key) + 1} 轮` : '街头赛';
+    if (!e) return h('p', {}, SA.Config.text("arena_7bd3bb3555fd"));
+    const where = st.mode === 'camp' ? (() => { const [ci, si] = String(e.key).split(',').map(Number); return SA.Config.text("arena_d72d11a730b7", `${SA.CAMPAIGN[ci].name}`, `${si + 1}`); })() : st.mode === 'tour' ? SA.Config.text("arena_c177769a100d", `${Number(e.key) + 1}`) : SA.Config.text("arena_dc638f0b9759");
     const out = [
       h('div', { class: 'ar-kick' }, where),
       e.boss || (e.tag && e.tag[1] === 'Boss')
-        ? h('div', { class: 'ar-title boss' }, UI.img(X.brush('大对决', 34, X.RED, X.INK, 5), 2), UI.stamp('Boss', 'position:absolute;right:6px;top:10px'))
+        ? h('div', { class: 'ar-title boss' }, UI.img(X.brush(SA.Config.text("arena_c56a1dfb49ec"), 34, X.RED, X.INK, 5), 2), UI.stamp('Boss', 'position:absolute;right:6px;top:10px'))
         : h('div', { class: 'ar-title' }, UI.img(X.brush(e.v?.name || e.name, 22, X.INK, '#b59c6c', 3), 2)),
       h('div', { class: 'ar-vs' },
-        h('div', { class: 'who' }, oval('你'), h('div', { class: 'nm' }, h('b', {}, D.vehicle.name), h('span', { class: 'px-small' }, ' 评分 '), UI.num(s.rating))),
-        h('div', { class: 'mid' }, UI.loop(h('span', { class: 'dui' }, '对'), 42, 38, 7)),
-        h('div', { class: 'who' }, oval(e.pilot), h('div', { class: 'nm' }, h('b', {}, e.v?.name || e.name), h('span', { class: 'px-small' }, ' 评分 '), UI.num(e.rating)))),
+        h('div', { class: 'who' }, oval(SA.Config.text("arena_a0c7716669b5")), h('div', { class: 'nm' }, h('b', {}, D.vehicle.name), h('span', { class: 'px-small' }, SA.Config.text("arena_b9905636ed01")), UI.num(s.rating))),
+        h('div', { class: 'mid' }, UI.loop(h('span', { class: 'dui' }, SA.Config.text("arena_74570c72706a")), 42, 38, 7)),
+        h('div', { class: 'who' }, oval(e.pilot), h('div', { class: 'nm' }, h('b', {}, e.v?.name || e.name), h('span', { class: 'px-small' }, SA.Config.text("arena_b9905636ed01")), UI.num(e.rating)))),
       h('div', { class: 'ar-cars' }, engraved(D.vehicle, false), engraved(e.v, true)),
-      h('div', { class: 'ar-prize' }, e.replay ? UI.hand('↺ 重打：不发奖金、不计声望、不留战损、不掉落', 14, 'white-space:normal')
-        : e.prize ? ['奖金 ', UI.underline(UI.num(money(e.prize)), 30, 4), ' · 声望 · 缴获一件'] : '赢了不发奖金'),
+      h('div', { class: 'ar-prize' }, e.replay ? UI.hand(SA.Config.text("arena_fc63d3ddb80e"), 14, 'white-space:normal')
+        : e.prize ? [SA.Config.text("arena_f7bb3f29fe85"), UI.underline(UI.num(money(e.prize)), 30, 4), SA.Config.text("arena_dc4c740e190f")] : SA.Config.text("arena_aa2838275625")),
     ];
     return out;
   }
@@ -155,11 +155,11 @@ SA.Arena = (() => {
     SA.V.each(D.vehicle, (cell) => { if (cell.hp < SA.V.maxHp(cell)) hurt.push(cell); });
     const cost = hurt.reduce((a, c) => a + SA.S.repairCost(c), 0);
     const out = [];
-    if (s.problems.length) out.push(h('div', { class: 'ar-note' }, UI.hand(`还不能出战：${s.problems.join('；')}`, 16, 'white-space:normal'),
-      SA.Camp.has('garage') ? UI.btn('去车间处理', { sm: true, onclick: () => SA.nav('garage') }) : null));
-    if (hurt.length) out.push(h('div', { class: 'ar-note' }, UI.hand(`${hurt.length} 个模块受损`, 16),
-      UI.btn(`全部修理 ${money(cost)}`, { sm: true, title: `最贵的几项：\n${SA.UI.repairBrief(hurt)}`, onclick: () =>
-        SA.UI.pay({ title: '修理', amount: cost, okLabel: '修理', confirm: false, lines: [SA.UI.repairList(hurt)], onPaid: () => { SA.S.repairCells(hurt); SA.UI.toast('全部修好了'); render(); } }) })));
+    if (s.problems.length) out.push(h('div', { class: 'ar-note' }, UI.hand(SA.Config.text("arena_e8c028877d36", `${s.problems.join('；')}`), 16, 'white-space:normal'),
+      SA.Camp.has('garage') ? UI.btn(SA.Config.text("arena_9199b38df764"), { sm: true, onclick: () => SA.nav('garage') }) : null));
+    if (hurt.length) out.push(h('div', { class: 'ar-note' }, UI.hand(SA.Config.text("arena_05a52db1749a", `${hurt.length}`), 16),
+      UI.btn(SA.Config.text("arena_218d949df8a3", `${money(cost)}`), { sm: true, title: SA.Config.text("arena_414fbcf0218b", `${SA.UI.repairBrief(hurt)}`), onclick: () =>
+        SA.UI.pay({ title: SA.Config.text("arena_a0b0db2e55b8"), amount: cost, okLabel: SA.Config.text("arena_a0b0db2e55b8"), confirm: false, lines: [SA.UI.repairList(hurt)], onPaid: () => { SA.S.repairCells(hurt); SA.UI.toast(SA.Config.text("arena_77de03b04937")); render(); } }) })));
     const warns = s.warnings.filter(w => !/损毁/.test(w));
     if (warns.length) out.push(h('div', { class: 'ar-note px-small' }, warns.join('；')));
     return out;
@@ -174,25 +174,25 @@ SA.Arena = (() => {
     SA.V.each(e.v, (cell) => { if (!chassis && M[cell.id] && M[cell.id].layer === 'chassis') chassis = M[cell.id].name; });
     const field = (k, ...v) => h('div', { class: 'f' }, h('span', { class: 'k' }, k), h('span', {}, ...v));
     const dossier = h('div', { class: 'ar-dossier px-sk px-sk-kraft px-drop' }, UI.sk('paper', [
-      h('div', { class: 'ar-dt' }, h('span', { class: 'px-h2' }, '对手档案'), e.boss ? UI.underline(UI.hand('Boss！', 20), 26, 6) : null),
+      h('div', { class: 'ar-dt' }, h('span', { class: 'px-h2' }, SA.Config.text("arena_9ceddf319a3e")), e.boss ? UI.underline(UI.hand('Boss！', 20), 26, 6) : null),
       // 对手档案展示车辆铭牌；关卡标题仍由赛程和海报单独使用。
-      field('车手', e.pilot || '—'), field('座驾', e.v?.name || e.name), chassis ? field('底盘', chassis) : null,
-      field('评分', UI.num(e.rating), h('span', { class: 'px-small' }, ' 你 '), UI.num(s.rating)),
-      field('速度', SA.kmh(fs.topSpeed), h('span', { class: 'px-small' }, fs.topSpeed > s.topSpeed * 1.2 ? ' 比你快' : fs.topSpeed < s.topSpeed * 0.8 ? ' 比你慢' : ' 差不多'))]));
-    const why = e.lock || (!s.canDeploy ? '先把车修整好' : null);
-    const label = st.mode === 'camp' ? (e.replay ? '重打' : '出战') : st.mode === 'tour' ? '出战' : '应战';
+      field(SA.Config.text("arena_0d0dc4e4231d"), e.pilot || '—'), field(SA.Config.text("arena_58045ad11948"), e.v?.name || e.name), chassis ? field(SA.Config.text("arena_d55ac43b9ae9"), chassis) : null,
+      field(SA.Config.text("arena_96fff2e26c8d"), UI.num(e.rating), h('span', { class: 'px-small' }, SA.Config.text("arena_9418357cc52f")), UI.num(s.rating)),
+      field(SA.Config.text("arena_0e14d148b46b"), SA.kmh(fs.topSpeed), h('span', { class: 'px-small' }, fs.topSpeed > s.topSpeed * 1.2 ? SA.Config.text("arena_96be43b63aef") : fs.topSpeed < s.topSpeed * 0.8 ? SA.Config.text("arena_94d82552037a") : SA.Config.text("arena_2a57cb0e602a")))]));
+    const why = e.lock || (!s.canDeploy ? SA.Config.text("arena_ea58e9813630") : null);
+    const label = st.mode === 'camp' ? (e.replay ? SA.Config.text("arena_c0db7b4d07f1") : SA.Config.text("arena_a7caf88fcaa9")) : st.mode === 'tour' ? SA.Config.text("arena_a7caf88fcaa9") : SA.Config.text("arena_38c6f68eba39");
     const go = () => { if (why) { SA.UI.toast(why); return; } document.querySelector('#modal').hidden = true; SA.StoryDev.before({ key: st.mode === 'camp' ? e.key : 'current', replay: e.replay }, () => e.start()); };
     return [
-      D.news ? UI.sk('paper', [UI.stamp('号外'), ' ', D.news], 'padding:0 6px;font-size:13px', 'px-drop') : null,
+      D.news ? UI.sk('paper', [UI.stamp(SA.Config.text("arena_01b255a26588")), ' ', D.news], 'padding:0 6px;font-size:13px', 'px-drop') : null,
       dossier,
       betSlip(e),
       ...readiness(s),
       // 拉杆在正中：往左扳到底回院子（车间解锁后才有院子可回），往右推到底出战
       h('div', { class: 'ar-go' }, UI.throttle({ title: why || `${label} · ${e.name}`,
-        left: SA.Camp.has('garage') ? { label: '← 回院子', go: () => SA.Home.closeBoard() } : null,
+        left: SA.Camp.has('garage') ? { label: SA.Config.text("arena_702c1bd28416"), go: () => SA.Home.closeBoard() } : null,
         right: { label: `${label} →`, go, disabled: why } }),
         why ? h('div', { class: 'px-cap' }, why) : null,
-        h('div', { class: 'px-cap' }, 'A / D 移动 · 鼠标瞄准 · 按住左键稳住准星 · 1–9 换武器')),
+        h('div', { class: 'px-cap' }, SA.Config.text("arena_e807569d1ac3"))),
     ];
   }
   // 下注凭单：印好的金额，押哪个就用红笔圈哪个；已押的圈着、可以撤回
@@ -200,20 +200,21 @@ SA.Arena = (() => {
     const D = d(), UI = SA.PX.ui;
     if ((st.mode !== 'tour' && st.mode !== 'camp') || e.lock || e.replay || !SA.Camp.has('bet')) return null;
     const odds = SA.S.odds(e.raw, e.hpMul);
-    const max = Math.max(0, Math.floor(D.money / 10) * 10);
-    const opts = D.bet ? [D.bet.amount] : [0, 50, 100, 200, 500].filter(x => x <= max).concat(max > 500 ? [max] : []);
+    const bet = SA.Config.get('rules').bet;
+    const max = Math.max(0, Math.floor(D.money / bet.step) * bet.step);
+    const opts = D.bet ? [D.bet.amount] : bet.amounts.filter(x => x <= max).concat(max > bet.amounts.at(-1) ? [max] : []);
     const pick = D.bet ? D.bet.amount : (st.bet != null && opts.includes(st.bet) ? st.bet : 0);
     const opt = (x) => h('button', { class: 'ar-opt', onclick: D.bet ? null : () => { st.bet = x; render(); } },
-      x === pick ? UI.loop([x ? '■ ' : '■ ', x ? UI.num(money(x)) : '不下'], x ? 38 : 30, 19, 13 + x) : [x ? '□ ' : '□ ', x ? UI.num(money(x)) : '不下']);
+      x === pick ? UI.loop([x ? '■ ' : '■ ', x ? UI.num(money(x)) : SA.Config.text("arena_7c9567e20f32")], x ? 38 : 30, 19, 13 + x) : [x ? '□ ' : '□ ', x ? UI.num(money(x)) : SA.Config.text("arena_7c9567e20f32")]);
     return h('div', { class: 'ar-slip' },
       h('div', { class: 'stub px-sk px-sk-green' }, [...'0042'].map(ch => UI.num(ch, '#2e3a26'))),
       UI.sk('green', [
-        h('div', { class: 'ar-st' }, '伦敦蒸汽赛会 · 下注凭单'),
-        h('div', {}, '押 自己赢 · 赔率 ', UI.num(`×${odds}`)),
+        h('div', { class: 'ar-st' }, SA.Config.text("arena_03d9ed2a2824")),
+        h('div', {}, SA.Config.text("arena_57875902c2aa"), UI.num(`×${odds}`)),
         h('div', { class: 'ar-opts' }, opts.map(opt)),
-        D.bet ? h('div', { class: 'ar-bet' }, UI.hand(`已押，赢了拿回 ${money(D.bet.amount * D.bet.odds)}`, 15), UI.btn('撤回', { sm: true, onclick: () => { SA.S.cancelBet(); SA.UI.topbar(); render(); } }))
-          : pick ? h('div', { class: 'ar-bet' }, UI.hand(`能赢 ${money(pick * odds)}！`, 16), UI.btn('押自己赢', { sm: true, kind: 'pri', onclick: () => { SA.S.placeBet(pick, odds); st.bet = null; SA.UI.topbar(); SA.UI.toast(`押注 ${money(pick)}`); render(); } }))
-            : !max ? h('div', { class: 'px-small' }, '现在没钱可押') : null], 'flex:1;padding:0 6px', 'px-drop'));
+        D.bet ? h('div', { class: 'ar-bet' }, UI.hand(SA.Config.text("arena_4f2102ac02bc", `${money(D.bet.amount * D.bet.odds)}`), 15), UI.btn(SA.Config.text("arena_6b5819895525"), { sm: true, onclick: () => { SA.S.cancelBet(); SA.UI.topbar(); render(); } }))
+          : pick ? h('div', { class: 'ar-bet' }, UI.hand(SA.Config.text("arena_3744568f40c5", `${money(pick * odds)}`), 16), UI.btn(SA.Config.text("arena_f4fd8bf4a76a"), { sm: true, kind: 'pri', onclick: () => { SA.S.placeBet(pick, odds); st.bet = null; SA.UI.topbar(); SA.UI.toast(SA.Config.text("arena_efa9ac78224c", `${money(pick)}`)); render(); } }))
+            : !max ? h('div', { class: 'px-small' }, SA.Config.text("arena_bcc74c52d3fc")) : null], 'flex:1;padding:0 6px', 'px-drop'));
   }
 
   return { open, render, unmount };

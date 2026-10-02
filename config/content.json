@@ -1,0 +1,1755 @@
+{
+  "STARTER": {
+    "rows": [
+      "........",
+      "........",
+      "........",
+      "........",
+      "........",
+      "........"
+    ],
+    "subs": [
+      [
+        8,
+        9,
+        "boiler_s"
+      ],
+      [
+        8,
+        10,
+        "mg_s"
+      ],
+      [
+        9,
+        10,
+        "helmet"
+      ],
+      [
+        10,
+        9,
+        "track"
+      ]
+    ]
+  },
+  "OPPONENTS": [
+    {
+      "name": "锈钉子号",
+      "pilot": "铁匠 老汤姆",
+      "prize": 150,
+      "aim": 0.65,
+      "blurb": "拿铁匠铺的边角料拼出来的，但老汤姆的机炮从不卡壳。",
+      "rows": [
+        "........",
+        "........",
+        "........",
+        "...KM...",
+        "...OWA..",
+        "...TTT.."
+      ],
+      "sides": []
+    },
+    {
+      "name": "煤灰寡妇",
+      "pilot": "玛莎·布莱克",
+      "prize": 220,
+      "aim": 0.78,
+      "blurb": "四足稳定平台，火炮很准；车头的铲斗能把你推出场外。",
+      "rows": [
+        "........",
+        "........",
+        "...K....",
+        "...OC...",
+        "..WOAA..",
+        "..Q.U..."
+      ],
+      "sides": []
+    },
+    {
+      "name": "黄铜公爵",
+      "pilot": "沃德豪斯公爵",
+      "prize": 300,
+      "aim": 0.9,
+      "blurb": "第一台在侧挂层架侧炮的参赛车，藏在装甲后面放冷枪。",
+      "rows": [
+        "........",
+        "........",
+        "....K...",
+        "...OAM..",
+        "..WOAAC.",
+        "..TTTTT."
+      ],
+      "sides": [
+        [
+          3,
+          4
+        ]
+      ]
+    },
+    {
+      "name": "双足舞者",
+      "pilot": "伊莎贝拉·雷恩",
+      "prize": 400,
+      "aim": 0.9,
+      "blurb": "摇摇晃晃的双足底盘极难命中，还会顶着撞角全速冲过来。",
+      "rows": [
+        "........",
+        "....C...",
+        "...KM...",
+        "..OWAAX.",
+        "..WOAM..",
+        "..B....."
+      ],
+      "sides": []
+    },
+    {
+      "name": "铁甲圣堂",
+      "pilot": "圣殿骑士团",
+      "prize": 550,
+      "aim": 0.95,
+      "blurb": "重装甲堆到了第五层，顶上架着高抛火炮，车头还有蒸汽撞锤。",
+      "rows": [
+        "........",
+        "....KP..",
+        "..WOHHY.",
+        "..WOHHC.",
+        ".WOOHAM.",
+        ".TTTTTT."
+      ],
+      "sides": [
+        [
+          3,
+          4
+        ],
+        [
+          2,
+          4
+        ]
+      ]
+    },
+    {
+      "name": "维多利亚女王号",
+      "pilot": "卫冕冠军 哈灵顿爵士",
+      "prize": 800,
+      "aim": 1,
+      "blurb": "六层高的移动堡垒：五座锅炉、三门侧炮、顶层高抛炮，履带前还焊着铲斗。",
+      "rows": [
+        ".....K..",
+        "....OHP.",
+        "..WOHHM.",
+        ".WWOHKC.",
+        "WWOOHAM.",
+        "TTTTTTTU"
+      ],
+      "sides": [
+        [
+          2,
+          4
+        ],
+        [
+          3,
+          4
+        ],
+        [
+          4,
+          4
+        ]
+      ]
+    }
+  ],
+  "TERRAINS": {
+    "flat": {
+      "name": "平地",
+      "desc": "平整的煤渣地，没有遮挡，拼的是火力和装甲。"
+    },
+    "crates": {
+      "name": "货箱",
+      "crates": [
+        {
+          "x": 600,
+          "w": 48,
+          "h": 72,
+          "hp": 60
+        },
+        {
+          "x": 690,
+          "w": 48,
+          "h": 48,
+          "hp": 40
+        }
+      ],
+      "desc": "场地中间堆着几只木货箱：能替你挡一两发炮弹；车顶上去一碾就碎，只是会被拖慢一下，碎木堆也让车慢一点。"
+    },
+    "mud": {
+      "name": "泥地",
+      "mud": [
+        [
+          430,
+          850
+        ]
+      ],
+      "desc": "中间一大片烂泥：履带速度 ×0.8、四足 ×0.65、双足 ×0.45。冲撞车在泥里跑不起来。"
+    },
+    "hills": {
+      "name": "土坡",
+      "hills": [
+        {
+          "x": 640,
+          "w": 320,
+          "h": 44
+        }
+      ],
+      "desc": "中间隆起一道土坡：低平的直射炮弹会打在坡上；爬坡变慢、下坡变快，翻过去的车会被抬高。"
+    },
+    "yard": {
+      "name": "工厂后院",
+      "hills": [
+        {
+          "x": 510,
+          "w": 200,
+          "h": 26
+        },
+        {
+          "x": 790,
+          "w": 200,
+          "h": 26
+        }
+      ],
+      "crates": [
+        {
+          "x": 650,
+          "w": 48,
+          "h": 96,
+          "hp": 80
+        }
+      ],
+      "desc": "两道小坡夹着一摞高货箱：挡掉几发低平的炮弹，碾过去要多花一点时间。"
+    },
+    "mine": {
+      "name": "矿坑",
+      "hills": [
+        {
+          "x": 640,
+          "w": 360,
+          "h": 56
+        }
+      ],
+      "mud": [
+        [
+          330,
+          470
+        ],
+        [
+          810,
+          950
+        ]
+      ],
+      "desc": "中间一座矿渣堆，两边是泥坑：出发就陷在泥里，翻过渣堆才能贴身。"
+    }
+  },
+  "TERRAIN_ORDER": [
+    "flat",
+    "crates",
+    "mud",
+    "hills",
+    "yard",
+    "mine"
+  ],
+  "CAMP_START": {
+    "feat": [],
+    "mods": [
+      "track",
+      "helmet",
+      "plate",
+      "boiler",
+      "water",
+      "armor",
+      "cannon_m",
+      "mg",
+      "boiler_s",
+      "mg_s"
+    ],
+    "mat": 1,
+    "grid": {
+      "cols": 4,
+      "rows": 3
+    }
+  },
+  "SHOP_EXTRAS": [],
+  "FEATURES": {
+    "garage": "车间",
+    "shop": "商店",
+    "street": "街头赛",
+    "bank": "银行贷款",
+    "side": "侧挂层",
+    "upgrade": "改装（炮盾 / 附加装甲）",
+    "orders": "民间委托",
+    "bet": "下注",
+    "blueprints": "蓝图库",
+    "friendly": "友谊赛 · 云车库",
+    "season": "终局 · 伦敦蒸汽大奖赛"
+  },
+  "SIDE_ENCOUNTERS": [
+    {
+      "id": "dock_patrol",
+      "name": "码头巡逻队",
+      "pilot": "河岸工头",
+      "chapter": 1,
+      "terrain": "mud",
+      "aim": 0.72,
+      "style": "rush",
+      "settleDamage": true,
+      "blurb": "码头外的巡逻队拦住了补给车。没有观众，也没有奖金，但他们的观察镜值得拆下来研究。",
+      "rows": [
+        "........",
+        "........",
+        "...K....",
+        "...OM...",
+        "..WOA...",
+        "..TT..."
+      ],
+      "subs": [
+        [
+          3,
+          6,
+          "periscope"
+        ]
+      ],
+      "reward": {
+        "id": "periscope",
+        "key": "side:dock_patrol",
+        "mt": 2,
+        "unique": true,
+        "guaranteed": true,
+        "once": true,
+        "source": "side"
+      }
+    },
+    {
+      "id": "factory_escort",
+      "name": "工厂护送车",
+      "pilot": "夜班领班",
+      "chapter": 1,
+      "terrain": "crates",
+      "aim": 0.78,
+      "style": "turtle",
+      "settleDamage": true,
+      "blurb": "护送车不参加赛会，只守着工厂门口。击败它可以拿到一块稀有装甲。",
+      "rows": [
+        "........",
+        "........",
+        "...K....",
+        "..OMC...",
+        "..WOH...",
+        "..TT..."
+      ],
+      "reward": {
+        "id": "armor_heavy",
+        "key": "side:factory_escort",
+        "mt": 3,
+        "unique": true,
+        "guaranteed": true,
+        "once": true,
+        "source": "side"
+      }
+    },
+    {
+      "id": "variant_quad_skirtfort",
+      "name": "四足精英 · 裙甲堡",
+      "pilot": "场外机械师",
+      "chapter": 1,
+      "mt": 2,
+      "terrain": "flat",
+      "aim": 0.8,
+      "style": "wander",
+      "settleDamage": true,
+      "blurb": "首次击败可固定缴获「裙甲堡」四足底盘；同材料数值与普通底盘相同。",
+      "rows": [
+        "........",
+        "........",
+        "........",
+        "........",
+        "...O....",
+        "...Q...."
+      ],
+      "subs": [
+        [
+          7,
+          6,
+          "helmet"
+        ],
+        [
+          7,
+          7,
+          "mg_s"
+        ],
+        [
+          8,
+          8,
+          "water"
+        ]
+      ],
+      "reward": {
+        "id": "quad",
+        "key": "quad:skirtfort",
+        "look": "skirtfort",
+        "name": "裙甲堡",
+        "mt": 2,
+        "chapter": 1,
+        "once": true,
+        "source": "side",
+        "unique": true,
+        "guaranteed": true
+      }
+    },
+    {
+      "id": "variant_quad_gren",
+      "name": "四足精英 · 掷弹兵",
+      "pilot": "场外机械师",
+      "chapter": 2,
+      "mt": 3,
+      "terrain": "flat",
+      "aim": 0.8,
+      "style": "wander",
+      "settleDamage": true,
+      "blurb": "首次击败可固定缴获「掷弹兵」四足底盘；同材料数值与普通底盘相同。",
+      "rows": [
+        "........",
+        "........",
+        "........",
+        "........",
+        "...O....",
+        "...Q...."
+      ],
+      "subs": [
+        [
+          7,
+          6,
+          "helmet"
+        ],
+        [
+          7,
+          7,
+          "mg_s"
+        ],
+        [
+          8,
+          8,
+          "water"
+        ]
+      ],
+      "reward": {
+        "id": "quad",
+        "key": "quad:gren",
+        "look": "gren",
+        "name": "掷弹兵",
+        "mt": 3,
+        "chapter": 2,
+        "once": true,
+        "source": "side",
+        "unique": true,
+        "guaranteed": true
+      }
+    },
+    {
+      "id": "variant_quad_pedrail",
+      "name": "四足精英 · 步行履带",
+      "pilot": "场外机械师",
+      "chapter": 2,
+      "mt": 3,
+      "terrain": "flat",
+      "aim": 0.8,
+      "style": "wander",
+      "settleDamage": true,
+      "blurb": "首次击败可固定缴获「步行履带」四足底盘；同材料数值与普通底盘相同。",
+      "rows": [
+        "........",
+        "........",
+        "........",
+        "........",
+        "...O....",
+        "...Q...."
+      ],
+      "subs": [
+        [
+          7,
+          6,
+          "helmet"
+        ],
+        [
+          7,
+          7,
+          "mg_s"
+        ],
+        [
+          8,
+          8,
+          "water"
+        ]
+      ],
+      "reward": {
+        "id": "quad",
+        "key": "quad:pedrail",
+        "look": "pedrail",
+        "name": "步行履带",
+        "mt": 3,
+        "chapter": 2,
+        "once": true,
+        "source": "side",
+        "unique": true,
+        "guaranteed": true
+      }
+    },
+    {
+      "id": "variant_quad_knight",
+      "name": "四足精英 · 蒸汽圣骑",
+      "pilot": "场外机械师",
+      "chapter": 3,
+      "mt": 4,
+      "terrain": "flat",
+      "aim": 0.8,
+      "style": "wander",
+      "settleDamage": true,
+      "blurb": "首次击败可固定缴获「蒸汽圣骑」四足底盘；同材料数值与普通底盘相同。",
+      "rows": [
+        "........",
+        "........",
+        "........",
+        "........",
+        "...O....",
+        "...Q...."
+      ],
+      "subs": [
+        [
+          7,
+          6,
+          "helmet"
+        ],
+        [
+          7,
+          7,
+          "mg_s"
+        ],
+        [
+          8,
+          8,
+          "water"
+        ]
+      ],
+      "reward": {
+        "id": "quad",
+        "key": "quad:knight",
+        "look": "knight",
+        "name": "蒸汽圣骑",
+        "mt": 4,
+        "chapter": 3,
+        "once": true,
+        "source": "side",
+        "unique": true,
+        "guaranteed": true
+      }
+    },
+    {
+      "id": "variant_quad_mantis",
+      "name": "四足精英 · 螳臂步行机",
+      "pilot": "场外机械师",
+      "chapter": 3,
+      "mt": 4,
+      "terrain": "flat",
+      "aim": 0.8,
+      "style": "wander",
+      "settleDamage": true,
+      "blurb": "首次击败可固定缴获「螳臂步行机」四足底盘；同材料数值与普通底盘相同。",
+      "rows": [
+        "........",
+        "........",
+        "........",
+        "........",
+        "...O....",
+        "...Q...."
+      ],
+      "subs": [
+        [
+          7,
+          6,
+          "helmet"
+        ],
+        [
+          7,
+          7,
+          "mg_s"
+        ],
+        [
+          8,
+          8,
+          "water"
+        ]
+      ],
+      "reward": {
+        "id": "quad",
+        "key": "quad:mantis",
+        "look": "mantis",
+        "name": "螳臂步行机",
+        "mt": 4,
+        "chapter": 3,
+        "once": true,
+        "source": "side",
+        "unique": true,
+        "guaranteed": true
+      }
+    },
+    {
+      "id": "variant_quad_centaur",
+      "name": "四足精英 · 半人马",
+      "pilot": "场外机械师",
+      "chapter": 4,
+      "mt": 5,
+      "terrain": "flat",
+      "aim": 0.8,
+      "style": "wander",
+      "settleDamage": true,
+      "blurb": "首次击败可固定缴获「半人马」四足底盘；同材料数值与普通底盘相同。",
+      "rows": [
+        "........",
+        "........",
+        "........",
+        "........",
+        "...O....",
+        "...Q...."
+      ],
+      "subs": [
+        [
+          7,
+          6,
+          "helmet"
+        ],
+        [
+          7,
+          7,
+          "mg_s"
+        ],
+        [
+          8,
+          8,
+          "water"
+        ]
+      ],
+      "reward": {
+        "id": "quad",
+        "key": "quad:centaur",
+        "look": "centaur",
+        "name": "半人马",
+        "mt": 5,
+        "chapter": 4,
+        "once": true,
+        "source": "side",
+        "unique": true,
+        "guaranteed": true
+      }
+    },
+    {
+      "id": "variant_quad_anchor",
+      "name": "四足精英 · 锚链铁甲",
+      "pilot": "场外机械师",
+      "chapter": 4,
+      "mt": 5,
+      "terrain": "flat",
+      "aim": 0.8,
+      "style": "wander",
+      "settleDamage": true,
+      "blurb": "首次击败可固定缴获「锚链铁甲」四足底盘；同材料数值与普通底盘相同。",
+      "rows": [
+        "........",
+        "........",
+        "........",
+        "........",
+        "...O....",
+        "...Q...."
+      ],
+      "subs": [
+        [
+          7,
+          6,
+          "helmet"
+        ],
+        [
+          7,
+          7,
+          "mg_s"
+        ],
+        [
+          8,
+          8,
+          "water"
+        ]
+      ],
+      "reward": {
+        "id": "quad",
+        "key": "quad:anchor",
+        "look": "anchor",
+        "name": "锚链铁甲",
+        "mt": 5,
+        "chapter": 4,
+        "once": true,
+        "source": "side",
+        "unique": true,
+        "guaranteed": true
+      }
+    },
+    {
+      "id": "variant_quad_bigben",
+      "name": "四足精英 · 大本钟",
+      "pilot": "场外机械师",
+      "chapter": 5,
+      "mt": 6,
+      "terrain": "flat",
+      "aim": 0.8,
+      "style": "wander",
+      "settleDamage": true,
+      "blurb": "首次击败可固定缴获「大本钟」四足底盘；同材料数值与普通底盘相同。",
+      "rows": [
+        "........",
+        "........",
+        "........",
+        "........",
+        "...O....",
+        "...Q...."
+      ],
+      "subs": [
+        [
+          7,
+          6,
+          "helmet"
+        ],
+        [
+          7,
+          7,
+          "mg_s"
+        ],
+        [
+          8,
+          8,
+          "water"
+        ]
+      ],
+      "reward": {
+        "id": "quad",
+        "key": "quad:bigben",
+        "look": "bigben",
+        "name": "大本钟",
+        "mt": 6,
+        "chapter": 5,
+        "once": true,
+        "source": "side",
+        "unique": true,
+        "guaranteed": true
+      }
+    },
+    {
+      "id": "variant_quad_dragon",
+      "name": "四足精英 · 黑龙",
+      "pilot": "场外机械师",
+      "chapter": 5,
+      "mt": 6,
+      "terrain": "flat",
+      "aim": 0.8,
+      "style": "wander",
+      "settleDamage": true,
+      "blurb": "首次击败可固定缴获「黑龙」四足底盘；同材料数值与普通底盘相同。",
+      "rows": [
+        "........",
+        "........",
+        "........",
+        "........",
+        "...O....",
+        "...Q...."
+      ],
+      "subs": [
+        [
+          7,
+          6,
+          "helmet"
+        ],
+        [
+          7,
+          7,
+          "mg_s"
+        ],
+        [
+          8,
+          8,
+          "water"
+        ]
+      ],
+      "reward": {
+        "id": "quad",
+        "key": "quad:dragon",
+        "look": "dragon",
+        "name": "黑龙",
+        "mt": 6,
+        "chapter": 5,
+        "once": true,
+        "source": "side",
+        "unique": true,
+        "guaranteed": true
+      }
+    },
+    {
+      "id": "variant_biped_stilt",
+      "name": "双足精英 · 高跷",
+      "pilot": "场外机械师",
+      "chapter": 3,
+      "mt": 2,
+      "terrain": "flat",
+      "aim": 0.8,
+      "style": "wander",
+      "settleDamage": true,
+      "blurb": "首次击败可固定缴获「高跷」双足底盘；同材料数值与普通底盘相同。",
+      "rows": [
+        "........",
+        "........",
+        "........",
+        "...O....",
+        "...B....",
+        "........"
+      ],
+      "subs": [
+        [
+          5,
+          6,
+          "helmet"
+        ],
+        [
+          5,
+          7,
+          "mg_s"
+        ],
+        [
+          6,
+          8,
+          "water"
+        ]
+      ],
+      "reward": {
+        "id": "biped",
+        "key": "biped:stilt",
+        "look": "stilt",
+        "name": "高跷",
+        "mt": 2,
+        "chapter": 3,
+        "once": true,
+        "source": "side",
+        "unique": true,
+        "guaranteed": true
+      }
+    },
+    {
+      "id": "variant_biped_blade",
+      "name": "双足精英 · 板簧跑刃",
+      "pilot": "场外机械师",
+      "chapter": 3,
+      "mt": 3,
+      "terrain": "flat",
+      "aim": 0.8,
+      "style": "wander",
+      "settleDamage": true,
+      "blurb": "首次击败可固定缴获「板簧跑刃」双足底盘；同材料数值与普通底盘相同。",
+      "rows": [
+        "........",
+        "........",
+        "........",
+        "...O....",
+        "...B....",
+        "........"
+      ],
+      "subs": [
+        [
+          5,
+          6,
+          "helmet"
+        ],
+        [
+          5,
+          7,
+          "mg_s"
+        ],
+        [
+          6,
+          8,
+          "water"
+        ]
+      ],
+      "reward": {
+        "id": "biped",
+        "key": "biped:blade",
+        "look": "blade",
+        "name": "板簧跑刃",
+        "mt": 3,
+        "chapter": 3,
+        "once": true,
+        "source": "side",
+        "unique": true,
+        "guaranteed": true
+      }
+    },
+    {
+      "id": "variant_biped_skirt",
+      "name": "双足精英 · 裙甲堡",
+      "pilot": "场外机械师",
+      "chapter": 3,
+      "mt": 3,
+      "terrain": "flat",
+      "aim": 0.8,
+      "style": "wander",
+      "settleDamage": true,
+      "blurb": "首次击败可固定缴获「裙甲堡」双足底盘；同材料数值与普通底盘相同。",
+      "rows": [
+        "........",
+        "........",
+        "........",
+        "...O....",
+        "...B....",
+        "........"
+      ],
+      "subs": [
+        [
+          5,
+          6,
+          "helmet"
+        ],
+        [
+          5,
+          7,
+          "mg_s"
+        ],
+        [
+          6,
+          8,
+          "water"
+        ]
+      ],
+      "reward": {
+        "id": "biped",
+        "key": "biped:skirt",
+        "look": "skirt",
+        "name": "裙甲堡",
+        "mt": 3,
+        "chapter": 3,
+        "once": true,
+        "source": "side",
+        "unique": true,
+        "guaranteed": true
+      }
+    },
+    {
+      "id": "variant_biped_mail",
+      "name": "双足精英 · 锁甲骑士腿",
+      "pilot": "场外机械师",
+      "chapter": 3,
+      "mt": 4,
+      "terrain": "flat",
+      "aim": 0.8,
+      "style": "wander",
+      "settleDamage": true,
+      "blurb": "首次击败可固定缴获「锁甲骑士腿」双足底盘；同材料数值与普通底盘相同。",
+      "rows": [
+        "........",
+        "........",
+        "........",
+        "...O....",
+        "...B....",
+        "........"
+      ],
+      "subs": [
+        [
+          5,
+          6,
+          "helmet"
+        ],
+        [
+          5,
+          7,
+          "mg_s"
+        ],
+        [
+          6,
+          8,
+          "water"
+        ]
+      ],
+      "reward": {
+        "id": "biped",
+        "key": "biped:mail",
+        "look": "mail",
+        "name": "锁甲骑士腿",
+        "mt": 4,
+        "chapter": 3,
+        "once": true,
+        "source": "side",
+        "unique": true,
+        "guaranteed": true
+      }
+    },
+    {
+      "id": "variant_biped_panto",
+      "name": "双足精英 · 缩放仪平行腿",
+      "pilot": "场外机械师",
+      "chapter": 3,
+      "mt": 4,
+      "terrain": "flat",
+      "aim": 0.8,
+      "style": "wander",
+      "settleDamage": true,
+      "blurb": "首次击败可固定缴获「缩放仪平行腿」双足底盘；同材料数值与普通底盘相同。",
+      "rows": [
+        "........",
+        "........",
+        "........",
+        "...O....",
+        "...B....",
+        "........"
+      ],
+      "subs": [
+        [
+          5,
+          6,
+          "helmet"
+        ],
+        [
+          5,
+          7,
+          "mg_s"
+        ],
+        [
+          6,
+          8,
+          "water"
+        ]
+      ],
+      "reward": {
+        "id": "biped",
+        "key": "biped:panto",
+        "look": "panto",
+        "name": "缩放仪平行腿",
+        "mt": 4,
+        "chapter": 3,
+        "once": true,
+        "source": "side",
+        "unique": true,
+        "guaranteed": true
+      }
+    },
+    {
+      "id": "variant_biped_steamman",
+      "name": "双足精英 · 蒸汽人",
+      "pilot": "场外机械师",
+      "chapter": 4,
+      "mt": 5,
+      "terrain": "flat",
+      "aim": 0.8,
+      "style": "wander",
+      "settleDamage": true,
+      "blurb": "首次击败可固定缴获「蒸汽人」双足底盘；同材料数值与普通底盘相同。",
+      "rows": [
+        "........",
+        "........",
+        "........",
+        "...O....",
+        "...B....",
+        "........"
+      ],
+      "subs": [
+        [
+          5,
+          6,
+          "helmet"
+        ],
+        [
+          5,
+          7,
+          "mg_s"
+        ],
+        [
+          6,
+          8,
+          "water"
+        ]
+      ],
+      "reward": {
+        "id": "biped",
+        "key": "biped:steamman",
+        "look": "steamman",
+        "name": "蒸汽人",
+        "mt": 5,
+        "chapter": 4,
+        "once": true,
+        "source": "side",
+        "unique": true,
+        "guaranteed": true
+      }
+    },
+    {
+      "id": "variant_biped_bellows",
+      "name": "双足精英 · 风箱腿",
+      "pilot": "场外机械师",
+      "chapter": 4,
+      "mt": 5,
+      "terrain": "flat",
+      "aim": 0.8,
+      "style": "wander",
+      "settleDamage": true,
+      "blurb": "首次击败可固定缴获「风箱腿」双足底盘；同材料数值与普通底盘相同。",
+      "rows": [
+        "........",
+        "........",
+        "........",
+        "...O....",
+        "...B....",
+        "........"
+      ],
+      "subs": [
+        [
+          5,
+          6,
+          "helmet"
+        ],
+        [
+          5,
+          7,
+          "mg_s"
+        ],
+        [
+          6,
+          8,
+          "water"
+        ]
+      ],
+      "reward": {
+        "id": "biped",
+        "key": "biped:bellows",
+        "look": "bellows",
+        "name": "风箱腿",
+        "mt": 5,
+        "chapter": 4,
+        "once": true,
+        "source": "side",
+        "unique": true,
+        "guaranteed": true
+      }
+    },
+    {
+      "id": "variant_biped_templar",
+      "name": "双足精英 · 圣堂骑士腿",
+      "pilot": "场外机械师",
+      "chapter": 5,
+      "mt": 6,
+      "terrain": "flat",
+      "aim": 0.8,
+      "style": "wander",
+      "settleDamage": true,
+      "blurb": "首次击败可固定缴获「圣堂骑士腿」双足底盘；同材料数值与普通底盘相同。",
+      "rows": [
+        "........",
+        "........",
+        "........",
+        "...O....",
+        "...B....",
+        "........"
+      ],
+      "subs": [
+        [
+          5,
+          6,
+          "helmet"
+        ],
+        [
+          5,
+          7,
+          "mg_s"
+        ],
+        [
+          6,
+          8,
+          "water"
+        ]
+      ],
+      "reward": {
+        "id": "biped",
+        "key": "biped:templar",
+        "look": "templar",
+        "name": "圣堂骑士腿",
+        "mt": 6,
+        "chapter": 5,
+        "once": true,
+        "source": "side",
+        "unique": true,
+        "guaranteed": true
+      }
+    },
+    {
+      "id": "variant_biped_crystal",
+      "name": "双足精英 · 晶枝腿",
+      "pilot": "场外机械师",
+      "chapter": 5,
+      "mt": 6,
+      "terrain": "flat",
+      "aim": 0.8,
+      "style": "wander",
+      "settleDamage": true,
+      "blurb": "首次击败可固定缴获「晶枝腿」双足底盘；同材料数值与普通底盘相同。",
+      "rows": [
+        "........",
+        "........",
+        "........",
+        "...O....",
+        "...B....",
+        "........"
+      ],
+      "subs": [
+        [
+          5,
+          6,
+          "helmet"
+        ],
+        [
+          5,
+          7,
+          "mg_s"
+        ],
+        [
+          6,
+          8,
+          "water"
+        ]
+      ],
+      "reward": {
+        "id": "biped",
+        "key": "biped:crystal",
+        "look": "crystal",
+        "name": "晶枝腿",
+        "mt": 6,
+        "chapter": 5,
+        "once": true,
+        "source": "side",
+        "unique": true,
+        "guaranteed": true
+      }
+    }
+  ],
+  "CAMPAIGN_LAYOUT": 2,
+  "CLOUD_PRESETS": [
+    {
+      "author": "齿轮先生",
+      "name": "咆哮的茶壶",
+      "rows": [
+        "........",
+        "........",
+        "...K....",
+        "..OAM...",
+        "..WOAC..",
+        "..Q.U..."
+      ],
+      "sides": [
+        [
+          3,
+          3
+        ]
+      ]
+    },
+    {
+      "author": "Ada_Loveplate",
+      "name": "差分机",
+      "rows": [
+        "........",
+        "........",
+        "....M...",
+        "...KAM..",
+        "..WOOAM.",
+        "..B....."
+      ],
+      "sides": []
+    },
+    {
+      "author": "伦敦雾",
+      "name": "夜行者",
+      "rows": [
+        "........",
+        "........",
+        "..OK....",
+        "..WAA...",
+        "..OOHH..",
+        "..TTTT.."
+      ],
+      "sides": [
+        [
+          3,
+          3
+        ],
+        [
+          3,
+          4
+        ],
+        [
+          4,
+          4
+        ],
+        [
+          4,
+          5
+        ]
+      ]
+    }
+  ],
+  "OFFICIAL_BLUEPRINTS": [
+    {
+      "name": "履带 · 基础炮车",
+      "desc": "起步用的稳妥构型：一门直射火炮，装甲护住锅炉。",
+      "rows": [
+        "........",
+        "........",
+        "........",
+        "...KC...",
+        "...OWA..",
+        "...TTT.."
+      ]
+    },
+    {
+      "name": "履带 · 铲斗推土机",
+      "desc": "宽履带加车头铲斗，机炮压制，靠冲撞把对手推出去。",
+      "rows": [
+        "........",
+        "........",
+        "........",
+        "...KM...",
+        "..WOAA..",
+        "..TTTTU."
+      ]
+    },
+    {
+      "name": "四足 · 稳定炮台",
+      "desc": "四足平台散布小，直射炮平推，顶上高抛炮砸顶。",
+      "rows": [
+        "........",
+        "........",
+        "...P....",
+        "..WKC...",
+        "..OOA...",
+        "..Q....."
+      ]
+    },
+    {
+      "name": "双足 · 轻骑兵",
+      "desc": "跑得快、难命中，装甲前焊着撞角，适合贴脸冲锋。",
+      "rows": [
+        "........",
+        "........",
+        "........",
+        "...KM...",
+        "...OAX..",
+        "...B...."
+      ]
+    }
+  ],
+  "STREET_TIERS": [
+    {
+      "name": "后巷赛",
+      "cap": 200
+    },
+    {
+      "name": "集市赛",
+      "cap": 300
+    },
+    {
+      "name": "码头赛",
+      "cap": 450
+    }
+  ],
+  "STREET_PILOTS": [
+    [
+      "报童 小杰克",
+      "号外号外"
+    ],
+    [
+      "扫烟囱的汤米",
+      "烟囱刷"
+    ],
+    [
+      "卖花女 莉莉",
+      "紫罗兰"
+    ],
+    [
+      "码头工 大块头比尔",
+      "缆桩"
+    ],
+    [
+      "钟表匠学徒 奥利",
+      "发条"
+    ],
+    [
+      "面包师 胖墩",
+      "烤炉"
+    ],
+    [
+      "邮差 老乔",
+      "急件"
+    ],
+    [
+      "擦鞋匠 小山姆",
+      "鞋油罐"
+    ],
+    [
+      "磨刀匠 老维克",
+      "砂轮"
+    ],
+    [
+      "送奶工 玛吉",
+      "奶桶"
+    ],
+    [
+      "车夫 霍布斯",
+      "老马"
+    ],
+    [
+      "修伞匠 皮普",
+      "黑伞"
+    ]
+  ],
+  "PROLOGUE_PLATE_STAGE": "0:1",
+  "CAMPAIGN": [
+    {
+      "name": "序章 · 铁匠铺后院",
+      "place": "铁匠铺后院",
+      "bounds": {
+        "left": 0,
+        "right": 1280
+      },
+      "blurb": "老汤姆答应教你开蒸汽战车。先在后院的煤渣地上试试手：A/D 开车，按住左键瞄准开火。",
+      "stages": [
+        {
+          "stageRef": "0:0"
+        },
+        {
+          "stageRef": "0:1"
+        },
+        {
+          "stageRef": "0:2"
+        }
+      ],
+      "unlock": {
+        "feat": [
+          "shop"
+        ],
+        "mods": [
+          "tank_tall",
+          "cannon_s",
+          "mg_s",
+          "boiler_s"
+        ],
+        "grid": {
+          "cols": 5,
+          "rows": 3
+        },
+        "note": "商店开张：没库存的模块直接放上车就是购买。每个大格可以拆成 2×2 小格：小水罐、水罐、小炮、车载机枪和竖式锅炉用来补缝、增加火力或供能。"
+      }
+    },
+    {
+      "name": "第一章 · 后巷",
+      "place": "白教堂后巷",
+      "bounds": {
+        "left": 0,
+        "right": 1280
+      },
+      "blurb": "后巷里的地下赛车圈。在这里站稳脚跟，才会有人给你递锦标赛的请柬。",
+      "stages": [
+        {
+          "stageRef": "1:0"
+        },
+        {
+          "stageRef": "1:1"
+        },
+        {
+          "stageRef": "1:2"
+        }
+      ],
+      "unlock": {
+        "mods": [
+          "quad",
+          "cannon",
+          "mg_heavy"
+        ],
+        "mat": 2,
+        "grid": {
+          "cols": 5,
+          "rows": 4
+        },
+        "note": "熟铁材料开放：选中车上的模块就能升级材料，所有属性 ×1.2。四足、直射火炮和重机枪到手，观察镜、装弹机和侧挂件都是可击毁的实体模块。街头赛可以刷钱，银行可以贷款。"
+      }
+    },
+    {
+      "name": "第二章 · 码头区",
+      "place": "泰晤士河码头",
+      "bounds": {
+        "left": 0,
+        "right": 1280
+      },
+      "blurb": "码头区先让你用侧炮和近战贴身，随后把战场抬到头顶：货箱和厚甲挡住平射，臼炮从后排越过掩体落下。",
+      "stages": [
+        {
+          "stageRef": "2:0"
+        },
+        {
+          "stageRef": "2:1"
+        },
+        {
+          "stageRef": "2:2"
+        }
+      ],
+      "unlock": {
+        "mat": 3,
+        "grid": {
+          "cols": 6,
+          "rows": 4
+        },
+        "note": "钢材料开放（×1.45）。你已经见过泥地、双足和抛射火力，下一章会把贴身缠斗推到更高强度。"
+      }
+    },
+    {
+      "name": "第三章 · 工厂区",
+      "place": "兰开夏纺织厂",
+      "blurb": "工厂区进入缠斗：撞角、鱼叉和蒸汽喷射器轮番把距离变成优势，贴身后要在反震和持续加热之间做取舍。",
+      "stages": [
+        {
+          "stageRef": "3:0"
+        },
+        {
+          "stageRef": "3:1"
+        },
+        {
+          "stageRef": "3:2"
+        }
+      ],
+      "unlock": {
+        "feat": [
+          "upgrade"
+        ],
+        "mat": 4,
+        "grid": {
+          "cols": 6,
+          "rows": 5
+        },
+        "note": "镀镍材料开放（×1.75）。改装（炮盾 / 附加装甲）开放；侧挂层、抛射和缠斗装备已经在前两章逐步拿到。"
+      }
+    },
+    {
+      "name": "第四章 · 北方矿区",
+      "place": "约克郡煤矿",
+      "blurb": "第四章先按下主题：矿区把前几章的构筑混在一起，先学会管理重炮、储压和抛射架的空间，Boss 后开放大部分剩余装备。",
+      "stages": [
+        {
+          "stageRef": "4:0"
+        },
+        {
+          "stageRef": "4:1"
+        },
+        {
+          "stageRef": "4:2"
+        }
+      ],
+      "unlock": {
+        "feat": [
+          "bet",
+          "blueprints",
+          "friendly"
+        ],
+        "mods": [
+          "mg2",
+          "radiator",
+          "gyroscope",
+          "boiler_l",
+          "water_l"
+        ],
+        "grid": {
+          "cols": 7,
+          "rows": 5
+        },
+        "note": "第四章 Boss 后开放大部分剩余装备：双联机枪、散热片、陀螺仪、大型锅炉和大水箱补齐火力、控制与后勤；下注和蓝图库开放。"
+      }
+    },
+    {
+      "name": "第五章 · 水晶宫",
+      "place": "海德公园 · 水晶宫",
+      "blurb": "帝国蒸汽大奖赛。全英国最好的战车都在这里，卫冕冠军的女王号在决赛等你。",
+      "stages": [
+        {
+          "stageRef": "5:0"
+        },
+        {
+          "stageRef": "5:1"
+        },
+        {
+          "stageRef": "5:2"
+        }
+      ],
+      "unlock": {
+        "feat": [
+          "season"
+        ],
+        "mods": [
+          "cannon_giant"
+        ],
+        "mat": 6,
+        "grid": {
+          "cols": 8,
+          "rows": 6
+        },
+        "ingots": {
+          "wootz": 1
+        },
+        "note": "你是帝国冠军了！改装台扩到 8×6。终局「伦敦蒸汽大奖赛」开放：每个赛季对手更强，夺冠奖励以太结晶。"
+      }
+    }
+  ],
+  "ORDERS": [
+    {
+      "id": "farmer",
+      "who": "农场主 哈格里夫斯",
+      "reward": 180,
+      "rep": 0,
+      "text": "泥地里犁田要四条腿，还得带足水，免得半路烧干。",
+      "req": [
+        [
+          "四足底盘",
+          [
+            "byId",
+            "quad"
+          ],
+          2
+        ],
+        [
+          "水箱",
+          [
+            "byId",
+            "water"
+          ],
+          2
+        ]
+      ]
+    },
+    {
+      "id": "post",
+      "who": "皇家邮政局",
+      "reward": 150,
+      "rep": 0,
+      "text": "送信用的双足机，要轻：额定总功率需求不超过 60 kW。",
+      "req": [
+        [
+          "双足底盘",
+          [
+            "byId",
+            "biped"
+          ],
+          2
+        ],
+        [
+          "额定需求 ≤ 60 kW",
+          [
+            "lte",
+            "demand",
+            60
+          ],
+          1
+        ]
+      ]
+    },
+    {
+      "id": "mill",
+      "who": "纺织厂主 布伦特伍德",
+      "reward": 260,
+      "rep": 1,
+      "text": "工厂需要一台强劲的蒸汽原动机，动力供给要足。",
+      "req": [
+        [
+          "锅炉轴功率 (kW)",
+          [
+            "field",
+            "supply"
+          ],
+          180
+        ]
+      ]
+    },
+    {
+      "id": "fire",
+      "who": "伦敦消防队",
+      "reward": 220,
+      "rep": 1,
+      "text": "救火车要扛得住热：3 只水箱，全力运转 90 秒不过热。",
+      "req": [
+        [
+          "水箱",
+          [
+            "byId",
+            "water"
+          ],
+          3
+        ],
+        [
+          "烧干时间 ≥ 90 秒",
+          [
+            "gte",
+            "overheat",
+            90
+          ],
+          1
+        ]
+      ]
+    },
+    {
+      "id": "mine",
+      "who": "北方矿业公司",
+      "reward": 320,
+      "rep": 2,
+      "ingots": {
+        "wootz": 1
+      },
+      "text": "矿道常常塌方，要结实的履带车。",
+      "req": [
+        [
+          "履带底盘",
+          [
+            "byId",
+            "track"
+          ],
+          4
+        ],
+        [
+          "重装甲",
+          [
+            "byId",
+            "armor_heavy"
+          ],
+          2
+        ]
+      ]
+    },
+    {
+      "id": "circus",
+      "who": "马戏团团长 巴纳比",
+      "reward": 240,
+      "rep": 2,
+      "ingots": {
+        "wootz": 1
+      },
+      "text": "要一台看着就吓人的大家伙：叠满六层！",
+      "req": [
+        [
+          "载具高度",
+          [
+            "field",
+            "height"
+          ],
+          6
+        ]
+      ]
+    }
+  ]
+}

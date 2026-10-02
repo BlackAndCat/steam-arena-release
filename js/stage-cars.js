@@ -1,390 +1,9 @@
-// 关卡车手工设计数据（由 tools/stage-editor.html 写入，请勿手工编辑已保存记录）。
+// 关卡最终记录只来自 config/stage-cars.json；记录缺失时直接报错。
 window.SA = window.SA || {};
-SA.STAGE_CARS = {
-  "version": 1,
-  "campaignLayout": 2,
-  "targets": [
-    "0:0",
-    "0:1",
-    "0:2",
-    "1:0",
-    "1:1",
-    "1:2",
-    "2:0",
-    "2:1",
-    "2:2",
-    "3:0",
-    "3:1",
-    "3:2",
-    "4:0",
-    "4:1",
-    "4:2",
-    "5:0",
-    "5:1",
-    "5:2"
-  ],
-  "records": {
-    "0:0": {
-      "version": 1,
-      "id": "0:0",
-      "cells": [
-        [
-          0,
-          8,
-          9,
-          "boiler_s",
-          1,
-          0
-        ],
-        [
-          0,
-          8,
-          10,
-          "mg_s",
-          1,
-          0
-        ],
-        [
-          0,
-          9,
-          10,
-          "helmet",
-          1,
-          0
-        ],
-        [
-          0,
-          10,
-          9,
-          "track",
-          1,
-          0
-        ]
-      ],
-      "code": "SA2.eyJuIjoi6L+b5YyW5YCZ6YCJwrcxLTEtODQwNDLCt+WPmOW8gjQ3MTYxIiwiYiI6W1s4LDksNDRdLFs4LDEwLDQyXSxbOSwxMCwxNl0sWzEwLDksMF1dLCJzIjpbXSwiYSI6MiwicHYiOjIsIm1zIjpbXX0=",
-      "style": "rush",
-      "aim": 0.35,
-      "terrain": "flat",
-      "boss": false,
-      "prize": 60,
-      "unlock": {
-        "feat": [
-          "garage"
-        ],
-        "mods": [
-          "tank_s"
-        ],
-        "note": "车间开放：库存里有一门机炮和四块铁装甲，再给你一只小水罐练习冷却。"
-      },
-      "uniqueLoot": [],
-      "name": "破铜烂铁号",
-      "pilot": "学徒 小提米",
-      "blurb": "铁匠铺学徒拿废料拼的练习车，只有一门机炮，枪法也很烂。放心开火。",
-      "weakness": "",
-      "source": "manual",
-      "locked": true,
-      "updatedAt": "2026-09-29T13:25:25.658Z",
-      "rules": "2026-09-28-giant-indirect-module-family",
-      "analysis": {
-        "rating": 73,
-        "value": 340,
-        "weight": 1435,
-        "drive": 0.4,
-        "water": 0,
-        "overheat": 43.5,
-        "dps": 3.733333333333333,
-        "hp": 408
-      },
-      "vehicleName": "破铜烂铁号"
-    },
-    "0:1": {
-      "version": 1,
-      "id": "0:1",
-      "cells": [
-        [
-          0,
-          7,
-          8,
-          "boiler_s",
-          1,
-          0
-        ],
-        [
-          0,
-          7,
-          9,
-          "tank_s",
-          1,
-          0
-        ],
-        [
-          0,
-          8,
-          9,
-          "plate",
-          1,
-          0
-        ],
-        [
-          0,
-          9,
-          8,
-          "helmet",
-          1,
-          0
-        ],
-        [
-          0,
-          9,
-          9,
-          "mg_s",
-          1,
-          0
-        ],
-        [
-          0,
-          10,
-          8,
-          "track",
-          1,
-          0
-        ]
-      ],
-      "code": "SA2.eyJuIjoi6L+b5YyW5YCZ6YCJwrcxLTItOTYzMjQiLCJiIjpbWzcsOCw0NF0sWzcsOSwxOF0sWzgsOSwxN10sWzksOCwxNl0sWzksOSw0Ml0sWzEwLDgsMF1dLCJzIjpbXSwiYSI6Mn0=",
-      "style": "rush",
-      "aim": 0.45,
-      "terrain": "flat",
-      "boss": false,
-      "prize": 0,
-      "unlock": {
-        "mods": [
-          "plate"
-        ],
-        "note": "获得一块甲片：回到车间，把它装在要害受到攻击的一侧。",
-        "feat": []
-      },
-      "uniqueLoot": [],
-      "name": "钉子号",
-      "pilot": "铆工 小艾达",
-      "blurb": "驾驶舱上方焊着一块甲片。观察它护住了哪里，再试着从薄弱处打进去。",
-      "weakness": "",
-      "source": "manual",
-      "locked": true,
-      "updatedAt": "2026-09-29T08:47:16.961Z",
-      "rules": "2026-09-28-giant-indirect-module-family",
-      "analysis": {
-        "rating": 86,
-        "value": 372,
-        "weight": 1725,
-        "drive": 0.5,
-        "water": 36,
-        "overheat": 68.5,
-        "dps": 3.733333333333333,
-        "hp": 481
-      },
-      "vehicleName": "钉子号"
-    },
-    "0:2": {
-      "version": 1,
-      "id": "0:2",
-      "cells": [
-        [
-          0,
-          8,
-          8,
-          "boiler_s",
-          1,
-          0
-        ],
-        [
-          0,
-          8,
-          9,
-          "tank_s",
-          1,
-          0
-        ],
-        [
-          0,
-          8,
-          10,
-          "plate",
-          1,
-          0
-        ],
-        [
-          0,
-          9,
-          9,
-          "helmet",
-          1,
-          0
-        ],
-        [
-          0,
-          9,
-          10,
-          "mg_s",
-          1,
-          0
-        ],
-        [
-          0,
-          10,
-          8,
-          "track",
-          1,
-          0
-        ],
-        [
-          0,
-          10,
-          10,
-          "bucket",
-          1,
-          0
-        ]
-      ],
-      "code": "SA2.eyJuIjoi6L+b5YyW5YCZ6YCJwrcxLTMtMTA2NMK35Y+Y5byCNDgzNjnCt+WPmOW8gjc0NTM2IiwiYiI6W1s4LDgsNDRdLFs4LDksMThdLFs4LDEwLDE3XSxbOSw5LDE2XSxbOSwxMCw0Ml0sWzEwLDgsMF0sWzEwLDEwLDEyXV0sInMiOltdLCJhIjoyfQ==",
-      "style": "turtle",
-      "aim": 0.6,
-      "terrain": "flat",
-      "boss": false,
-      "prize": 120,
-      "unlock": {
-        "mods": [
-          "bucket"
-        ],
-        "note": "缴获铲斗：前期瞄准困难时，先用动力和铲斗贴近解决战斗。",
-        "feat": []
-      },
-      "uniqueLoot": [],
-      "name": "进化候选·1-3-1064·变异48369·变异74536",
-      "pilot": "铁匠 老汤姆",
-      "blurb": "老汤姆的机炮从不卡壳，专扫你没有装甲的锅炉和驾驶舱；车头铲斗会把你推出去。用装甲护住要害，再贴近它。",
-      "weakness": "",
-      "source": "manual",
-      "locked": true,
-      "updatedAt": "2026-09-29T08:46:44.184Z",
-      "rules": "2026-09-28-giant-indirect-module-family",
-      "analysis": {
-        "rating": 122,
-        "value": 482,
-        "weight": 2425,
-        "drive": 0.7,
-        "water": 36,
-        "overheat": 67,
-        "dps": 3.733333333333333,
-        "hp": 741
-      }
-    },
-    "1:0": {
-      "version": 1,
-      "id": "1:0",
-      "cells": [
-        [
-          0,
-          7,
-          7,
-          "cannon_s",
-          1,
-          0
-        ],
-        [
-          0,
-          8,
-          4,
-          "boiler_s",
-          1,
-          0
-        ],
-        [
-          0,
-          8,
-          5,
-          "tank_s",
-          1,
-          0
-        ],
-        [
-          0,
-          8,
-          7,
-          "armor",
-          1,
-          0
-        ],
-        [
-          0,
-          9,
-          5,
-          "tank_s",
-          1,
-          0
-        ],
-        [
-          0,
-          9,
-          6,
-          "helmet",
-          1,
-          0
-        ],
-        [
-          0,
-          10,
-          4,
-          "track",
-          1,
-          0
-        ],
-        [
-          0,
-          10,
-          6,
-          "track",
-          1,
-          0
-        ]
-      ],
-      "code": "SA2.eyJuIjoi6ZOB55qu572Q5aS0IiwiYiI6W1s3LDcsMjFdLFs4LDQsNDRdLFs4LDUsMThdLFs4LDcsNl0sWzksNSwxOF0sWzksNiwxNl0sWzEwLDQsMF0sWzEwLDYsMF1dLCJzIjpbXSwiYSI6MiwicHYiOjIsIm1zIjpbXX0=",
-      "style": "turtle",
-      "aim": 0.55,
-      "terrain": "crates",
-      "boss": false,
-      "prize": 130,
-      "unlock": {
-        "feat": [
-          "street",
-          "bank"
-        ],
-        "note": "街头赛和银行开放：先用短赛补足改装预算，再决定把钱投到武器还是冷却。",
-        "mods": []
-      },
-      "uniqueLoot": [],
-      "name": "铁皮罐头",
-      "pilot": "锅炉工 胖哈利",
-      "blurb": "车头糊满了铁皮，机炮打上去只冒火星（装甲每发减伤）。用直射火炮把铁皮凿穿，再打它的火炮。",
-      "weakness": "",
-      "source": "manual",
-      "locked": true,
-      "updatedAt": "2026-09-29T13:27:28.684Z",
-      "rules": "2026-09-28-giant-indirect-module-family",
-      "analysis": {
-        "rating": 126,
-        "value": 574,
-        "weight": 2885,
-        "drive": 0.9,
-        "water": 72,
-        "overheat": 137.5,
-        "dps": 4.438888888888889,
-        "hp": 758
-      }
-    }
-  }
-};
+SA.STAGE_CARS = SA.Config.get('stage-cars');
 SA.StageCars = (() => {
   const data = SA.STAGE_CARS;
+  // 每关只有一条最终记录；手工作者字段与原始关卡字段已在迁移时合并。
   const keyOf = (chapter, stage) => `${chapter}:${stage}`;
   const targetKeys = () => [...(data.targets || [])];
   const get = (chapter, stage) => data.records && data.records[keyOf(chapter, stage)] || null;
@@ -398,37 +17,50 @@ SA.StageCars = (() => {
   }
   function vehicle(record, name) {
     if (!record) return null;
-    if (Array.isArray(record.cells) && typeof SA.V.fromCells === 'function') return SA.V.fromCells(name || record.name || '手工关卡车', record.cells);
-    if (record.code && typeof SA.V.decode === 'function') return SA.V.decode(record.code);
+    if (Array.isArray(record.cells) && typeof SA.V?.fromCells === 'function') return SA.V.fromCells(name || record.name || '手工关卡车', record.cells);
+    if (record.code && typeof SA.V?.decode === 'function') {
+      const decoded = SA.V.decode(record.code);
+      if (decoded && name) decoded.name = name;
+      return decoded;
+    }
     return null;
   }
   function merge(base, chapter, stage) {
     const record = get(chapter, stage);
-    if (!record) return { ...base, source: 'original', locked: false, stageCar: null };
-    const out = { ...base };
-    for (const field of ['name', 'pilot', 'blurb', 'weakness', 'style', 'aim', 'terrain', 'boss', 'prize', 'unlock', 'uniqueLoot', 'rewardItems', 'rewardMoney', 'victoryRepairFree']) if (record[field] !== undefined) out[field] = record[field];
-    out.source = 'manual'; out.locked = record.locked !== false; out.stageCar = record; out.manualVersion = record.updatedAt || record.version || null; out.vehicle = vehicle(record, out.name);
+    if (!record) throw new Error('缺少关卡配置：' + keyOf(chapter, stage));
+    if (typeof record.rewardMoney !== 'boolean' || typeof record.victoryRepairFree !== 'boolean')
+      throw new Error('关卡结算配置不完整：' + keyOf(chapter, stage));
+    // 最终关卡字段全部来自本条配置，避免已加载旧值回填缺失字段。
+    const out = { ...record, stageRef: keyOf(chapter, stage) };
+    if (record.cells || record.code) for (const field of ['rows', 'sides', 'elite', 'subs']) delete out[field];
+    if (record.cells || record.code) out.vehicle = vehicle(record, record.vehicleName || record.name);
+    out.source = record.source || (record.cells || record.code ? 'manual' : 'original');
+    out.locked = record.locked !== false;
+    out.stageCar = out.source === 'manual' ? record : null;
     return out;
   }
   function applyToCampaign() {
     if (!Array.isArray(SA.CAMPAIGN)) return;
     for (const key of targetKeys()) {
-      const [chapter, stage] = key.split(':').map(Number), record = get(chapter, stage), base = SA.CAMPAIGN[chapter]?.stages?.[stage];
-      if (!record || !base) continue;
-      const out = merge(base, chapter, stage);
-      for (const field of ['name', 'pilot', 'blurb', 'weakness', 'style', 'aim', 'terrain', 'boss', 'prize', 'unlock', 'uniqueLoot', 'rewardItems', 'rewardMoney', 'victoryRepairFree']) if (out[field] !== undefined) base[field] = out[field];
-      base.vehicle = out.vehicle; base.source = 'manual'; base.locked = out.locked; base.stageCar = record;
+      const [chapter, stage] = key.split(':').map(Number);
+      const ref = SA.CAMPAIGN[chapter]?.stages?.[stage];
+      if (!ref || ref.stageRef !== key) throw new Error('关卡引用与配置不匹配：' + key);
+      SA.CAMPAIGN[chapter].stages[stage] = merge(ref, chapter, stage);
     }
+    SA.PROLOGUE_PLATE_STAGE = { ...SA.CAMPAIGN[0].stages[1] };
   }
   function makeRecord(chapter, stage, base, vehicleValue, meta = {}) {
     const stats = SA.V.stats(vehicleValue);
+    // 保存改车时沿用该关未编辑的规则和规格，同时移除旧 ASCII 车体。
+    const { rows, sides, elite, subs, vehicle: oldVehicle, stageCar, ...preserved } = get(chapter, stage) || {};
     return {
+      ...preserved,
       version: 1, id: keyOf(chapter, stage), cells: cellsOf(vehicleValue), code: SA.V.encode(vehicleValue),
       style: meta.style ?? base.style ?? 'wander', aim: Number.isFinite(+meta.aim) ? +meta.aim : (base.aim ?? 0.8), terrain: meta.terrain || base.terrain || 'flat', boss: meta.boss === undefined ? !!base.boss : !!meta.boss,
       prize: Number.isFinite(+meta.prize) ? +meta.prize : (base.prize || 0), unlock: meta.unlock === undefined ? (base.unlock || null) : meta.unlock, uniqueLoot: meta.uniqueLoot === undefined ? (base.uniqueLoot || []) : meta.uniqueLoot,
       rewardItems: meta.rewardItems === undefined ? (base.rewardItems || []) : meta.rewardItems,
-      rewardMoney: meta.rewardMoney === undefined ? (base.rewardMoney !== false) : !!meta.rewardMoney,
-      victoryRepairFree: meta.victoryRepairFree === undefined ? (base.victoryRepairFree === true) : !!meta.victoryRepairFree,
+      rewardMoney: meta.rewardMoney === undefined ? base.rewardMoney : !!meta.rewardMoney,
+      victoryRepairFree: meta.victoryRepairFree === undefined ? base.victoryRepairFree : !!meta.victoryRepairFree,
       name: meta.name || base.name || vehicleValue.name, pilot: meta.pilot || base.pilot || '', blurb: meta.blurb ?? base.blurb ?? '', weakness: meta.weakness ?? base.weakness ?? '',
       source: 'manual', locked: meta.locked !== false, updatedAt: new Date().toISOString(), rules: ruleFingerprint(),
       analysis: { rating: stats.rating, value: stats.value, weight: stats.weight, drive: stats.drive, water: stats.water, overheat: stats.overheat, dps: stats.dps, hp: stats.hp },

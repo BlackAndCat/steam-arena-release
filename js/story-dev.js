@@ -77,7 +77,7 @@ SA.StoryDev = (() => {
       });
     }
     list.addEventListener('change', touch);
-    // 保存：先 set（校验、写本机草稿），再 save 写文件；显式传 who / scene（undefined = 去掉），避免沿用这个位置原有的角色
+    // 保存：先校验并更新本页内存，再由服务写入正式配置；失败保留编辑内容以便重试。
     async function save() {
       let out;
       try {
@@ -86,10 +86,10 @@ SA.StoryDev = (() => {
       } catch (e) { status.textContent = `没保存：${e.message}`; status.className = 'sd-status bad'; return false; }
       status.textContent = '保存中……'; status.className = 'sd-status muted';
       const r = await D().save();
-      dirty = false;
+      if (r.ok) dirty = !!r.pending;
       status.className = `sd-status ${r.ok ? 'ok' : 'warn'}`;
-      status.textContent = !r.ok ? '已存本机草稿（用 tools/serve.py 打开才能写入文件）' : r.pending ? '已保存，另有修改仍待写入' : `已写入 ${r.file || '文本文件'}`;
-      return true;
+      status.textContent = !r.ok ? `写入失败，本页内容可重试：${r.error?.message || '服务不可用'}` : r.pending ? '本次已写入，另有修改仍待保存' : `已写入 ${r.file || 'config/text.json'}`;
+      return !!r.ok;
     }
     const onKey = (e) => {
       if ((e.ctrlKey || e.metaKey) && e.code === 'KeyS') { e.preventDefault(); e.stopImmediatePropagation(); save(); }
@@ -148,7 +148,7 @@ SA.StoryDev = (() => {
     }
     filter();
     SA.UI.openModal('剧情编辑器', h('div', { class: 'sd-browser' },
-      h('p', { class: 'muted', style: 'margin-top:0' }, '点一段打开编辑；Ctrl+S 保存，写进 text/steam-arena/zh-CN.json（需要 tools/serve.py），否则先存本机草稿。'), q, body));
+      h('p', { class: 'muted', style: 'margin-top:0' }, '点一段打开编辑；Ctrl+S 将修改写进 config/text.json。'), q, body));
   }
 
   // ---------- 战前 / 战后插入 ----------

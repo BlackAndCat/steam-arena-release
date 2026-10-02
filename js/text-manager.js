@@ -3,7 +3,7 @@
 // 设计目标：
 // 1. 运行时编辑或删除 DOM 文本、按钮文案和 title/aria-label 等属性，并隐藏所选元素；
 // 2. 同一个 key 可以绑定多个位置，修改后即时联动；
-// 3. 首次选择文本文件后自动保存；浏览器草稿随时留在 localStorage；
+// 3. 编辑只在当前页面暂存，点击保存后由本机服务写入正式配置；
 // 4. 不直接改写散落在业务 JS 里的字符串，避免正则替换破坏模板和逻辑。
 //
 // 最小接入示例：
@@ -17,11 +17,17 @@ SA.Text = (() => {
   const config = {
     game: 'steam-arena',
     locale: 'zh-CN',
-    loadUrl: '/__text/load',
     saveUrl: '/__text/save',
     toolbar: true,
   };
   const values = Object.create(null);
+  let uiDocument = null, savedUiMessages = null;
+  function uiConfig() {
+    if (!uiDocument) { uiDocument = SA.Config.get('ui'); savedUiMessages = { ...uiDocument.messages }; }
+    return uiDocument;
+  }
+  const uiBindings = new Map();
+  let uiDirty = false, uiChangeRevision = 0;
   const removedElements = new Set();
   const hiddenElements = new Map();
   const defaults = Object.create(null);
@@ -34,7 +40,6 @@ SA.Text = (() => {
   const listeners = new Set();
   let editing = false;
   let dirty = false;
-  let resetPending = false;
   let started = false;
   let loaded = false;
   let scanTimer = 0;
@@ -46,13 +51,8 @@ SA.Text = (() => {
   let editorBox = null;
   let statusEl = null;
   let saves = Promise.resolve(); // 同页的连续保存按顺序写入，防止旧请求覆盖新稿。
-  let fileHandle = null;
-  let filePermission = false;
-  let fileReadPending = false;
   let fileLoadError = '';
-  let autoSaveTimer = 0;
   let changeRevision = 0;
-  let originalView = false;
   const canvasSource = new WeakMap();
   let canvasWrapped = false;
   let pinned = null;
@@ -61,44 +61,12 @@ SA.Text = (() => {
   let readyResolve;
   const ready = new Promise(resolve => { readyResolve = resolve; });
 
-  const storageKey = () => `sa-text-${config.game}-${config.locale}`;
-  const fileName = () => `text/${config.game}/${config.locale}.json`;
-  const handleKey = () => `${config.game}/${config.locale}:${location.pathname}`;
-  // HTTP 作者页统一由本机服务写入正式项目文件；file 页面才使用浏览器文件句柄。
-  const usesTextService = () => location.protocol === 'http:' || location.protocol === 'https:';
+  const fileName = () => 'config/text.json';
+  const sourceDocument = SA.Config.get('text');
   const safeKey = key => typeof key === 'string' && key.length > 0 && key.length <= 240;
   // 剧情编排入口及编辑器自身是功能控件，页面选字模式不能拦截其点击或扫描其文字。
   const isUiElement = el => el && el.closest && el.closest('#sa-text-manager, [data-sa-text-mirror], [data-story-action], [data-yard-chat-editor]');
   const snapshot = () => ({ values: { ...values }, removedElements: [...removedElements] });
-  // 旧首开编辑可能在黑板尚未加 down 时保存；读取时统一到展开态路径。
-  // 同一历史层内两种路径并存时展开态优先；跨层仍按历史时间与顶层覆盖顺序。
-  const boardPath = key => typeof key === 'string' ? key.replace(/(^|\/)(div\.yard-board)(:n\d+)(?=\/|::|$)/, '$1$2.down$3') : key;
-  function boardValues(source) {
-    const normalized = {};
-    for (const [key, value] of Object.entries(source)) {
-      const current = boardPath(key);
-      if (current !== key && !Object.hasOwn(source, current)) normalized[current] = value;
-    }
-    for (const [key, value] of Object.entries(source)) if (boardPath(key) === key) normalized[key] = value;
-    return normalized;
-  }
-  // 旧文件的历史文案按时间由旧到新合并，同时间以数组较后项为准；顶层覆盖是最后的编辑态。
-  // 元素显隐是完整快照，只取顶层最终状态，不能把旧快照的删除路径并集回来。
-  function editedSnapshot(data) {
-    const merged = {};
-    (Array.isArray(data?.history) ? data.history : []).filter(item => item && item.values && typeof item.values === 'object')
-      .map((item, index) => ({ item, index }))
-      .sort((a, b) => String(a.item.at || '').localeCompare(String(b.item.at || '')) || a.index - b.index)
-      .forEach(({ item }) => Object.assign(merged, boardValues(item.values)));
-    Object.assign(merged, boardValues(data?.values || {}));
-    const removed = Array.isArray(data?.removedElements) ? data.removedElements : [];
-    return { values: merged, removedElements: [...new Set(removed.map(boardPath))] };
-  }
-
-  // 原始文件只有默认值；旧版本元数据或非空覆盖表示已有编辑稿，防止空原始文件盖掉本地编辑。
-  const hasEdits = data => !!(data && (data.edited || data.activeVersion || data.history?.length
-    || Object.keys(data.values || {}).length || data.removedElements?.length));
-
   function replaceSnapshot(data) {
     Object.keys(values).forEach(key => delete values[key]);
     Object.assign(values, data.values || {});
@@ -107,19 +75,6 @@ SA.Text = (() => {
     restoreElements();
     applyAll();
     scan();
-  }
-
-  // 原始版只供预览；编辑数据一直保存在顶层快照，切回编辑版立即恢复。
-  function selectVersion(id, keepPin = false) {
-    if (!['original', 'edited'].includes(id) || originalView === (id === 'original')) return;
-    if (!keepPin) releasePin();
-    originalView = id === 'original';
-    restoreElements();
-    applyAll();
-    scan();
-    notify('*');
-    updateVersions();
-    updateToolbar(originalView ? '正在预览原始版本' : '已返回编辑版本');
   }
 
   function notify(key) {
@@ -155,8 +110,21 @@ SA.Text = (() => {
     return get(key, fallback);
   }
 
+  // Config.text 输出记录原模板与实参，页面编辑框可显示完整占位符文本。
+  function registerUi(key, rendered, template, args) {
+    if (typeof key !== 'string' || typeof rendered !== 'string' || typeof template !== 'string') return;
+    const old = uiBindings.get(rendered);
+    uiBindings.set(rendered, old && old.key !== key ? null : { key, args: [...args] });
+  }
+  function uiBindingFor(rendered) {
+    const direct = uiBindings.get(rendered);
+    if (direct) return direct;
+    const key = SA.Config.keyForText?.(rendered);
+    return key && !/{{\d+}}/.test(uiConfig().messages[key]) ? { key, args: [] } : null;
+  }
+
   function get(key, fallback = '') {
-    if (originalView) return key in defaults ? defaults[key] : String(fallback == null ? '' : fallback);
+    if (key.startsWith('ui:')) return uiConfig().messages[key.slice(3)] ?? fallback;
     if (key in values) return values[key];
     return key in defaults ? defaults[key] : String(fallback == null ? '' : fallback);
   }
@@ -190,24 +158,45 @@ SA.Text = (() => {
   }
 
   function set(key, value, options = {}) {
-    if (originalView) selectVersion('edited', true);
     if (!safeKey(key)) throw new Error('SA.Text.set 需要非空且不超过 240 字符的 key');
     const next = String(value == null ? '' : value);
+    if (key.startsWith('ui:')) {
+      const name = key.slice(3);
+      if (!Object.hasOwn(uiConfig().messages, name)) throw new Error(`未知界面文案：${name}`);
+      if (uiConfig().messages[name] === next) return next;
+      uiConfig().messages[name] = next;
+      uiDirty = true; uiChangeRevision++;
+      applyKey(key);
+      if (!options.silent) notify(key);
+      updateToolbar();
+      return next;
+    }
     if (!(key in defaults)) defaults[key] = Array.from(keyEntries.get(key) || []).find(entry => entry.auto)?.fallback ?? next;
     if (values[key] === next && key in values) return next;
     values[key] = next;
     dirty = true;
     changeRevision++;
     applyKey(key);
-    persistLocal();
-    scheduleAutoSave();
     if (!options.silent) notify(key);
     updateToolbar();
     return next;
   }
 
+  // 章节继承等显式删除只移除当前配置键，写盘前仍保留在本页内存中。
+  function remove(key) {
+    if (!safeKey(key)) throw new Error('SA.Text.remove 需要有效 key');
+    if (!(key in values)) return;
+    delete values[key];
+    delete defaults[key];
+    dirty = true;
+    changeRevision++;
+    applyKey(key);
+    notify(key);
+    updateToolbar();
+  }
+
   function entryValue(entry) {
-    if (originalView) return entry.semantic && entry.key in defaults ? defaults[entry.key] : entry.fallback;
+    if (entry.key.startsWith('ui:')) return SA.Config.text(entry.key.slice(3), ...(entry.uiArgs || []));
     const oldPathKey = entry.auto && !entry.semantic ? uniqueOldPathKey(entry.key, Object.keys(values), 'dom:') : null;
     return entry.key in values ? values[entry.key]
       : oldPathKey ? values[oldPathKey]
@@ -307,6 +296,14 @@ SA.Text = (() => {
     return matches.length === 1 ? matches[0] : null;
   }
 
+  // 已保存的页面路径就是作者字段；UI 语义模板只接管尚无作者覆盖的元素。
+  function savedPathKey(current, legacy) {
+    if (current in values) return current;
+    const old = uniqueOldPathKey(current, Object.keys(values), 'dom:');
+    if (old) return old;
+    return legacy in values ? legacy : null;
+  }
+
   // #screen 与弹窗按游戏页面隔离；侧栏等公共区域属于全局，避免同构重绘误删别页。
   function removalPath(el) {
     const screen = el.closest('#screen, #modal') ? `screen:${document.body.dataset.screen || ''}` : 'global';
@@ -334,7 +331,7 @@ SA.Text = (() => {
   }
 
   function applyRemoved() {
-    if (originalView || !removedElements.size) return;
+    if (!removedElements.size) return;
     for (const el of document.body.querySelectorAll('*')) {
       if (!canRemove(el)) continue;
       const path = removalPath(el);
@@ -359,15 +356,19 @@ SA.Text = (() => {
       if (nodes.length) {
         el.dataset.saTextEditable = '1';
         nodes.forEach((node, index) => {
-          const key = el.dataset.textKey && index === 0 ? el.dataset.textKey : textKey(el, index);
           const raw = node.data;
+          const binding = uiBindingFor(raw.trim());
+          const path = textKey(el, index), legacy = legacyTextKey(el, index);
+          const authored = savedPathKey(path, legacy);
+          const key = el.dataset.textKey && index === 0 ? el.dataset.textKey
+            : authored || (binding ? `ui:${binding.key}` : path);
           node.saTextManaged = true;
           if (!nodeDefaults.has(node)) nodeDefaults.set(node, {
             fallback: raw.trim(), prefix: (raw.match(/^\s*/) || [''])[0], suffix: (raw.match(/\s*$/) || [''])[0],
           });
           const original = nodeDefaults.get(node);
           // 扫描得到的绑定每次重绘都重新建立；显式 bindText 保留自己的语义 key。
-          addEntry({ key, legacyKey: el.dataset.textKey && index === 0 ? null : legacyTextKey(el, index), semantic: !!(el.dataset.textKey && index === 0),
+          addEntry({ key, uiArgs: authored ? [] : binding?.args || [], legacyKey: el.dataset.textKey && index === 0 ? null : legacy, semantic: !!(el.dataset.textKey && index === 0) || (!!binding && !authored),
             kind: 'text', target: el, textNode: node, nodeIndex: index, fallback: original.fallback,
             prefix: original.prefix, suffix: original.suffix, auto: true });
         });
@@ -375,14 +376,17 @@ SA.Text = (() => {
       editableAttributes(el).forEach(attr => {
         const manual = manualBindings.get(el)?.get(attr);
         const semantic = !!manual || (attr === 'title' && !!el.dataset.textKey);
-        const key = manual || (attr === 'title' && el.dataset.textKey ? `${el.dataset.textKey}.${attr}` : attrKey(el, attr));
+        const binding = uiBindingFor(el.getAttribute(attr));
+        const path = attrKey(el, attr), legacy = legacyAttrKey(el, attr);
+        const authored = savedPathKey(path, legacy);
+        const key = manual || (attr === 'title' && el.dataset.textKey ? `${el.dataset.textKey}.${attr}` : authored || (binding ? `ui:${binding.key}` : path));
         if (!el.saTextAttrs) el.saTextAttrs = new Set();
         el.saTextAttrs.add(attr);
         if (!attrDefaults.has(el)) attrDefaults.set(el, new Map());
         const originals = attrDefaults.get(el);
         if (!originals.has(attr)) originals.set(attr, el.getAttribute(attr));
         el.dataset.saTextEditable = '1';
-        addEntry({ key, legacyKey: semantic ? null : legacyAttrKey(el, attr), semantic,
+        addEntry({ key, uiArgs: authored ? [] : binding?.args || [], legacyKey: semantic ? null : legacy, semantic: semantic || (!!binding && !authored),
           kind: 'attr', attr, target: el, fallback: originals.get(attr), auto: true });
       });
       if (el.tagName === 'CANVAS' && canvasSource.has(el)) {
@@ -498,11 +502,7 @@ SA.Text = (() => {
     const status = document.createElement('span'); status.className = 'sa-text-status';
     head.append(title, status);
     const actions = document.createElement('div'); actions.className = 'sa-text-actions';
-    actions.append(makeButton('toggle', '开启编辑'), makeButton('save', '选择保存文件'), makeButton('export', '导出 JSON'), makeButton('reset', '清除覆盖'));
-    const versionsLabel = document.createElement('label'); versionsLabel.textContent = '编辑版本 ';
-    const versions = document.createElement('select'); versions.dataset.textVersions = '1';
-    versionsLabel.append(versions);
-    versions.addEventListener('change', () => selectVersion(versions.value));
+    actions.append(makeButton('toggle', '开启编辑'), makeButton('save', '保存到配置'), makeButton('reset', '撤销本页修改'));
     editorBox = document.createElement('div'); editorBox.className = 'sa-text-editor'; editorBox.hidden = true;
     const label = document.createElement('label'); label.textContent = '当前文案';
     editorInput = document.createElement('textarea'); editorInput.rows = 2;
@@ -512,7 +512,7 @@ SA.Text = (() => {
     const editActions = document.createElement('div'); editActions.className = 'sa-text-actions';
     editActions.append(makeButton('parent', '选中父元素'), makeButton('remove-element', '删除所选元素'), makeButton('remove-text', '删除当前文字'));
     editorBox.append(selection, editActions);
-    toolbar.append(head, actions, versionsLabel, editorBox);
+    toolbar.append(head, actions, editorBox);
     document.body.append(toolbar);
     statusEl = status;
     toolbar.addEventListener('click', event => {
@@ -522,7 +522,6 @@ SA.Text = (() => {
       const name = action.dataset.textAction;
       if (name === 'toggle') toggle();
       if (name === 'save') save();
-      if (name === 'export') exportJson();
       if (name === 'reset') reset();
       if (name === 'parent') selectParent();
       if (name === 'remove-element') removeSelectedElement();
@@ -531,29 +530,15 @@ SA.Text = (() => {
     editorInput.addEventListener('input', () => {
       if (activeEntry) set(activeEntry.key, editorInput.value);
     });
-    // 本地草稿可能先于工具栏读取；工具栏出现后补上当前版与历史版。
-    updateVersions();
+    // 工具栏显示当前配置与本页尚未保存的修改。
     updateToolbar();
-  }
-
-  function updateVersions() {
-    const select = toolbar?.querySelector('[data-text-versions]');
-    if (!select) return;
-    select.replaceChildren();
-    [['original', '原始版本'], ['edited', '编辑版本']].forEach(([id, label]) => {
-      const option = document.createElement('option');
-      option.value = id;
-      option.textContent = label;
-      select.append(option);
-    });
-    select.value = originalView ? 'original' : 'edited';
   }
 
   function openEditor(entry) {
     activeEntry = entry;
     editorBox.querySelector('label').hidden = !entry;
     if (!entry) { editorBox.querySelector('small').textContent = '此元素没有可编辑文字'; return; }
-    editorInput.value = entryValue(entry);
+    editorInput.value = entry.key.startsWith('ui:') ? uiConfig().messages[entry.key.slice(3)] : entryValue(entry);
     editorBox.querySelector('small').textContent = `${entry.key}${entry.kind === 'attr' ? `（${entry.attr}）` : ''}`;
     editorInput.focus(); editorInput.select();
   }
@@ -575,18 +560,17 @@ SA.Text = (() => {
 
   function removeSelectedElement() {
     if (!canRemove(activeElement)) return;
-    if (originalView) selectVersion('edited');
     removedElements.add(removalPath(activeElement));
     hideElement(activeElement);
     activeElement = null; activeEntry = null; editorBox.hidden = true;
-    dirty = true; changeRevision++; persistLocal(); scheduleAutoSave(); updateToolbar('元素已隐藏；草稿已保存');
+    dirty = true; changeRevision++;  updateToolbar('元素已隐藏；尚未写入配置');
   }
 
   function removeSelectedText() {
     if (!activeEntry) return;
     set(activeEntry.key, '');
     editorInput.value = '';
-    updateToolbar('文字已删除；草稿已保存');
+    updateToolbar('文字已删除；尚未写入配置');
   }
 
   function onPointerDown(event) {
@@ -709,289 +693,95 @@ SA.Text = (() => {
   function updateToolbar(message) {
     if (!toolbar) return;
     const toggleButton = toolbar.querySelector('[data-text-action="toggle"]');
-    const saveButton = toolbar.querySelector('[data-text-action="save"]');
     toggleButton.textContent = editing ? '完成编辑' : '开启编辑';
-    saveButton.disabled = !dirty && !usesTextService() && !!fileHandle && filePermission;
-    saveButton.textContent = usesTextService() ? '保存到本机服务'
-      : !window.showSaveFilePicker ? '保存到本机服务' : fileHandle ? '保存到已选文件' : '选择保存文件';
     if (editorBox) {
       editorBox.querySelector('[data-text-action="parent"]').disabled = !activeElement || !activeElement.parentElement || activeElement.parentElement === document.body;
       editorBox.querySelector('[data-text-action="remove-element"]').disabled = !canRemove(activeElement);
       editorBox.querySelector('[data-text-action="remove-text"]').disabled = !activeEntry;
     }
-    statusEl.textContent = message || fileLoadError || (dirty
-      ? usesTextService() ? '草稿已保存；点击保存写入本机服务'
-        : filePermission ? '正在自动保存到文件…' : window.showSaveFilePicker ? fileHandle ? '草稿已保存；点击保存重新授权' : `草稿已保存；点击选择 ${fileName()}` : '草稿已保存；可通过本机服务保存或导出 JSON'
-      : loaded ? !usesTextService() && filePermission ? '文件已同步' : '本机草稿已保存' : '正在加载…');
-  }
-
-  function persistLocal() {
-    try {
-      localStorage.setItem(storageKey(), JSON.stringify({ ...payloadNow(), dirty, resetPending }));
-    } catch (e) {
-      updateToolbar('浏览器存储不可用');
-    }
-  }
-
-  // 文件句柄只保存于同源 IndexedDB；读写权限每次重新检查，不把上次授权当作永久授权。
-  function handleStore(mode, value) {
-    if (!window.indexedDB) return Promise.resolve(null);
-    return new Promise((resolve, reject) => {
-      const open = indexedDB.open('sa-text-files', 1);
-      open.onupgradeneeded = () => open.result.createObjectStore('handles');
-      open.onerror = () => reject(open.error);
-      open.onsuccess = () => {
-        const db = open.result;
-        const tx = db.transaction('handles', mode === 'read' ? 'readonly' : 'readwrite');
-        const request = mode === 'read' ? tx.objectStore('handles').get(handleKey()) : tx.objectStore('handles').put(value, handleKey());
-        let result = null;
-        request.onsuccess = () => { result = request.result || null; };
-        request.onerror = () => reject(request.error);
-        tx.oncomplete = () => { db.close(); resolve(result); };
-        tx.onabort = tx.onerror = () => { db.close(); reject(tx.error || new Error('文件句柄保存失败')); };
-      };
-    });
+    statusEl.textContent = message || fileLoadError || (dirty || uiDirty ? '本页修改尚未写入正式配置' : loaded ? '配置已同步' : '正在加载…');
   }
 
   function payloadNow() {
-    return { version: 1, game: config.game, locale: config.locale, edited: true, ...snapshot() };
+    // 结构元数据与页面文案同写进唯一正式配置；编辑器只改当前快照。
+    return { ...sourceDocument, version: 1, game: config.game, locale: config.locale, ...snapshot() };
   }
 
-  // 首次选文件先读现有覆盖；有草稿时只补文件独有的键，显式“清除覆盖”则保持全清意图。
-  function mergeFile(data, empty = false) {
-    if (empty) return;
-    if (!data || typeof data !== 'object' || Array.isArray(data)
-      || data.version !== 1 || data.game !== config.game || data.locale !== config.locale
-      || !data.values || typeof data.values !== 'object' || Array.isArray(data.values)
-      || (Object.hasOwn(data, 'removedElements') && !Array.isArray(data.removedElements)))
-      throw new Error('所选文件不是当前游戏的页面管理 JSON');
-    const merged = editedSnapshot(data);
-    if (!dirty) {
-      replaceSnapshot(merged);
-    } else if (!resetPending) {
-      Object.entries(merged.values).forEach(([key, value]) => { if (!(key in values)) values[key] = value; });
-      // 草稿的显隐清单是最终状态；文件旧清单不可把用户已恢复的元素再隐藏。
-      changeRevision++;
-    }
-    persistLocal();
-    scan();
-    notify('*');
-  }
-
-  function scheduleAutoSave() {
-    if (usesTextService() || !fileHandle || !filePermission) return;
-    clearTimeout(autoSaveTimer);
-    autoSaveTimer = setTimeout(() => { autoSaveTimer = 0; save(); }, 250);
-  }
-
-  // 文件选择与重新授权必须在按钮点击的用户手势内开始；取消时只保留本机草稿。
-  async function prepareFile() {
-    let newSelection = false;
-    try {
-      if (!fileHandle) {
-        fileHandle = await window.showSaveFilePicker({ suggestedName: `${config.locale}.json`,
-          types: [{ description: '页面管理 JSON', accept: { 'application/json': ['.json'] } }] });
-        newSelection = true;
-        if (fileHandle.name !== `${config.locale}.json`) {
-          fileHandle = null;
-          throw new Error(`请选择 ${fileName()}`);
-        }
-      }
-      filePermission = await fileHandle.queryPermission({ mode: 'readwrite' }) === 'granted';
-      if (!filePermission) filePermission = await fileHandle.requestPermission({ mode: 'readwrite' }) === 'granted';
-      if (!filePermission) throw new Error('未获得文本文件写入权限');
-      if (newSelection || fileReadPending) {
-        const contents = await (await fileHandle.getFile()).text();
-        mergeFile(contents.trim() ? JSON.parse(contents) : null, !contents.trim());
-        fileReadPending = false;
-      }
-      if (newSelection) await handleStore('write', fileHandle).catch(() => {});
-      fileLoadError = '';
-      updateToolbar();
-      return true;
-    } catch (error) {
-      filePermission = false;
-      if ((newSelection || fileReadPending) && error.name !== 'NotAllowedError' && error.message !== '未获得文本文件写入权限') {
-        fileHandle = null;
-        fileReadPending = false;
-      }
-      updateToolbar(error.name === 'AbortError' ? '已取消选择；草稿仍在浏览器' : `草稿仍在浏览器：${error.message}`);
-      return false;
-    }
-  }
-
-  async function load() {
-    let local = null;
-    try { local = JSON.parse(localStorage.getItem(storageKey()) || 'null'); } catch (e) { local = null; }
-    if (local && local.values && typeof local.values === 'object') {
-      const merged = editedSnapshot(local);
-      Object.assign(values, merged.values);
-      merged.removedElements.forEach(path => removedElements.add(path));
-    }
-    dirty = !!(local && local.dirty);
-    resetPending = !!(local && local.resetPending && dirty);
-    let sourceLoaded = false;
-    let fileRestoreFailed = false;
-    if (!usesTextService() && window.showSaveFilePicker) {
-      try {
-        fileHandle = await handleStore('read');
-        if (fileHandle) {
-          filePermission = await fileHandle.queryPermission({ mode: 'readwrite' }) === 'granted';
-          if (filePermission) {
-            const data = JSON.parse(await (await fileHandle.getFile()).text());
-            if (!dirty && data.values && typeof data.values === 'object' && (!hasEdits(local) || hasEdits(data))) {
-              replaceSnapshot(editedSnapshot(data));
-            }
-            sourceLoaded = true;
-          } else {
-            fileReadPending = true;
-            fileLoadError = '已找到保存文件；点击保存重新授权读取和写入';
-          }
-        }
-      } catch (error) {
-        fileRestoreFailed = true;
-        fileLoadError = `文件读取失败，草稿仍在浏览器；点击重新选择 ${fileName()}`;
-        fileHandle = null;
-        filePermission = false;
-      }
-    }
-    try {
-      const query = `?game=${encodeURIComponent(config.game)}&locale=${encodeURIComponent(config.locale)}`;
-      const response = await fetch(`${config.loadUrl}${query}`, { cache: 'no-store' });
-      if (response.ok) {
-        const data = await response.json();
-        if (!dirty && !fileHandle && !fileRestoreFailed && (!hasEdits(local) || hasEdits(data)) && data.values && typeof data.values === 'object') {
-          replaceSnapshot(editedSnapshot(data));
-        }
-        sourceLoaded = true;
-      }
-    } catch (e) {
-      // 普通静态托管没有服务接口时，尝试读取同路径下的 JSON 文件。
-    }
-    if (!sourceLoaded && !fileHandle && !fileRestoreFailed) {
-      try {
-        const response = await fetch(fileName(), { cache: 'no-store' });
-        if (response.ok) {
-          const data = await response.json();
-          if (!dirty && (!hasEdits(local) || hasEdits(data)) && data.values && typeof data.values === 'object') {
-            replaceSnapshot(editedSnapshot(data));
-          }
-          sourceLoaded = true;
-        }
-      } catch (error) { /* 草稿足以继续启动游戏。 */ }
-    }
-    loaded = true;
-    if (sourceLoaded && !dirty) persistLocal();
-    if (readyResolve) readyResolve(api);
-    updateToolbar();
-    scan();
-    notify('*'); // 游戏首屏若已建院子，异步文本到齐后立即重建当前聊天池。
-    if (startupStyle) { startupStyle.remove(); startupStyle = null; }
-    if (dirty) scheduleAutoSave();
-  }
-
-  // 发行包只读取归档中的正式文本快照，不接触开发草稿和作者文件句柄。
-  async function loadRelease() {
-    const response = await fetch(fileName(), { cache: 'no-store' });
-    if (!response.ok) throw new Error(`发行文本 HTTP ${response.status}`);
-    const data = await response.json();
-    if (data && data.values && typeof data.values === 'object') replaceSnapshot(editedSnapshot(data));
+  function load() {
+    if (!sourceDocument || sourceDocument.version !== 1 || !sourceDocument.values || !Array.isArray(sourceDocument.removedElements))
+      throw new Error('正式文本配置格式无效');
+    replaceSnapshot(sourceDocument);
     loaded = true;
     if (readyResolve) readyResolve(api);
-    scan();
-    notify('*');
+    updateToolbar(); scan(); notify('*');
     if (startupStyle) { startupStyle.remove(); startupStyle = null; }
   }
 
-  // 其他标签页保存院子聊天后刷新已保存快照；当前页有草稿时不覆盖它。
+  // 其他标签页写入后，只在当前页没有待保存修改时接收新快照。
   async function reload(savedDocument) {
-    if (dirty) return false;
-    let data = savedDocument;
-    if (!data) {
-      const query = `?game=${encodeURIComponent(config.game)}&locale=${encodeURIComponent(config.locale)}`;
-      const response = await fetch(`${config.loadUrl}${query}`, { cache: 'no-store' });
-      if (!response.ok) return false;
-      data = await response.json();
-    }
-    if (!data || data.version !== 1 || data.game !== config.game || data.locale !== config.locale
-      || !data.values || typeof data.values !== 'object' || Array.isArray(data.values)) return false;
-    replaceSnapshot(editedSnapshot(data));
-    persistLocal();
-    applyAll();
-    scan();
+    if (dirty || !savedDocument) return false;
+    if (savedDocument.version !== 1 || savedDocument.game !== config.game || savedDocument.locale !== config.locale
+      || !savedDocument.values || !Array.isArray(savedDocument.removedElements)) return false;
+    Object.assign(sourceDocument, savedDocument);
+    replaceSnapshot(sourceDocument);
     notify('*');
     return true;
   }
 
   function save() {
-    clearTimeout(autoSaveTimer);
-    // prepareFile 立即调用文件选择器，避免排队的 Promise 丢失浏览器用户手势。
-    const prepared = !usesTextService() && window.showSaveFilePicker && (!fileHandle || !filePermission)
-      ? prepareFile() : Promise.resolve(true);
-    saves = saves.then(async () => (await prepared) ? saveNow() : { ok: false, cancelled: true },
-      async () => (await prepared) ? saveNow() : { ok: false, cancelled: true });
+    saves = saves.then(saveNow, saveNow);
     return saves;
   }
 
   async function saveNow() {
-    if (!usesTextService() && !dirty && !fileHandle) return { ok: true, local: true };
-    persistLocal();
-    const payload = payloadNow();
-    const revision = changeRevision;
+    const saveText = dirty, saveUi = uiDirty;
+    const payload = saveText ? payloadNow() : null;
+    const uiPayload = saveUi ? JSON.parse(JSON.stringify(uiConfig())) : null;
+    const revision = changeRevision, uiRevision = uiChangeRevision;
+    let serverRevision;
     try {
-      let serverRevision;
-      if (!usesTextService() && fileHandle && filePermission) {
-        const writable = await fileHandle.createWritable();
-        await writable.write(JSON.stringify(payload, null, 2) + '\n');
-        await writable.close();
-      } else {
+      if (saveText) {
         const response = await fetch(config.saveUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
         if (!response.ok) {
           const data = await response.json().catch(() => ({}));
           throw new Error(data.error || `HTTP ${response.status}`);
         }
-        const data = await response.json();
-        serverRevision = data.revision;
+        serverRevision = (await response.json()).revision;
+        Object.assign(sourceDocument, payload);
+        dirty = changeRevision !== revision;
       }
-      // 写入过程中产生的新稿由修订号保护，下一次自动写入最新完整内容。
-      dirty = changeRevision !== revision;
-      if (!dirty) resetPending = false;
-      persistLocal();
-      updateToolbar(dirty ? '部分修改仍待保存' : `已写入 ${fileName()}`);
-      if (dirty) scheduleAutoSave();
-      return { ok: true, file: fileName(), revision: serverRevision, pending: dirty, document: payload };
+      if (saveUi) {
+        const response = await fetch('/__config/save', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: 'ui', data: uiPayload }) });
+        if (!response.ok) {
+          const data = await response.json().catch(() => ({}));
+          throw new Error(data.error || `HTTP ${response.status}`);
+        }
+        await response.json();
+        savedUiMessages = { ...uiPayload.messages };
+        uiDirty = uiChangeRevision !== uiRevision;
+      }
+      updateToolbar(dirty || uiDirty ? '本次写入完成；后续修改仍待保存' : '已写入正式配置');
+      return { ok: true, file: saveUi && !saveText ? 'config/ui.json' : fileName(), revision: serverRevision,
+        pending: dirty || uiDirty, document: payload };
     } catch (error) {
-      persistLocal();
-      if (!usesTextService() && fileHandle) filePermission = false;
-      updateToolbar(`写入失败，草稿仍在浏览器：${error.message}`);
+      updateToolbar(`写入失败，本页修改仍可重试：${error.message}`);
       return { ok: false, error };
     }
   }
 
-  function exportJson() {
-    const payload = JSON.stringify(payloadNow(), null, 2);
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(new Blob([payload], { type: 'application/json;charset=utf-8' }));
-    link.download = `${config.game}-${config.locale}.json`;
-    link.click();
-    setTimeout(() => URL.revokeObjectURL(link.href), 1000);
-    updateToolbar('已导出 JSON；可放入 text/<game>/<locale>.json');
-  }
-
   function reset() {
-    if (originalView) selectVersion('edited');
-    Object.keys(values).forEach(key => delete values[key]);
-    removedElements.clear();
-    restoreElements();
-    dirty = true;
-    resetPending = true;
+    // 撤销只恢复已落盘快照，不清空配置里的正式内容。
+    replaceSnapshot(sourceDocument);
+    dirty = false;
+    if (uiDocument) uiDocument.messages = { ...savedUiMessages };
+    uiDirty = false;
+    uiChangeRevision++;
     changeRevision++;
-    persistLocal();
     applyAll();
     scan();
     notify('*');
-    scheduleAutoSave();
-    updateToolbar('已恢复默认文案；草稿已保存');
+    updateToolbar('已恢复到上次写入的配置');
   }
 
   function onChange(fn) {
@@ -1037,7 +827,7 @@ SA.Text = (() => {
     }
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot, { once: true });
     else boot();
-    (SA.RELEASE ? loadRelease() : load()).catch(error => {
+    Promise.resolve().then(load).catch(error => {
       fileLoadError = `文本加载失败：${error.message}`;
       loaded = true;
       scan();
@@ -1047,13 +837,11 @@ SA.Text = (() => {
   }
 
   const api = SA.RELEASE ? {
-    init, ready, get, t: get, register, homeLines, homeTips, bindText, bindAttr, canvas, draw, onChange,
+    init, ready, get, t: get, register, registerUi, homeLines, homeTips, bindText, bindAttr, canvas, draw, onChange,
     isEditing: () => false, file: fileName,
   } : {
-    init, ready, load: reload, get, t: get, set, register, homeLines, homeTips, bindText, bindAttr, canvas, draw,
-    enterEdit, exitEdit, toggle, save, export: exportJson, reset, onChange,
-    versions: () => [{ id: 'original' }, { id: 'edited' }],
-    selectVersion,
+    init, ready, load: reload, get, t: get, set, register, registerUi, homeLines, homeTips, bindText, bindAttr, canvas, draw,
+    enterEdit, exitEdit, toggle, save, reset, remove, onChange,
     isEditing: () => editing,
     file: fileName,
     refresh: () => scan(),
@@ -1062,7 +850,7 @@ SA.Text = (() => {
   return api;
 })();
 
-// 剧情数据接口：编辑前等待 SA.Text.ready；所有覆盖值沿用同一份文本文件与本地草稿。
+// 剧情数据接口：编辑前等待 SA.Text.ready；所有台词读取和写回同一份正式配置。
 SA.StoryData = (() => {
   const clone = value => JSON.parse(JSON.stringify(value));
   const story = () => SA.STORY;
@@ -1086,31 +874,13 @@ SA.StoryData = (() => {
     if (typeof id !== 'string' || !list().includes(id)) throw new Error(`无效剧情场景：${id}`);
   }
 
-  // 默认台词按调用时的 SA.STORY 生成；stage/feat 的纯字符串由远房亲戚讲述。
-  function defaults(id) {
-    if (id === 'opening') return story().opening;
-    if (id === 'tutorial.intro') return [].concat(story().tutorial.intro);
-    if (id.startsWith('tutorial.parts.')) return story().tutorial.parts[Number(id.slice(15))].lines;
-    if (id.startsWith('stage.')) {
-      const match = /^stage\.(\d+,\d+)\.(win|lose)$/.exec(id);
-      return story().stage[match[1]][match[2]];
-    }
-    if (id.startsWith('feat.')) return story().feat[id.slice(5)];
-    const insert = /^(before|after)\.(.+)$/.exec(id);
-    if (insert) return (story()[insert[1]] || {})[insert[2]] || [];
-    return [];
-  }
-
-  function normalize(id, lines) {
-    const speaker = id.startsWith('stage.') || id.startsWith('feat.') ? 'uncle' : null;
-    return lines.map(line => typeof line === 'string' ? { text: line, ...(speaker ? { who: speaker } : {}) } : clone(line));
-  }
-
-  // get 始终返回新对象；未编辑的场景从当前默认数据读取，不修改 SA.STORY。
+  // 每个场景在配置 values 中只有一份当前数据；空数组表示作者明确关闭该场景。
   function get(id) {
     valid(id);
-    const raw = SA.Text.get(`story:${id}`, '');
-    return raw ? clone(JSON.parse(raw)) : normalize(id, defaults(id));
+    const raw = SA.Text.get(`story:${id}`, '[]');
+    const lines = JSON.parse(raw);
+    const speaker = id.startsWith('stage.') || id.startsWith('feat.') ? 'uncle' : null;
+    return lines.map(line => typeof line === 'string' ? { text: line, ...(speaker ? { who: speaker } : {}) } : clone(line));
   }
 
   // set 接受字符串或 {text,who?,scene?}；省略元数据时沿用该位置原有值。

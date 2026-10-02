@@ -1,0 +1,91 @@
+{
+  "initial": {
+    "money": 300,
+    "vehicleName": "一号原型机",
+    "news": "老汤姆的铁匠铺后院：你的第一台原型机已经点着了锅炉。去「出战」打第一场练习赛。"
+  },
+  "economy": {
+    "loanCap": 1500,
+    "loanStep": 100,
+    "quickBorrow": 300,
+    "quickRepay": 100,
+    "interestRate": 0.1,
+    "scrapRate": 0.1,
+    "upgradeRefundRate": 0.5,
+    "sellRate": 0.5,
+    "drawFeeRate": 0.1,
+    "drawFeeStep": 5,
+    "drawFeeMinimum": 5,
+    "repairTierLimits": [0.06, 0.12, 0.2]
+  },
+  "tournament": {
+    "materialSeasonOffset": 3,
+    "extraHpAfterSeason": 3,
+    "extraHpPerSeason": 0.2,
+    "prizeBaseMultiplier": 2,
+    "prizePerSeason": 0.6,
+    "oddsMinimum": 1.15,
+    "oddsMaximum": 5,
+    "oddsBase": 1.1,
+    "oddsRatingFactor": 0.9,
+    "winReputation": 1,
+    "flawlessReputation": 2,
+    "surrenderReputation": 1,
+    "championAether": 1
+  },
+  "street": {
+    "gridRows": 6,
+    "gridCols": 8,
+    "chassisRow": 5,
+    "startCol": 2,
+    "smallWidthBase": 2,
+    "bigWidthBase": 3,
+    "widthRange": 3,
+    "smallLevelBase": 1,
+    "bigLevelBase": 2,
+    "levelRange": 3,
+    "narrowRange": 2,
+    "chassisPool": ["track", "quad", "biped"],
+    "structurePool": ["armor", "armor", "armor", "water", "boiler", "armor_heavy", "plate"],
+    "weaponPool": ["mg", "mg", "cannon", "cannon_m", "mortar", "steamjet", "flamer", "harpoon", "rocket_rack"],
+    "indirectPool": ["mortar"],
+    "frontWeaponChance": 0.65,
+    "indirectChance": 0.1,
+    "bucketChance": 0.15,
+    "spikeChance": 0.3,
+    "sideCannonChance": 0.15,
+    "capMultipliers": [1, 1, 1.35, 1.8, 2.4, 3.1],
+    "completedCapMultiplier": 3.8,
+    "capStep": 10,
+    "goalMinimum": 0.88,
+    "goalMaximum": 1.08,
+    "offerAttempts": 200,
+    "largeRatingThreshold": 280,
+    "earlyStopErrorRatio": 0.03,
+    "aimMinimum": 0.55,
+    "aimMaximum": 0.75,
+    "prizeRatingFactor": 0.4,
+    "prizeStep": 5,
+    "flatTerrainChance": 0.5,
+    "reofferRatingChange": 0.15,
+    "trialAttempts": 50,
+    "trialAim": 0.65,
+    "trialBigChance": 0.5,
+    "fallbackRows": ["........", "........", "........", "...K{weapon}...", "...OA...", "...{chassis}{chassis}..."]
+  },
+  "bet": {
+    "step": 10,
+    "amounts": [0, 50, 100, 200, 500]
+  },
+  "battle": {
+    "cameraMinZoom": 0.62,
+    "surrenderDurationSec": 3.5,
+    "surrenderPoleSec": 1.2
+  },
+  "_notes": {
+    "economy": "钱的单位是英镑；比例以 1 为 100%。",
+    "tournament": "赛季从 1 开始；赔率与奖金倍率保持当前运行算法。",
+    "street": "概率与比例以 1 为 100%；模块池中重复的 ID 表示更高抽取权重；aim 为 0～1 的命中参数。",
+    "battle": "镜头缩放无单位，投降动画时长单位为秒。"
+  }
+}

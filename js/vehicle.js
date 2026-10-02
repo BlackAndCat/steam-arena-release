@@ -10,7 +10,7 @@ SA.V = (() => {
   const ARMOR_VER = 2;
   // pv：加压舱占格版本。旧车未记录 pv，表示仍按 1×1 摆放，读入后迁移到 1×2。
   const PRESSURE_VER = 2;
-  const create = (name = '原型机') => ({ name, body: grid(), side: grid(), av: ARMOR_VER, pv: PRESSURE_VER });
+  const create = (name = SA.Config.text("state_3a7baff38a97")) => ({ name, body: grid(), side: grid(), av: ARMOR_VER, pv: PRESSURE_VER });
   const layerOf = (id) => (M[id].layer === 'side' ? 'side' : 'body');
   // 满耐久：改装（炮盾 / 附加装甲）每级按比例加；参战副本直接带 max
   const maxHp = (cell) => cell.max || Math.round(SA.mod(cell).hp * (1 + SA.upHp(cell.id) * (cell.lv || 0)));
@@ -184,7 +184,7 @@ SA.V = (() => {
   }
   const inRegion = (v, r, c) => { const g = region(v); return r >= g.r0 && c >= g.c0 && c <= g.c1; };
   const boxInRegion = (v, r, c, w, h) => inRegion(v, r, c) && inRegion(v, r + h - 1, c + w - 1);
-  const LOCKED = '这一格还没扩建：推进战役会解锁更大的改装台';
+  const LOCKED = SA.Config.text("vehicle_bd09be8e512a");
 
   function each(v, fn) {
     for (const layer of ['body', 'side'])
@@ -194,7 +194,7 @@ SA.V = (() => {
   }
 
   const isRamCell = (cell) => cell && SA.isRam(cell.id);
-  const mountText = (m) => `${m.name}要装在${m.mount.map(x => M[x].name).join('/')}的正前方（右侧）`;
+  const mountText = (m) => SA.Config.text("vehicle_00ad5972b1d4", `${m.name}`, `${m.mount.map(x => M[x].name).join('/')}`);
   // 真双足：锚在第 ROWS-4 行的 2×4 整件；胯层 = 锚点那两行，腿区 = 下面两行（不能放任何模块）
   const bipedOf = (v) => chassisAnchors(v).find(x => x.cell.id === 'biped' && x.r === chassisRow('biped')) || null;
   // 底盘保留区从哪一行开始：双足占最底下两层（4 行），其余底盘两行
@@ -241,39 +241,39 @@ SA.V = (() => {
   function canPlace(v, id, r, c) {
     const m = M[id], { w, h } = fp(id);
     const no = (reason) => ({ ok: false, reason });
-    if (!fits(r, c, w, h)) return no('超出格子范围');
+    if (!fits(r, c, w, h)) return no(SA.Config.text("vehicle_7230b6f9f8a8"));
     if (!boxInRegion(v, r, c, w, h)) return no(LOCKED);
     const O = occ(v, 'body'), cells = box(r, c, w, h);
     if (m.layer === 'side') {
-      if (r + h > floorRow(v) && !bipedWaist(v, r, c, w, h)) return no('底盘上不能挂侧炮');
+      if (r + h > floorRow(v) && !bipedWaist(v, r, c, w, h)) return no(SA.Config.text("vehicle_790b7c4b3a97"));
       const S = occ(v, 'side');
-      if (cells.some(([rr, cc]) => S[rr][cc])) return no('侧挂层这里已经有侧炮');
-      if (cells.some(([rr, cc]) => !O[rr][cc])) return no('侧炮必须整个挂在主体模块上');
-      if (cells.some(([rr, cc]) => isRamCell(O[rr][cc].cell))) return no('撞击武器上不能挂侧炮');
+      if (cells.some(([rr, cc]) => S[rr][cc])) return no(SA.Config.text("vehicle_3ef702ab6894"));
+      if (cells.some(([rr, cc]) => !O[rr][cc])) return no(SA.Config.text("vehicle_d427dcfedf49"));
+      if (cells.some(([rr, cc]) => isRamCell(O[rr][cc].cell))) return no(SA.Config.text("vehicle_d97cbe967a49"));
       return { ok: true };
     }
-    if (cells.some(([rr, cc]) => O[rr][cc])) return no('这里已经有模块');
+    if (cells.some(([rr, cc]) => O[rr][cc])) return no(SA.Config.text("vehicle_45f9e24da252"));
     if (m.layer === 'ram') {
-      if (bipedOf(v) && !inHipRows(v, r, h)) return no('双足撞击件只能装在胯层或腰挂位');
+      if (bipedOf(v) && !inHipRows(v, r, h)) return no(SA.Config.text("vehicle_4eee3911ae77"));
       if (!behind(O, r, c, h).some(o => m.mount.includes(o.cell.id))) return no(mountText(m));
-      if (anyAhead(O, r, c, w, h)) return no('撞击武器必须在这一行的最前端');
+      if (anyAhead(O, r, c, w, h)) return no(SA.Config.text("vehicle_1aaaf5795430"));
       return { ok: true };
     }
     if (m.layer === 'chassis') {
-      if (r !== chassisRow(id)) return no(`${m.name}只能贴着最底下放`);
+      if (r !== chassisRow(id)) return no(SA.Config.text("vehicle_3ad9ab98b50f", `${m.name}`));
       const chassis = chassisAnchors(v);
-      if (chassis.some(x => x.cell.id !== id)) return no('一辆车只能使用一种底盘');
-      if (m.chassisLimit === 1 && chassis.some(x => x.cell.id === id)) return no('一辆车只能有一个底盘整件');
-      if (m.chain && chassis.length && !chassis.some(x => x.c + w === c || c + w === x.c)) return no(`${m.name}要和已有的首尾相连，中间不能隔空`);
-      if (ramBehind(O, r, c, h)) return no('撞击武器前方不能再放模块');
+      if (chassis.some(x => x.cell.id !== id)) return no(SA.Config.text("vehicle_2d644a62c152"));
+      if (m.chassisLimit === 1 && chassis.some(x => x.cell.id === id)) return no(SA.Config.text("vehicle_8349bca866a2"));
+      if (m.chain && chassis.length && !chassis.some(x => x.c + w === c || c + w === x.c)) return no(SA.Config.text("vehicle_080e3f8388ac", `${m.name}`));
+      if (ramBehind(O, r, c, h)) return no(SA.Config.text("vehicle_7da5b5f98f49"));
       return { ok: true };
     }
-    if (r + h > floorRow(v) && !bipedWaist(v, r, c, w, h) && !endArmorSide(v, id, r, c)) return no(bipedOf(v) ? '双足的胯层只能放腰挂位，腿区不能放模块' : '最底下两行只能放底盘');
+    if (r + h > floorRow(v) && !bipedWaist(v, r, c, w, h) && !endArmorSide(v, id, r, c)) return no(bipedOf(v) ? SA.Config.text("vehicle_c7a7f2dde86c") : SA.Config.text("vehicle_1aaebea2f8b1"));
     // 外圈只要挨着一个（非撞击件的）模块就能塞进去；是否一路连到底盘由 issues() 检查
     const near = ring(r, c, w, h).map(([rr, cc]) => O[rr][cc]).filter(Boolean);
-    if (!near.length) return no('悬空：四周都没有模块可以依靠');
-    if (near.every(o => isRamCell(o.cell))) return no('撞击武器不能当支撑');
-    if (ramBehind(O, r, c, h)) return no('撞击武器前方不能再放模块');
+    if (!near.length) return no(SA.Config.text("vehicle_08441cb986b1"));
+    if (near.every(o => isRamCell(o.cell))) return no(SA.Config.text("vehicle_772300b88a8a"));
+    if (ramBehind(O, r, c, h)) return no(SA.Config.text("vehicle_7da5b5f98f49"));
     return { ok: true };
   }
 
@@ -291,9 +291,9 @@ SA.V = (() => {
   // 只检查位置是否空着；返回 { ok, reason, fit }，fit 表示这个位置是否已经合规
   function canPut(v, id, r, c) {
     const { w, h } = fp(id), layer = layerOf(id);
-    if (!fits(r, c, w, h)) return { ok: false, reason: '超出格子范围' };
+    if (!fits(r, c, w, h)) return { ok: false, reason: SA.Config.text("vehicle_7230b6f9f8a8") };
     if (!boxInRegion(v, r, c, w, h)) return { ok: false, reason: LOCKED };
-    if (!free(v, layer, r, c, w, h)) return { ok: false, reason: layer === 'side' ? '侧挂层这里已经有侧炮' : '这里已经有模块' };
+    if (!free(v, layer, r, c, w, h)) return { ok: false, reason: layer === 'side' ? SA.Config.text("vehicle_3ef702ab6894") : SA.Config.text("vehicle_45f9e24da252") };
     const chk = canPlace(v, id, r, c);
     return { ok: true, fit: chk.ok, reason: chk.reason };
   }
@@ -321,9 +321,9 @@ SA.V = (() => {
   // 受损模块要先修理；报废模块直接清除（由调用方回收残值）
   function remove(v, layer, r, c) {
     const cell = inGrid(r, c) && v[layer][r][c];
-    if (!cell) return { ok: false, reason: '这里是空的' };
+    if (!cell) return { ok: false, reason: SA.Config.text("vehicle_d2156defb0c9") };
     const riders = layer === 'body' ? ridersOf(v, r, c) : [];
-    if (hurt(cell) || riders.some(x => hurt(x.cell))) return { ok: false, reason: '受损模块要先修理才能拆下' };
+    if (hurt(cell) || riders.some(x => hurt(x.cell))) return { ok: false, reason: SA.Config.text("vehicle_469eb834c128") };
     const out = [cell];
     for (const x of riders) { out.push(x.cell); v.side[r + x.dr][c + x.dc] = null; }
     v[layer][r][c] = null;
@@ -333,12 +333,12 @@ SA.V = (() => {
   // 移动：把锚点 (r1, c1) 的模块搬到锚点 (r2, c2)。目标位置正好压着另一个模块就对调（对方搬到原位，放得下才行）
   // 主体模块连同挂在它上面的侧炮一起搬
   function move(v, layer, r1, c1, r2, c2) {
-    if (!inGrid(r1, c1) || !inGrid(r2, c2)) return { ok: false, reason: '超出格子范围' };
+    if (!inGrid(r1, c1) || !inGrid(r2, c2)) return { ok: false, reason: SA.Config.text("vehicle_7230b6f9f8a8") };
     if (r1 === r2 && c1 === c2) return { ok: false, reason: '' };
     const cell = v[layer][r1][c1];
-    if (!cell) return { ok: false, reason: '这里是空的' };
+    if (!cell) return { ok: false, reason: SA.Config.text("vehicle_d2156defb0c9") };
     const { w, h } = fp(cell.id);
-    if (!fits(r2, c2, w, h)) return { ok: false, reason: '超出格子范围' };
+    if (!fits(r2, c2, w, h)) return { ok: false, reason: SA.Config.text("vehicle_7230b6f9f8a8") };
     if (!boxInRegion(v, r2, c2, w, h)) return { ok: false, reason: LOCKED };
     const lift = (r, c) => {
       const riders = layer === 'body' ? ridersOf(v, r, c) : [];
@@ -356,7 +356,7 @@ SA.V = (() => {
     const hits = [];
     for (const [rr, cc] of box(r2, c2, w, h)) { const o = O[rr][cc]; if (o && !hits.includes(o)) hits.push(o); }
     if (!hits.length) { drop(a, r2, c2); return { ok: true, swapped: false }; }
-    if (hits.length > 1) { drop(a, r1, c1); return { ok: false, reason: '目标位置压着好几个模块，换不了' }; }
+    if (hits.length > 1) { drop(a, r1, c1); return { ok: false, reason: SA.Config.text("vehicle_33e9896fda49") }; }
     const X = hits[0], xf = fp(X.cell.id);
     const b = lift(X.r, X.c);
     // 先放搬过去的，再看对方能不能放回原位
@@ -366,7 +366,7 @@ SA.V = (() => {
       v[layer][r2][c2] = null; for (const x of a.riders) v.side[r2 + x.dr][c2 + x.dc] = null;
     }
     drop(b, X.r, X.c); drop(a, r1, c1);
-    return { ok: false, reason: `${M[X.cell.id].name}放不回原位，换不了（尺寸不一样）` };
+    return { ok: false, reason: SA.Config.text("vehicle_2189a813bf25", `${M[X.cell.id].name}`) };
   }
 
   // 出战检查：逐个模块找出悬空（没有一路连到底盘）或摆放不合规的。
@@ -380,15 +380,15 @@ SA.V = (() => {
     const queue = [];
     const chassis = chassisAnchors(v);
     const chassisIds = new Set(chassis.map(x => x.cell.id));
-    if (chassisIds.size > 1) for (const x of chassis) flag('body', x.r, x.c, '一辆车只能使用一种底盘');
+    if (chassisIds.size > 1) for (const x of chassis) flag('body', x.r, x.c, SA.Config.text("vehicle_2d644a62c152"));
     for (const id of chassisIds) if (M[id].chassisLimit === 1 && chassis.filter(x => x.cell.id === id).length > 1)
-      for (const x of chassis.filter(x => x.cell.id === id).slice(1)) flag('body', x.r, x.c, '一辆车只能有一个底盘整件');
+      for (const x of chassis.filter(x => x.cell.id === id).slice(1)) flag('body', x.r, x.c, SA.Config.text("vehicle_8349bca866a2"));
     // 连续底盘（履带、四足）：只认最长的一段，隔着空子的其余几件都标红。
     for (const id of chassisIds) if (M[id].chain) {
       const w = fp(id).w, xs = chassis.filter(x => x.cell.id === id).sort((p, q) => p.c - q.c), runs = [];
       for (const x of xs) { const last = runs[runs.length - 1]; if (last && last[last.length - 1].c + w === x.c) last.push(x); else runs.push([x]); }
       const best = runs.reduce((p, q) => (q.length > p.length ? q : p));
-      for (const run of runs) if (run !== best) for (const x of run) flag('body', x.r, x.c, `${M[id].name}之间不能隔着空子（要首尾相连）`);
+      for (const run of runs) if (run !== best) for (const x of run) flag('body', x.r, x.c, SA.Config.text("vehicle_82d980e8a835", `${M[id].name}`));
     }
     const isBiped = !!bipedOf(v), floor = floorRow(v);
     for (const x of chassis) if (x.r === chassisRow(x.cell.id) && inRegion(v, x.r, x.c)) { ok.add(key(x.r, x.c)); queue.push([x.r, x.c]); }
@@ -411,16 +411,16 @@ SA.V = (() => {
         const m = M[cell.id], { w, h } = fp(cell.id);
         if (!boxInRegion(v, r, c, w, h)) flag('body', r, c, LOCKED);
         else if (m.layer === 'chassis') {
-          if (r !== chassisRow(cell.id)) flag('body', r, c, `${m.name}只能贴着最底下放`);
+          if (r !== chassisRow(cell.id)) flag('body', r, c, SA.Config.text("vehicle_3ad9ab98b50f", `${m.name}`));
         } else if (m.layer === 'ram') {
-          if (isBiped && !inHipRows(v, r, h)) flag('body', r, c, '双足撞击件只能装在胯层或腰挂位');
+          if (isBiped && !inHipRows(v, r, h)) flag('body', r, c, SA.Config.text("vehicle_4eee3911ae77"));
           else if (!behind(O, r, c, h).some(o => m.mount.includes(o.cell.id) && ok.has(key(o.r, o.c)))) flag('body', r, c, mountText(m));
-          else if (anyAhead(O, r, c, w, h)) flag('body', r, c, '撞击武器必须是这一行的最前端');
+          else if (anyAhead(O, r, c, w, h)) flag('body', r, c, SA.Config.text("vehicle_92097b2f55f0"));
         } else if (r + h > floor && !(isBiped && bipedWaist(v, r, c, w, h)) && !endArmorSide(v, cell.id, r, c)) {
-          flag('body', r, c, isBiped ? (r + h > floor + 2 ? '双足腿区不能放模块' : '双足的胯层只能放腰挂位（胯左右各一格）') : '底盘腿区只能放底盘');
+          flag('body', r, c, isBiped ? (r + h > floor + 2 ? SA.Config.text("vehicle_0789672892e8") : SA.Config.text("vehicle_277b96ce365a")) : SA.Config.text("vehicle_b4682b465b5e"));
         } else if (!ok.has(key(r, c))) {
           const below = ring(r, c, w, h).filter(([rr]) => rr === r + h).map(([rr, cc]) => O[rr][cc]).filter(Boolean);
-          flag('body', r, c, below.length && below.every(o => isRamCell(o.cell)) ? '悬空：撞击武器不能当支撑' : '悬空：四周都没连到底盘');
+          flag('body', r, c, below.length && below.every(o => isRamCell(o.cell)) ? SA.Config.text("vehicle_c549eb415298") : SA.Config.text("vehicle_e1cb25bb5a9c"));
         }
       }
     for (let r = 0; r < K.ROWS; r++)
@@ -429,10 +429,10 @@ SA.V = (() => {
         if (!cell) continue;
         const { w, h } = fp(cell.id), under = box(r, c, w, h).map(([rr, cc]) => inGrid(rr, cc) && O[rr][cc]);
         if (!boxInRegion(v, r, c, w, h)) flag('side', r, c, LOCKED);
-        else if (r + h > floor && !(isBiped && bipedWaist(v, r, c, w, h))) flag('side', r, c, '底盘上不能挂侧炮');
-        else if (under.some(o => !o)) flag('side', r, c, '悬空：侧炮必须整个挂在主体模块上');
-        else if (under.some(o => isRamCell(o.cell))) flag('side', r, c, '撞击武器上不能挂侧炮');
-        else if (under.some(o => !ok.has(key(o.r, o.c)))) flag('side', r, c, '悬空：挂载的模块没有连到底盘');
+        else if (r + h > floor && !(isBiped && bipedWaist(v, r, c, w, h))) flag('side', r, c, SA.Config.text("vehicle_790b7c4b3a97"));
+        else if (under.some(o => !o)) flag('side', r, c, SA.Config.text("vehicle_064c258235ab"));
+        else if (under.some(o => isRamCell(o.cell))) flag('side', r, c, SA.Config.text("vehicle_d97cbe967a49"));
+        else if (under.some(o => !ok.has(key(o.r, o.c)))) flag('side', r, c, SA.Config.text("vehicle_bc6fe015ba42"));
       }
     return out;
   }
@@ -585,35 +585,35 @@ SA.V = (() => {
     s.rating = Math.round(s.hp / 12 + s.dps * 5 + s.salvoDps * 0.8 + s.splashDps + s.heatDps / 25 + s.tether + s.store * 0.014 + s.dryCool * 0.16 + (1 - s.waterSave) * 120 + s.evade * 60 + s.rams * 15 + Math.min(s.overheat, 120) / 4);
 
     s.problems = [];
-    if (!s.chassis) s.problems.push('没有底盘');
-    if (!s.cockpits) s.problems.push('没有可用的驾驶舱');
-    if (!s.boilers) s.problems.push('没有锅炉，机器无法启动');
-    if (s.chassis && s.weight > s.load) s.problems.push(`超重：总重 ${SA.tons(s.weight)} 超过底盘承重 ${SA.tons(s.load)}`);
+    if (!s.chassis) s.problems.push(SA.Config.text("vehicle_a3a9bdd8de8e"));
+    if (!s.cockpits) s.problems.push(SA.Config.text("vehicle_7abfbf6b281e"));
+    if (!s.boilers) s.problems.push(SA.Config.text("vehicle_fdab84d99c43"));
+    if (s.chassis && s.weight > s.load) s.problems.push(SA.Config.text("vehicle_4fe380eb9d59", `${SA.tons(s.weight)}`, `${SA.tons(s.load)}`));
     s.issues = issues(v);
-    if (s.issues.length) s.problems.push(`${s.issues.length} 个模块悬空或摆放不合规（车间里红色闪烁），接好才能出战`);
+    if (s.issues.length) s.problems.push(SA.Config.text("vehicle_ed6884f4d489", `${s.issues.length}`));
     // 履带是一个整体：有一段被毁就整条掉链，修好之前开不动
     const deadTracks = v.body[CH].filter(cell => cell && cell.id === 'track' && cell.hp <= 0).length;
     s.thrown = deadTracks > 0;
-    if (s.thrown) s.problems.push('履带掉链（有一段被打断），在车间修好才能开');
+    if (s.thrown) s.problems.push(SA.Config.text("vehicle_68c64e650c10"));
     s.warnings = [];
     if (chassisCell && chassisCell.id === 'biped') {
       const rule = M.biped.balance || { steady: 0.25, limit: 0.6, topHeavy: 1.8, toleranceByMt: [] };
       s.balanceTolerance = rule.toleranceByMt[chassisMt - 1] || rule.limit;
-      s.balance = Math.abs(s.d) <= rule.steady ? '平衡' : (Math.abs(s.d) <= s.balanceTolerance ? (s.d > 0 ? '前倾' : '后仰') : '失衡');
+      s.balance = Math.abs(s.d) <= rule.steady ? '平衡' : (Math.abs(s.d) <= s.balanceTolerance ? (s.d > 0 ? SA.Config.text("vehicle_252ba89c1ba5") : SA.Config.text("vehicle_ecc051faaf16")) : '失衡');
       s.balanceState = s.balance;
       s.topHeavy = s.comHeight > rule.topHeavy;
       const zones = chassisCell.bipedZones;
-      s.hip = zones ? (zones.hip > 0 ? '正常' : '损毁') : (chassisCell.hp > 0 ? '正常' : '损毁');
-      s.legs = zones ? (zones.leg > 0 ? '正常' : '损毁') : (chassisCell.hp > 0 ? '正常' : '损毁');
-      if (s.balance === '失衡') s.problems.push('双足重心失衡，无法部署');
-      if (s.topHeavy) s.warnings.push('双足头重脚轻，行走摆动增大');
+      s.hip = zones ? (zones.hip > 0 ? '正常' : SA.Config.text("vehicle_b0272ae322c9")) : (chassisCell.hp > 0 ? '正常' : SA.Config.text("vehicle_b0272ae322c9"));
+      s.legs = zones ? (zones.leg > 0 ? '正常' : SA.Config.text("vehicle_b0272ae322c9")) : (chassisCell.hp > 0 ? '正常' : SA.Config.text("vehicle_b0272ae322c9"));
+      if (s.balance === '失衡') s.problems.push(SA.Config.text("vehicle_cec73c2faa72"));
+      if (s.topHeavy) s.warnings.push(SA.Config.text("vehicle_03c3bbe5dda8"));
     }
-    if (s.demand > s.supply && s.boilers) s.warnings.push(`动力不足：车速和装填降至 ${Math.round(s.power * 100)}%`);
-    if (s.blocked.length) s.warnings.push(`${s.blocked.length} 门武器被己方模块挡住，无法开火`);
-    if (!s.weapons) s.warnings.push('没有武器');
-    if (s.overheat < 60) s.warnings.push(`全力开火约 ${Math.round(s.overheat)} 秒后烧干`);
+    if (s.demand > s.supply && s.boilers) s.warnings.push(SA.Config.text("vehicle_5be9817aa75b", `${Math.round(s.power * 100)}`));
+    if (s.blocked.length) s.warnings.push(SA.Config.text("vehicle_7ff3b573c8ca", `${s.blocked.length}`));
+    if (!s.weapons) s.warnings.push(SA.Config.text("vehicle_36768053c9a3"));
+    if (s.overheat < 60) s.warnings.push(SA.Config.text("vehicle_b0c86f179335", `${Math.round(s.overheat)}`));
     const brokenOther = s.broken - deadTracks;
-    if (brokenOther > 0) s.warnings.push(`${brokenOther} 个模块已损毁，不会参战`);
+    if (brokenOther > 0) s.warnings.push(SA.Config.text("vehicle_a34380ad5380", `${brokenOther}`));
     s.canDeploy = s.problems.length === 0;
     return s;
   }
@@ -727,7 +727,7 @@ SA.V = (() => {
       const d = JSON.parse(decodeURIComponent(escape(atob(raw.slice(4)))));
       // 必须先验完整包，再创建车辆；不能静默丢掉损坏记录后仍把分享码当成成功导入。
       if (!d || typeof d !== 'object' || Array.isArray(d) || !validLayout({ ...d, g: ver }, true)) return null;
-      const v = create(String(d.n || '无名载具').slice(0, 20));
+      const v = create(String(d.n || SA.Config.text("vehicle_a7a357a827fb")).slice(0, 20));
       v.pv = d.pv;
       v.migrationStock = (d.ms || []).map(cell => SA.fixCell(JSON.parse(JSON.stringify(cell))));
       // 自下而上摆放，保证规则合法；侧炮最后挂
