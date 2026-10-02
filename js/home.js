@@ -75,7 +75,7 @@ SA.Home = (() => {
 
   function build(stage, root, WX) {
     if (stopChat) { stopChat(); stopChat = null; }
-    const UI = X.ui, D = d(), has = SA.Camp.has, stats = SA.V.stats(D.vehicle), st = SA.Camp.current(), HS = SA.HomeScene;
+    const UI = X.ui, D = d(), has = SA.Camp.has, stats = SA.V.stats(D.vehicle), HS = SA.HomeScene;
     // 站位线：人物、道具、路标的脚都落在这里（原生 HS.FEET 放大 2 倍）；车站得更靠前
     const FEET = HS.FEET * 2, CAR_BOTTOM = 672, SUNX = HS.theme(WX).cast === 'sun' ? 6 : 0;
     const sh = (x, y, w) => ab(x + SUNX, y, UI.img(HS.shadow(w, 6, WX), 2));   // x = 影子左边（CSS），w = 原生宽
@@ -179,7 +179,7 @@ SA.Home = (() => {
     stage.append(...[
       sparks.map(s => (at('tom') === 'forge' ? ab(SP.anvil[0] * 2 + 16, SP.anvil[1] * 2 - 10, s) : ab(ANVIL_X + 24, FEET - 58, s))), zz,
       bubbles.rel, bubbles.tom, bubbles.tim,
-      h('div', { class: 'ab yb-keep', style: 'left:300px;top:14px' }, h('div', { title: has('bank') ? '银行：借款 / 还款' : '资金', onclick: has('bank') ? () => SA.UI.openBank() : null }, UI.counter({ money: D.money, ingotList: ingots, onclick: has('bank') })),
+      h('div', { class: 'ab yb-keep', style: 'left:300px;top:14px' }, h('div', { title: has('bank') ? '银行：借款 / 还款' : '资金', onclick: has('bank') ? () => SA.UI.openBank() : null }, UI.counter({ money: D.money, rep: D.rep, ingotList: ingots, onclick: has('bank') })),
         D.debt ? h('div', { style: 'margin:6px 0 0 8px' }, UI.tag([h('span', {}, '欠银行'), UI.num(SA.UI.money(D.debt), X.RED)])) : null),
       h('div', { class: 'ab yb-keep', style: 'left:1206px;top:14px' }, gearBtn),
     ].flat(Infinity).filter(Boolean));
@@ -194,11 +194,6 @@ SA.Home = (() => {
     stopChat = stopChatUpdates;
     const NAME = { rel: REL, tom: TOM, tim: TIM };
     const esc = (s) => String(s).replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
-    const TIP = {
-      tom: probs.length ? `车还有问题：<b>${esc(probs[0])}</b>。先去车间弄好。` : st ? `下一场是<b>「${esc(st.name)}」</b>，${esc(st.pilot)}开的。车况不错，去吧。` : '车况不错。锦标赛就等你了。',
-      rel: '要打哪场，去路标那儿拉下黑板看！打过的我给你划掉了！',
-      tim: '要改装就点车！',
-    };
     let cur = null, tick = 0, mounted = false;
     const say = (key, html) => { for (const k in bubbles) bubbles[k].classList.remove('on'); bubbles[key].set(NAME[key], html); bubbles[key].classList.add('on'); };
     const burst = () => sparks.forEach((s, k) => { const a = -Math.PI * (0.15 + 0.7 * k / 5), r = 10 + (k % 3) * 8; let f = 0; s.style.opacity = '1';
@@ -228,7 +223,10 @@ SA.Home = (() => {
         HS.inside(inG, WX, f, (performance.now() - t0fx) / 1000);
       }
     };
-    for (const k of ['tom', 'rel', 'tim']) who[k].box.addEventListener('click', () => { chatter.force(k, TIP[k]); step(); });
+    // 点击读取最新页面文案；dialog 用文本节点显示，编辑的台词不会被当作 HTML 执行。
+    for (const k of ['tom', 'rel', 'tim']) who[k].box.addEventListener('click', () => {
+      SA.UI.dialog(NAME[k], SA.YardChat.clickTips()[k]);
+    });
     if (timer) clearInterval(timer);
     timer = setInterval(step, 100);
     step();

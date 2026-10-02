@@ -93,7 +93,7 @@ function applyLocalStageCars(payload) {
     // 手工关卡车的目标随现有战役章节生成，工作台可编辑全部已定义关卡。
     SA.STAGE_CARS.targets = SA.CAMPAIGN.flatMap((ch, ci) => ch.stages.map((_, si) => `${ci}:${si}`));
   }
-  // 发行版只使用随包发布的手工关卡车，不读取本机工作台草稿。
+  // 发行包始终以随包关卡车为准，忽略浏览器旧草稿与工作台广播。
   const local = SA.RELEASE ? null : arguments.length ? payload : readLocalStageCars();
   SA.STAGE_CARS.records = { ...SA.__STAGE_CARS_FILE_RECORDS, ...migrateStageRecords(local?.records, local?.campaignLayout) };
   if (typeof SA.StageCars.applyToCampaign === 'function') SA.StageCars.applyToCampaign();
@@ -165,8 +165,8 @@ SA.Camp = (() => {
   const hasMod = (id) => c().mods.includes(id);
   const maxMat = () => c().mat;
   const grid = () => c().grid;
-  // 发行包在构建时写入开放章数；开发版始终开放完整战役。
-  const chapterCount = () => SA.RELEASE ? Math.min(SA.RELEASE_CHAPTERS ?? 2, SA.CAMPAIGN.length) : SA.CAMPAIGN.length;
+  // 发行包只开放指定章数；开发目录始终使用完整战役。
+  const chapterCount = () => SA.RELEASE ? Math.min(SA.RELEASE_CHAPTERS, SA.CAMPAIGN.length) : SA.CAMPAIGN.length;
   const done = () => !!(c().done || (SA.RELEASE && c().ch >= chapterCount()));
   // 当前章节序号（通关后停在最后一章）
   const chIndex = () => Math.min(c().ch, chapterCount() - 1);
@@ -252,7 +252,6 @@ SA.Camp = (() => {
     if (C.st >= st.chapter.stages.length) {
       applyUnlock(st.chapter.unlock);
       out.unlocks.push({ title: `${st.chapter.name} · 通关`, u: st.chapter.unlock });
-      // 发行版在当前开放范围结束后仍保存下一章进度，扩章时可接着玩；全战役结束才永久标记通关。
       if (C.ch + 1 >= SA.CAMPAIGN.length) { C.done = true; C.st = st.chapter.stages.length; }
       else { C.ch++; C.st = 0; }
     }

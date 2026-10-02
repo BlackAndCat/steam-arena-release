@@ -1,0 +1,68 @@
+{
+  "version": 1,
+  "releaseVersion": "20261002-095539",
+  "chapters": 2,
+  "sourceRoot": "Z:\\Project\\HtmlGames\\SteamArena\\HtmlGames-astra",
+  "git": {
+    "commit": "0314e75a97a0e1610a5409b8f38b8348f57b2c2f",
+    "dirty": true
+  },
+  "sourceHashes": {
+    "index.html": "3b7288d24d9a9c99ef7e92ead2acf04d2b993730193130b4bd20e72471faf29b",
+    "css/style.css": "c6e9f883209c498ef36276ce59fd9518eb1526f1a00048ea19498bb139e85518",
+    "js/release.js": "5e217275d74ff4f000ca3ff3ad5d676b199f6a1065a9e41ce4c8ebd3e426362b",
+    "js/text-manager.js": "963e8fe3961d8b94f22b5dd67c631076ca040080bfe62b9533c04e3316e96f8d",
+    "js/yard-chat.js": "a780c2f1446c971ec9f96bc201358d9918515ab736478ef2f312115a1d20186f",
+    "js/palette.js": "0f2008ffba85136c7aa9f9d9ca76c2767e2222b7757235997c10a7ccb576fcda",
+    "js/coal.js": "9849695121ca15a182b6ced8fd1712f04eff4f71a45f6f09c86c4da1e56e97bc",
+    "js/modules.js": "4530e11eef3c3038a5880bf7026ce6a8ff4317f27c592afab08da9b4810eb8b6",
+    "js/module-art.js": "67003b02503850ba23b2c114cba9cdfac34692abd619f9ade5b8e830356fbdef",
+    "js/dynamics.js": "46c238d53156687bd2fe807517b6e6ca82e3b39629924686a900a8e3a3f9bd51",
+    "js/sprites.js": "41ebf1360f8e676070b06ae6c6da42a42c3d6ce0cac273983e9d9ce3364b400e",
+    "js/ui-px.js": "9d8fbede9e769712ff3828a6a5950e7e53f641e042f5c00706af562171047b2e",
+    "js/legs.js": "27b3820b67f05bfb881e98fe37431b0726464e692df485a72496bb77a203371e",
+    "js/vehicle.js": "f1434594061b98fbcb7edb73611d2b04e63a7611532d392beb00ea95e423141a",
+    "js/content.js": "bcc790984dc6165792f99faa8f9cfc9c696eeb9d2bf02fe43b0396d01e420dc0",
+    "js/state.js": "826f4f1c0a539bf58c275699aab70b43f2415c10ae2b7e35db7fdda39e726857",
+    "js/ui.js": "b977e863ee39879cf1a5f2f77c1c212c6d29b0ca1eaea2cac0e69f6dba638e23",
+    "js/camp.js": "668e06f9917c2f4c444984ab2f92ab47462d34462f11e769186f8cd13b133d2d",
+    "js/camp-ui.js": "78066f5d1abf9939ac273252d8d1695b014acc636236ab50b0583cbbc36ed09b",
+    "js/story.js": "5d56ba3b6a0b095491ebddf5611410f14fb49360952ad91396cad2080edf64ba",
+    "js/story-dev.js": "b837879b3dbf96d3720d4bf555930d5d925e2672d8c73a5cd0bcda36eee1d431",
+    "js/editor.js": "6d56ff612257f9f423126d09822ac4ab79cff939dac11b75315b73f0e91e8dcf",
+    "js/blueprints.js": "de2c92729ce477ae4d65811ee9d08da7de20b48d2979328c9fd00cd92a4fdb22",
+    "js/street.js": "4961689a41db5ab47c98a5a2217ff1e635b86e6f29ed56e4ad3981a2b9011315",
+    "js/arena.js": "954a17d94f338df609a4232135a4524d592710e04c4070953c5a15e22e102ed3",
+    "js/home-scene.js": "065297765d82bffa1f28a44fa7ee11b9c9607bf168bc94cd90ba2d4b653014ca",
+    "js/home.js": "2b19d6d1736f01cc8407ec3a4fbe22caeb18fe3ce04c1635330f9f2c84b3af5b",
+    "js/terrain-art.js": "88fc92e56854a096b9d70985ee4aeeda154a3a63bd236de5d6cb143370be891b",
+    "js/scenes.js": "5001915e54d460eefc300e96b9d1b92ece20a5dcd0cf0a97401fa56e70c5b13d",
+    "js/battle-view.js": "6572e0ca7c36de1bd0ba517ee7fa81111dfd738f2dad1ca7f6109bf02b364ca4",
+    "js/battle.js": "c7dd7a90428990bb6bf9407a3d49c95b51feb7e1006d0f6089c2d19cf4927aa6",
+    "js/build-sys.js": "136e6a31cc5a73230e4a2f079fb49659b8f86623518eb68ee9a4fc27bb0c2326",
+    "js/build-vis.js": "edac4d535b29dff29277a840a9417031e0ee17b3f15c18ad0a2450b5444d8212",
+    "js/main.js": "b4e100f82f371a4da8efbc3bcf9743ecc73f416f1746c34996a2a11209d9e056",
+    "js/stage-cars.js": "f5f89ab2ce482caec87f907a742cf411e23c115f126afcdeaac0b9ee0c2d7d82",
+    "text/steam-arena/zh-CN.json": "be195a8d36cc50899e42caa8dd8f2f8d02bb0bebce35103fa1c5130fe1c054b9"
+  },
+  "archive": {
+    "archivedAt": "2026-10-02T00:52:56.217900+00:00",
+    "sources": [
+      {
+        "kind": "text-export",
+        "url": "file:///Z:/Project/HtmlGames/SteamArena/%E5%89%A7%E6%83%85zh-CN.json",
+        "exportedAt": "2026-10-02T00:41:52.824890+00:00"
+      },
+      {
+        "kind": "formal-files",
+        "url": "file:///Z:/Project/HtmlGames/SteamArena/HtmlGames-astra",
+        "exportedAt": "2026-10-02T00:41:52.824890+00:00"
+      }
+    ],
+    "files": {
+      "js/stage-cars.js": "f5f89ab2ce482caec87f907a742cf411e23c115f126afcdeaac0b9ee0c2d7d82",
+      "text/steam-arena/zh-CN.json": "be195a8d36cc50899e42caa8dd8f2f8d02bb0bebce35103fa1c5130fe1c054b9",
+      "js/modules.js": "4530e11eef3c3038a5880bf7026ce6a8ff4317f27c592afab08da9b4810eb8b6"
+    }
+  }
+}

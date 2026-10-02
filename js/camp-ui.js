@@ -54,6 +54,7 @@ SA.CampUI = (() => {
   // 开发者面板：侧边栏底部的「开发者」按钮。上面是开发工具（新标签页打开），下面是存档调试
   // 新做的工具页 / 预览页加到 DEV_TOOLS 里就会出现在面板上；视觉样机不单独加，登记到 tools/labs.js（视觉样机馆）
   const DEV_TOOLS = [
+    { url: 'tools/console.html', name: '后台 · 全部工具', desc: '关卡、剧情、院子闲聊、视觉样机和游戏调试都在这一页；Ctrl+K 搜任何一关、一幕剧情、一个样机' },
     { url: 'tools/sim.html', name: '数值自测', desc: 'AI 对 AI 批量对打：战役关卡检验、对战矩阵 + 评分校准、模块性价比' },
     { url: 'tools/evolve.html', name: '进化报告', desc: '关卡车进化生成器的结果：选关、强度 × 表现散点图、分类网格、毒瘤车与奇特构筑，可复现、可试驾' },
     { url: 'tools/stage-editor.html', name: '关卡车工作台', desc: '拼装全部章节关卡车，编辑奖励、文字与强度并保存手工锁定版本' },

@@ -10,7 +10,7 @@ SA.BattleView.create = function createBattleView(api) {
   const camera = api.camera;
   const isP = api.isP, cellX = api.cellX, cellY = api.cellY, frontEdge = api.frontEdge;
   const groundAt = api.groundAt, crateAt = api.crateAt, modBox = api.modBox, modCenter = api.modCenter, cellAt = api.cellAt, modAt = api.modAt;
-  const muzzle = api.muzzle, targetAt = api.targetAt, aimAngle = api.aimAngle, spreadDeg = api.spreadDeg, barrel = api.barrel, predict = api.predict;
+  const muzzle = api.muzzle, targetAt = api.targetAt, aimAngle = api.aimAngle, spreadDeg = api.spreadDeg, barrel = api.barrel, launch = api.launch, predict = api.predict;
   const tiltOf = api.tiltOf, pivY = api.pivY, toWorld = api.toWorld;
   const step = api.step;
   let B = null, cv, g, dg, wc, wrap, hud = {};
@@ -51,7 +51,7 @@ SA.BattleView.create = function createBattleView(api) {
       const e = B.e, why = data.why;
       SA.UI.dialog(`「${e.name}」挂出了白旗`, [
         h('p', { style: 'margin-top:0' }, `对手${why}，已经没法再打，请求投降。`),
-        h('p', {}, h('b', {}, '接受：'), '立即获胜，对手剩下的零件原样保留（缴获的选择更多）。'),
+        h('p', {}, h('b', {}, '接受：'), '立即获胜，对手剩下的零件原样保留（缴获的选择更多），体面收场额外 ', h('b', {}, '声望 +1'), '。'),
         h('p', { class: 'muted' }, '拒绝：比赛继续，你可以把它拆得更彻底；这场不会再问第二次。'),
       ], [{ label: '接受投降', primary: true, onClick: () => api.acceptSurrender() }], '拒绝，继续打', () => api.refuseSurrender());
     }
@@ -62,7 +62,7 @@ SA.BattleView.create = function createBattleView(api) {
   let BD = null;
   const sceneT = () => performance.now() / 1000;
   function drawBackdrop(vw, vh, oy) { SA.Scenes.back(BD, g, vw, vh, oy, B.cam.x, sceneT(), B.opts); }
-  function drawFloor() { SA.Scenes.floor(BD, g, B.cam); }
+  function drawFloor() { SA.Scenes.floor(BD, g, B.cam); if (B.bounds) SA.Scenes.barriers(BD, g, B.bounds, groundAt, sceneT()); }   // 有场地边界时两头摆路障
   function drawNear(vw, vh, oy) { SA.Scenes.front(BD, g, vw, vh, oy, B.cam.x, sceneT()); }
 
   // ---------- 绘制 ----------
@@ -609,10 +609,8 @@ SA.BattleView.create = function createBattleView(api) {
   // 发射参数与 battle.js 的 launch() 一致（出膛点、偏弹射界限制、车身俯仰），只用于画面。
   const FAN_TAIL = C * 2.5, FAN_STEP = T.PREVIEW_STEP, FAN_BUDGET = 220;
   function fanLaunch(s, w, deg, jit) {
-    const [x0, y0] = muzzle(s, w, deg);
-    const shot = w.m.indirect ? clamp(deg + jit, w.m.elev[0], w.m.elev[1]) : deg + jit;
-    const wa = (shot + (isP(s) ? -1 : 1) * tiltOf(s) * 180 / Math.PI) * Math.PI / 180;
-    return { x0, y0, vx: (isP(s) ? 1 : -1) * w.m.v * Math.cos(wa), vy: -w.m.v * Math.sin(wa), g: K.GRAVITY * w.m.g };
+    const shot = launch(s, w, deg, jit);
+    return { x0: shot.x, y0: shot.y, vx: shot.vx, vy: shot.vy, g: shot.g };
   }
   const fanAt = (L, t) => [L.x0 + L.vx * t, L.y0 + L.vy * t + L.g * t * t / 2];
   // 世界坐标 → 对方车身的格子坐标（u 列、v 行，整数处是格线）：先转回车身平放（绕支点反转倾斜），敌方列号镜像，与 cellAt() 相同

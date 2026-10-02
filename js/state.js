@@ -152,7 +152,7 @@ SA.S = (() => {
   }
   // 买下 n 个模块进库存
   function buy(id, n = 1) {
-    if (SA.isUnique(id) || SA.minMt(id) > SA.Camp.maxMat()) return false;
+    if (!buyable(id)) return false;
     const cost = SA.buyPrice(id) * n;
     if (d.money < cost) return false;
     d.money -= cost; addInv(id, n, SA.buyMt(id));
@@ -333,7 +333,6 @@ SA.S = (() => {
           // 战前控制台可修改当前关卡；真正开战时再取一次最新数据，剧情编号和重打规则仍固定。
           start: () => {
             const latest = SA.Camp.stage(chapterIndex, i);
-            if (!latest) return false;
             // 本场经济规则随战斗选项固定，结算时不再读取可能已被工作台修改的关卡。
             SA.Battle.start({ mode: 'campaign', storyKey: `${chapterIndex},${i}`, replay, enemyVehicle: latest.vehicle, enemyName: latest.vehicle?.name || latest.name, aim: latest.aim, style: latest.style, terrain: latest.terrain, bounds: latest.chapter.bounds, boss: latest.boss, hpMul: 1, prize: replay || latest.rewardMoney === false ? 0 : latest.prize, rewardMoney: latest.rewardMoney !== false, victoryRepairFree: latest.victoryRepairFree === true, uniqueLoot: latest.uniqueLoot || [] });
           } }];
@@ -353,7 +352,7 @@ SA.S = (() => {
       return SA.Street.offers().map((o, i) => {
         const tier = SA.STREET_TIERS[i];
         const v = SA.Street.vehicleOf(o), cap = SA.Street.cap(i);
-        return { key: i, name: o.name, pilot: o.pilot, blurb: '街坊邻居随手拼的小车。赢了拿奖金，不影响赛程；损伤照常带回车间。', v, rating: o.rating, prize: o.prize, terrain: o.terrain || 'flat',
+        return { key: i, name: o.name, pilot: o.pilot, blurb: '街坊邻居随手拼的小车。赢了拿奖金，不计声望、不影响赛程；损伤照常带回车间。', v, rating: o.rating, prize: o.prize, terrain: o.terrain || 'flat',
           tag: ['', `上限 ${cap}`], title: `${tier.name} · ${o.name}`, lock: me > cap ? `你的评分 ${me} 超过上限 ${cap}` : null,
           start: () => SA.Battle.start({ mode: 'street', streetTier: i, enemyVehicle: v, enemyName: o.name, aim: o.aim, terrain: o.terrain, hpMul: 1, prize: o.prize }) };
       });
@@ -372,7 +371,7 @@ SA.S = (() => {
     const lines = [], pre = [], money0 = d.money;
     // 旧链接或脚本传入已取消的遭遇战时，不结算战损、奖励或旧档进度。
     if (res.mode === 'side') return { lines, pre, money0 };
-    // 发行版的高章节战斗即使绕过列表入口，也不能改变战损、经济或进度。
+    // 发行版拒绝越过开放章节的伪造结算，避免修改战损、经济与进度。
     if (SA.RELEASE && res.mode === 'campaign') {
       const key = /^(\d+),(\d+)$/.exec(String(res.opts?.storyKey || ''));
       if (!key || !SA.Camp.stage(Number(key[1]), Number(key[2]))) return { lines, pre, money0 };
@@ -407,7 +406,7 @@ SA.S = (() => {
         d.losses++;
         d.news = `「${d.vehicle.name}」在${tier.name}输给了「${res.enemyName}」。`;
       }
-      lines.push('街头赛不影响战役进度。');
+      lines.push('街头赛不计声望，也不影响战役进度。');
       SA.Street.consume(res.opts.streetTier);
     } else if (res.mode === 'campaign' || res.mode === 'tournament') {
       const camp = res.mode === 'campaign';
@@ -425,8 +424,10 @@ SA.S = (() => {
       } else if (res.win) {
         if (rewardMoney) d.money += res.prize;
         d.wins++;
-        // 暂停声望结算，保留旧存档中的 rep 字段和数值。
+        const rep = (res.flawless ? 2 : 1) + (res.surrendered ? 1 : 0);
+        d.rep += rep;
         if (rewardMoney) lines.push(`奖金 +${formatMoney(res.prize)}`);
+        lines.push(`声望 +${rep}${[res.flawless ? '驾驶舱毫发无损' : '', res.surrendered ? '接受投降，体面收场' : ''].filter(Boolean).map(x => `（${x}）`).join('')}`);
         if (d.bet) { const pay = Math.round(d.bet.amount * d.bet.odds); d.money += pay; lines.push(`赌注兑现 +${formatMoney(pay)}`); }
         // 缴获：只有你还没有的零件或史诗 / 传奇件；什么都没有就说一声
         const loot = SA.Camp.salvageOptions(res.survivors || []);
@@ -508,7 +509,10 @@ SA.S = (() => {
   }
 
   // 编辑器操作：付款在原确认入口扣除，其余模块变更在此执行。
-  const buyable = (id) => SA.Camp.has('shop') && SA.Camp.hasMod(id) && !SA.isUnique(id) && SA.minMt(id) <= SA.Camp.maxMat();
+  // 商店只卖有效的非退役模块；额外名单仅替代模块解锁，不放宽其他交易门槛。
+  const buyable = (id) => typeof id === 'string' && Object.hasOwn(SA.MODULES, id) && !Object.hasOwn(SA.RETIRED, id)
+    && SA.Camp.has('shop') && (SA.Camp.hasMod(id) || SA.SHOP_EXTRAS.includes(id))
+    && !SA.isUnique(id) && SA.minMt(id) <= SA.Camp.maxMat();
   function payAmount(amount) { d.money -= amount; save(); }
   function repay(n) { const x = Math.min(n, d.debt); d.debt -= x; d.money -= x; }
   function repairCells(cells) { for (const c of cells) c.hp = SA.V.maxHp(c); }

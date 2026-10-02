@@ -145,13 +145,10 @@ SA.Story = (() => {
   }
   // 你：睡着（闭眼）/ 醒着（expr 另给）
   const me = (expr = 'normal', pose = 'idle', pupil) => coal('你', { size: 'scene', expr, pose, pupil });
-  // 看到战车：瞪大眼睛，视线在亲戚（右边近处）和战车（右上远处）之间来回跳，瞳孔一直在抖（不可置信）。
-  // 视线每 0.28 秒换一个目标，抖动每 1/24 秒换一格（3 种偏移轮流），一共 2×3 张图，缓存住
-  const LOOK = [[0.95, 0.3], [0.85, -0.85]];
-  const JIT = [[0, 0], [0.22, -0.14], [-0.2, 0.16]];
-  function meShock(t, gt) {
-    const at = t < 0.5 ? 0 : Math.floor((t - 0.5) / 0.28 + 1) % 2, j = JIT[Math.floor(gt * 24) % 3], L = LOOK[at];
-    return me('shock', 'idle', [Math.max(-1, Math.min(1, L[0] + j[0])), Math.max(-1, Math.min(1, L[1] + j[1]))].map(v => Math.round(v * 20) / 20));
+  // 看到战车：保持瞪大眼睛，只让视线在右侧小幅平滑往返，约六秒一轮。
+  function meShock(gt) {
+    const x = 0.55 + 0.25 * Math.cos(gt * Math.PI / 3);
+    return me('shock', 'idle', [Math.round(x * 20) / 20, 0.1]);
   }
 
   // ---------- 徽记：齿轮底 + 两门交叉的卡隆炮 ----------
@@ -239,13 +236,18 @@ SA.Story = (() => {
   let carCv = null;
   function carSprite(t) {
     const v = SA.S.d.vehicle, K = SA.K, CL = K.CELL;
-    let c0 = K.COLS, c1 = -1, r0 = K.ROWS;
-    SA.V.each(v, (cell, r, c) => { c0 = Math.min(c0, c); c1 = Math.max(c1, c + SA.fp(cell.id).w - 1); r0 = Math.min(r0, r); });
+    let c0 = K.COLS, c1 = -1, r0 = K.ROWS, cockpitRow = K.ROWS;
+    SA.V.each(v, (cell, r, c) => {
+      c0 = Math.min(c0, c); c1 = Math.max(c1, c + SA.fp(cell.id).w - 1); r0 = Math.min(r0, r);
+      if (SA.isCockpit(cell.id)) cockpitRow = Math.min(cockpitRow, r);
+    });
     if (c1 < 0) return null;
     const src = SA.SPR.renderVehicle(v, { key: 'story', t, heat: 0.3, water: 1 });
     const sx = SA.SPR.PADX + c0 * CL - 8, sy = Math.max(0, r0 * CL - 12), w = (c1 - c0 + 1) * CL + 28, hh = K.ROWS * CL - sy;
     carCv = carCv || document.createElement('canvas');
     carCv.width = w; carCv.height = hh;
+    // 驾驶员可能探出模块格顶，预留 8 像素供本镜头的墙体遮挡。
+    carCv.cockpitTop = cockpitRow < K.ROWS ? Math.max(0, cockpitRow * CL - sy - 8) : Infinity;
     const x = carCv.getContext('2d');
     x.clearRect(0, 0, w, hh);
     x.drawImage(src, sx, sy, w, hh, 0, 0, w, hh);
@@ -265,7 +267,9 @@ SA.Story = (() => {
     if (idx >= 3) {
       const car = carSprite(gt);
       if (car) {
-        const cx = 400 - car.width / 2, cy = Math.min(FLOOR - car.height + 24, WALL + 16 - car.height) + Math.round((1 - ease(t / 0.9)) * 90);   // 小车也要整台露出墙头
+        const cx = 400 - car.width / 2;
+        // 后墙顶边最高到 WALL + 5；停稳后只露车体上部，让驾驶舱与驾驶员都藏在墙后。
+        const cy = Math.max(Math.min(FLOOR - car.height + 24, WALL + 16 - car.height), WALL + 5 - car.cockpitTop) + Math.round((1 - ease(t / 0.9)) * 90);
         g.drawImage(car, Math.round(cx), cy);
         for (let k = 0; k < 3; k++) {
           const f = (gt * 0.6 + k / 3) % 1;
@@ -301,8 +305,7 @@ SA.Story = (() => {
     } else {
       const jump = idx === 1 ? Math.round(Math.sin(Math.min(1, t / 0.35) * Math.PI) * 10) : 0;
       const expr = idx === 1 || (idx === 2 && t < 1.35) ? 'surprise' : 'normal';
-      const shake = idx === 3 ? (Math.floor(gt * 24) % 2 ? 1 : 0) : 0;   // 瞳孔地震：身子也跟着轻抖 1 像素
-      g.drawImage(idx === 3 ? meShock(t, gt) : me(expr), 56 + shake, FLOOR - 98 - jump, 112, 112);
+      g.drawImage(idx === 3 ? meShock(gt) : me(expr), 56, FLOOR - 98 - jump, 112, 112);
       if (idx === 1 || (idx === 2 && t < 0.6)) bang(g, 150, FLOOR - 92 - (idx === 1 ? Math.round(ease(t / 0.3) * 6) : 6));
     }
     // 亲戚：从右边滚进来，停住，弹起来站好
@@ -404,7 +407,6 @@ SA.Story = (() => {
     const txt = h('div', { class: 'vn-text' });
     const more = h('i', { class: 'vn-more', 'aria-hidden': 'true' });
     const skip = h('button', { class: 'vn-skip', type: 'button' }, '跳过 ▸▸');
-    // 发行版不创建编排按钮，玩家仍可跳过或继续剧情。
     const edit = !SA.RELEASE && onEdit ? h('button', { class: 'vn-skip', type: 'button', style: 'right:96px', 'data-story-action': '1' }, '编排剧情') : null;
     const dock = h('div', { class: 'vn-dock' }, name,
       h('div', { class: 'vn-box' }, h('div', { class: 'vn-frame' }, h('div', { class: 'vn-in' },
@@ -482,13 +484,13 @@ SA.Story = (() => {
 
   // ---------- 开始界面 ----------
   // 两种开发入口都复用同一开场编辑器；页面选字模式可在标题出现后即时开启。
-  const canEditOpening = () => !!SA.StoryDev && (SA.StoryDev.enabled() || !!SA.Text?.isEditing?.());
+  const canEditOpening = () => !SA.RELEASE && !!SA.StoryDev && (SA.StoryDev.enabled() || !!SA.Text?.isEditing?.());
   function title(onStart) {
     const bg = h('canvas', { class: 'px title-bg', width: SW, height: SH });
     const em = h('canvas', { class: 'px title-emblem', width: 64, height: 64 });
     const fresh = isFresh();
     const C0 = SA.S.d.camp, ch = SA.CAMPAIGN[Math.min(C0.ch, SA.CAMPAIGN.length - 1)];
-    // 旧存档若已越过发行范围，标题按发行进度视图显示，不泄露后续章节名。
+    // 越过发行章节的旧档只显示当前发行范围的通关状态。
     const savePlace = SA.RELEASE ? (SA.Camp.done() ? '战役已通关' : SA.CAMPAIGN[SA.Camp.chIndex()].name)
       : (C0.done ? '战役已通关' : ch.name);
     const go = h('button', { class: 'btn primary title-go', type: 'button' }, '开始游戏');

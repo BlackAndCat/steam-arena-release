@@ -126,7 +126,7 @@ SA.UI = (() => {
     const where = st ? ch.name : `锦标赛第 ${d.round + 1} 轮`;
     const nav = (key, label, extra) => UI.btn(label, { kind: cur === key ? 'pri' : 'sec', gear: cur === key, onclick: () => SA.nav(key), title: extra || null });
     const ingots = Object.entries(d.ingots || {}).filter(([, n]) => n > 0).map(([k, n]) => [k === 'aether' ? 'aether' : 'wootz', n]);
-    const counter = UI.counter({ money: d.money, ingotList: ingots, onclick: has('bank') });
+    const counter = UI.counter({ money: d.money, rep: d.rep, ingotList: ingots, onclick: has('bank') });
     if (has('bank')) { counter.title = '银行：借款 / 还款'; counter.addEventListener('click', openBank); }
     const gear = UI.btn(null, { title: '设置', icon: UI.img(SA.PX.gear(6, 8, SA.PX.RAMP.brass, 0.1)), onclick: settings }); gear.style.padding = '0 2px';
     // 导航（2026-09-30）：院子是中枢，出战也在院子里（拉下黑板）；顶栏只剩「在哪一章」、钱和设置，
@@ -140,7 +140,7 @@ SA.UI = (() => {
       gear,
     ].filter(Boolean));
   }
-  // 设置：发行版只显示玩家可用的设置，不生成开发入口。
+  // 设置：发行包只显示玩家可用的场景特效选项。
   function settings() {
     const editing = SA.Text && SA.Text.isEditing();
     dialog('设置', [h('p', { style: 'margin-top:0' }, SA.RELEASE ? '调整场景特效显示。' : '开发和调试用的入口。')], [
@@ -323,13 +323,13 @@ SA.UI = (() => {
     const pre = pending.map(p => p.kind === 'salvage'
       ? (next) => SA.Camp.salvageDialog(p.survivors, next)
       : (next) => SA.Camp.unlockDialog(p.unlock, next));
-    // K7 重打沿用战役 / 支线的战斗入口，但完全按友谊赛处理：不写战损，不推进进度，不发钱或缴获。
+    // K7 重打沿用战役 / 支线的战斗入口，但完全按友谊赛处理：不写战损，不推进进度，不发钱、声望或缴获。
     if (res.replay) {
       SA.nav('arena', null, true);
       dialog(res.draw ? '重打结束：平手' : res.win ? '重打胜利！' : '重打结束', [
         h('p', { style: 'font-size:16px;margin-top:0' }, h('b', {}, res.reason)),
         h('p', { class: 'muted' }, `造成伤害 ${Math.round(res.dealt)} · 承受伤害 ${Math.round(res.taken)} · 用时 ${Math.round(res.time)} 秒`),
-        h('div', { class: 'warn', style: 'border-left-color:var(--brass2)' }, '重打不发奖励，也不留下战损。'),
+        h('div', { class: 'warn', style: 'border-left-color:var(--brass2)' }, '重打不发奖励、不计声望，也不留下战损。'),
         feedbackRow(res.humanId),
       ], [], '继续', () => { refresh(); inserted(() => SA.Camp.introIfNew()); });
       return;

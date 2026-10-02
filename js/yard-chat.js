@@ -25,6 +25,21 @@ SA.YardChat = (() => {
     one('base-7', 'tom', '「{关卡名}」？别慌，车顶住了就行。'),
     one('base-8', 'tim', '我在锅炉上画了个笑脸！'),
   ];
+
+  // 三个人物的点击台词共用这一份默认值；工作台独立打开时没有存档，老汤姆使用通用提示。
+  function clickTips() {
+    const data = SA.S?.d;
+    const problems = data && SA.V?.stats ? SA.V.stats(data.vehicle).problems : [];
+    const stage = data && SA.Camp?.current ? SA.Camp.current() : null;
+    const defaults = {
+      tom: problems?.length ? `车还有问题：${problems[0]}。先去车间弄好。`
+        : stage ? `下一场是「${stage.name}」，${stage.pilot}开的。车况不错，去吧。`
+        : '车况不错。锦标赛就等你了。',
+      rel: '要打哪场，去路标那儿拉下黑板看！打过的我给你划掉了！',
+      tim: '要改装就点车！',
+    };
+    return SA.Text?.homeTips ? SA.Text.homeTips(defaults) : defaults;
+  }
   const scopeKey = scope => `${KEY}pool:${scope}`;
 
   // 存档里的章、关为零基序号；关卡完成后仍可继承所在章节的聊天。
@@ -54,11 +69,8 @@ SA.YardChat = (() => {
   function read(scope = currentScope()) {
     validScope(scope);
     for (const candidate of fallbackScopes(scope)) {
-      const key = scopeKey(candidate);
-      if (SA.Text.has(key)) {
-        const raw = SA.Text.get(key, '');
-        return { source: candidate, groups: raw === '' ? [] : clone(JSON.parse(raw)) };
-      }
+      const raw = SA.Text.get(scopeKey(candidate), '');
+      if (raw) return { source: candidate, groups: clone(JSON.parse(raw)) };
     }
     return { source: 'default', groups: clone(DEFAULT_GROUPS) };
   }
@@ -122,7 +134,7 @@ SA.YardChat = (() => {
 
   function inherit(scope) {
     validScope(scope);
-    SA.Text.unset(scopeKey(scope));
+    SA.Text.set(scopeKey(scope), '');
     return read(scope);
   }
 
@@ -191,7 +203,7 @@ SA.YardChat = (() => {
     return { step, force };
   }
 
-  // 发行版只读随包文案，不监听开发工作台的草稿同步。
+  // 发行包只读随包文案，忽略开发工作台的广播草稿。
   if (!SA.RELEASE && typeof BroadcastChannel === 'function') {
     const channel = new BroadcastChannel('sa-yard-chat');
     channel.onmessage = event => {
@@ -200,6 +212,6 @@ SA.YardChat = (() => {
     };
   }
 
-  return SA.RELEASE ? { currentScope, read, settings, createPlayer }
-    : { currentScope, read, settings, validateSettings, setSettings, validateGroups, write, inherit, save, createPlayer };
+  return SA.RELEASE ? { currentScope, read, settings, createPlayer, clickTips }
+    : { currentScope, read, settings, validateSettings, setSettings, validateGroups, write, inherit, save, createPlayer, clickTips };
 })();

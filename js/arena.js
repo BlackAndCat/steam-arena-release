@@ -143,8 +143,8 @@ SA.Arena = (() => {
         h('div', { class: 'mid' }, UI.loop(h('span', { class: 'dui' }, '对'), 42, 38, 7)),
         h('div', { class: 'who' }, oval(e.pilot), h('div', { class: 'nm' }, h('b', {}, e.v?.name || e.name), h('span', { class: 'px-small' }, ' 评分 '), UI.num(e.rating)))),
       h('div', { class: 'ar-cars' }, engraved(D.vehicle, false), engraved(e.v, true)),
-      h('div', { class: 'ar-prize' }, e.replay ? UI.hand('↺ 重打：不发奖金、不留战损、不掉落', 14, 'white-space:normal')
-        : e.prize ? ['奖金 ', UI.underline(UI.num(money(e.prize)), 30, 4), ' · 缴获一件'] : '赢了不发奖金'),
+      h('div', { class: 'ar-prize' }, e.replay ? UI.hand('↺ 重打：不发奖金、不计声望、不留战损、不掉落', 14, 'white-space:normal')
+        : e.prize ? ['奖金 ', UI.underline(UI.num(money(e.prize)), 30, 4), ' · 声望 · 缴获一件'] : '赢了不发奖金'),
     ];
     return out;
   }

@@ -333,10 +333,13 @@ SA.Battle = (() => {
     if ((w.m.indirect && !w.m.spread) || (s.prism && focus >= 1)) return 0;
     return (w.m.spread * (1 - s.acc * T.AIM_ACCEL_SPREAD) + shakeOf(s) * T.AIM_SHAKE_SPREAD) * (1 - s.aimShrink * focus) + o.evade * T.AIM_EVADE_SPREAD;
   };
+  // 间接炮的最高仰角限制在世界竖直方向；下坡时允许车身相对角超过 90°。
+  // 瞄准与散布发射共用此界，直射炮仍使用模块原射界。
+  const aimLimits = (s, w) => [w.m.elev[0], w.m.indirect ? w.m.elev[1] - pitchOf(s) : w.m.elev[1]];
   // 瞄准点 → 炮管该抬到的仰角（度），受射界限制
   function aimAngle(s, w, tx, ty) {
     let a = barrel(s, w), sol, raw, behind;
-    const [lo, hi] = w.m.elev;
+    const [lo, hi] = aimLimits(s, w);
     // 高抛炮的炮口会随仰角明显移动：从候选仰角的炮口迭代求解，
     // 让 AI 预判、慢速转炮后的发射和弹道预览使用同一个出膛点。
     for (let i = 0; i < (w.m.indirect ? 4 : 1); i++) {
@@ -361,7 +364,7 @@ SA.Battle = (() => {
   function launch(s, w, deg, jitter) {
     const [x0, y0] = muzzle(s, w, deg);
     // 有散布的抛射件限制偏弹射界；预览和实射共用，避免平射、反向射击或预览扇区越界。
-    const shotDeg = w.m.indirect ? clamp(deg + jitter, w.m.elev[0], w.m.elev[1]) : deg + jitter;
+    const shotDeg = w.m.indirect ? clamp(deg + jitter, ...aimLimits(s, w)) : deg + jitter;
     const a = shotDeg * Math.PI / 180;
     const dir = isP(s) ? 1 : -1;
     const wa = a + pitchOf(s) * Math.PI / 180;   // 炮管仰角（相对车身）+ 车身抬头 = 世界里的仰角
@@ -482,6 +485,46 @@ SA.Battle = (() => {
     emit('text', { str: String(Math.round(dmg)), x: x + rnd(-9, 9), y: y - 18, col: imp.layer === 'side' ? P.magenta : P.white });
     for (let i = 0; i < 6; i++) emit('part', { type: 'spark', x: x, y: y + 6, vx: rnd(-130, 130), vy: rnd(-160, 0), life: rnd(0.15, 0.35), col: undefined });
     if (cell.id === 'biped' ? (def.bipedLegDead && def.bipedHipDead) : cell.hp <= 0) destroy(def, att, imp);
+  }
+
+  // 受击刷新后重算可用驱动，避免沿用碰撞前的动力缓存；本帧蓄压放能仍算可移动。
+  const canDrive = (s) => {
+    if (s.speed <= 0 || s.armorSpeedFactor <= 0) return false;
+    const stored = s.storeMax > 0 ? Math.min(T.STORE_RELEASE_PER_SEC, Math.max(0, s.store || 0) / Math.max(1e-6, s.driveDt || 1 / 60) + (s.driveRelease || 0)) : 0;
+    return s.supply + stored > s.equip;
+  };
+  // 近战打中残骸或已毁腿/髋时，把一次攻击预算按距撞点远近分给存活部件。
+  function meleeDamage(def, att, imp, amount) {
+    const cell = def.v[imp.layer][imp.r][imp.c];
+    if (!cell || !(amount > 0)) return;
+    const budget = amount * (canDrive(def) ? 1 : 1.25);
+    const hitRow = imp.hitR == null ? imp.r : imp.hitR;
+    const hitCol = imp.hitC == null ? imp.c : imp.hitC;
+    const [hx, hy] = toWorld(def, cellX(def, hitCol) + HALF, cellY(hitRow, def) + HALF);
+    const zone = cell.id === 'biped' ? (hitRow >= bipedLegStart(def) ? 'leg' : 'hip') : null;
+    if (alive(cell) && (!zone || (zone === 'leg' ? def.bipedLegHp : def.bipedHipHp) > 0)) {
+      damage(def, att, { ...imp, hitR: hitRow, hitC: hitCol, zone }, budget);
+      return;
+    }
+    const targets = [];
+    SA.V.each(def.v, (part, r, c, layer) => {
+      if (!alive(part)) return;
+      let partZone = null, [x, y] = modCenter(def, layer, r, c);
+      if (part.id === 'biped') {
+        // 双足只取当前仍存活且更靠近撞点的分区，避免把份额写进已毁分区。
+        const choices = [];
+        if (def.bipedHipHp > 0) choices.push({ zone: 'hip', row: r + 1 });
+        if (def.bipedLegHp > 0) choices.push({ zone: 'leg', row: r + 3 });
+        if (!choices.length) return;
+        const pos = choices.map(q => ({ ...q, point: toWorld(def, x, cellY(q.row, def) + HALF) }));
+        pos.sort((a, b) => Math.hypot(a.point[0] - hx, a.point[1] - hy) - Math.hypot(b.point[0] - hx, b.point[1] - hy));
+        partZone = pos[0].zone; [x, y] = pos[0].point;
+      }
+      const weight = 1 / (C + Math.hypot(x - hx, y - hy));
+      targets.push({ layer, r, c, zone: partZone, hitR: partZone === 'leg' ? r + 3 : r, weight });
+    });
+    const total = targets.reduce((sum, target) => sum + target.weight, 0);
+    for (const target of targets) damage(def, att, target, budget * target.weight / total);
   }
 
   // 弹开概率：装甲厚度（材料放大后的 armor）对武器穿深。抽成纯函数，车间用它给出穿深对照（SA.Battle.ricochetChance）
@@ -646,6 +689,7 @@ SA.Battle = (() => {
   // 这样底盘伸得再长也只在底盘那一行挡路，上层的撞角可以从光秃秃的底盘上方越过去撞到后面的模块。
   // 每一行子格最前端的活模块（占格表里的 { cell, r, c }），没有就是 null
   const rowFront = (s, r) => { for (let c = K.COLS - 1; c >= 0; c--) { const o = s.occ[r][c]; if (o && alive(o.cell)) return o; } return null; };
+  const rowFrontAny = (s, r) => { for (let c = K.COLS - 1; c >= 0; c--) if (s.occ[r][c]) return s.occ[r][c]; return null; };
   const rowEdge = (s, o) => { const b = modBox(s, o.r, o.c, o.cell.id); return isP(s) ? b.x1 : b.x0; };
   // 返回 { gap, rows }：最小间距，以及贴得最近（在 1px 内）的那些行
   // 两车被地形抬到不同高度时，按世界高度对齐：p 的第 r 行对着 e 的第 r + dr 行
@@ -665,20 +709,36 @@ SA.Battle = (() => {
     return { gap, dr, rows: rows.filter(x => x.g <= gap + T.CONTACT_GAP) };
   }
 
+  // 普通碰撞仍只看存活前沿；近战另取残骸前沿，且攻击方必须是存活的前排撞击件。
+  function meleeContact(p, e, dr) {
+    const pairs = [];
+    for (let r = 0; r < K.ROWS; r++) {
+      const re = r + dr;
+      if (re < 0 || re >= K.ROWS) continue;
+      const pf = rowFront(p, r), ef = rowFront(e, re);
+      const pa = rowFrontAny(p, r), ea = rowFrontAny(e, re);
+      if (pf && SA.isRam(pf.cell.id) && ea) pairs.push({ a: p, d: e, am: pf, dm: ea, r, tr: re, g: rowEdge(e, ea) - rowEdge(p, pf) });
+      if (ef && SA.isRam(ef.cell.id) && pa) pairs.push({ a: e, d: p, am: ef, dm: pa, r: re, tr: r, g: rowEdge(e, ef) - rowEdge(p, pa) });
+    }
+    return pairs;
+  }
+
   function collide() {
     const p = B.p, e = B.e;
     if (p.frontCol < 0 || e.frontCol < 0) return;
     const { gap, rows, dr } = rowContact(p, e);
+    const melee = meleeContact(p, e, dr).filter(x => x.g <= T.CONTACT_GAP);
     B.contactRows = gap <= T.CONTACT_GAP ? rows.map(x => x.r) : [];
     B.contactRowsE = gap <= T.CONTACT_GAP ? rows.map(x => x.re) : [];
+    for (const x of melee) { B.contactRows.push(x.a === p ? x.r : x.tr); B.contactRowsE.push(x.a === e ? x.r : x.tr); }
     B.rowShift = dr;
-    B.contact = gap <= T.CONTACT_GAP;
+    B.contact = gap <= T.CONTACT_GAP || melee.length > 0;
     if (B.contact) {
       for (const [a, d] of [[p, e], [e, p]]) {
         if (a.chassisId === 'biped' && a.balance === '平衡' && !a.bipedLegDead && a.kickCooldown <= 0 && a.speed > 0) {
           const target = rows.find(x => {
             const part = a === p ? x.ec : x.pc;
-            return part && alive(part.cell);
+            return x.g <= T.CONTACT_GAP && part && alive(part.cell);
           });
           if (target) {
             const hit = a === p ? target.ec : target.pc;
@@ -691,8 +751,22 @@ SA.Battle = (() => {
         }
       }
     }
-    if (gap > 0) return;
     const closing = p.vx - e.vx;
+    // 已顶住时继续出力的近战件按原撞击公式每 0.35 秒打一轮；高速碰撞仍走下方原物理。
+    if (closing <= T.RAM_SPEED_THRESHOLD && B.ramCd <= 0) {
+      const used = [];
+      for (const x of melee) {
+        if (x.g > 0 || !canDrive(x.a) || x.a.dir !== (x.a === p ? 1 : -1) || used.some(q => q.a === x.a && q.am.cell === x.am.cell && q.dm.cell === x.dm.cell)) continue;
+        used.push(x);
+        const speed = Math.max((x.a === p ? 1 : -1) * (x.a.vx - x.d.vx), T.RAM_SPEED_THRESHOLD);
+        const dmg = (SA.mod(x.am.cell).ram || T.RAM_DEFAULT_DAMAGE) * speed / T.RAM_CLOSING_REFERENCE * SA.ramMul(x.a.mass * 1000);
+        x.a.events.ram++;
+        meleeDamage(x.d, x.a, { layer: 'body', r: x.dm.r, c: x.dm.c, hitR: x.tr }, SA.isRam(x.dm.cell.id) ? dmg * T.RAM_TARGET_DAMAGE : dmg);
+        if (alive(x.am.cell)) damage(x.a, null, { layer: 'body', r: x.am.r, c: x.am.c, hitR: x.r }, dmg * K.RAM_SELF);
+      }
+      if (used.length) B.ramCd = T.RAM_COOLDOWN;
+    }
+    if (gap > 0) return;
     const cx = (rowEdge(p, rows[0].pc) + rowEdge(e, rows[0].ec)) / 2;
     if (closing > T.RAM_SPEED_THRESHOLD && B.ramCd <= 0) {
       B.ramCd = T.RAM_COOLDOWN;
@@ -708,9 +782,13 @@ SA.Battle = (() => {
           // 撞击伤害 ∝ 相对速度 × 自身车重；撞击面自己也吃一部分反作用
           const dmg = (SA.mod(ma).ram || T.RAM_DEFAULT_DAMAGE) * f * SA.ramMul(a.mass * 1000);   // 车越重撞得越狠
           if (SA.mod(ma).ram) a.events.ram++;
-          damage(d, a, { layer: 'body', r: dm.r, c: dm.c }, SA.isRam(dm.cell.id) ? dmg * T.RAM_TARGET_DAMAGE : dmg);
+          const contact = SA.isRam(ma.id) && melee.find(q => q.a === a && q.am.cell === ma && q.g <= 0);
+          const target = contact ? contact.dm : dm, hitR = contact ? contact.tr : (a === p ? x.re : x.r);
+          const hit = { layer: 'body', r: target.r, c: target.c, hitR };
+          if (SA.isRam(ma.id)) meleeDamage(d, a, hit, SA.isRam(target.cell.id) ? dmg * T.RAM_TARGET_DAMAGE : dmg);
+          else damage(d, a, hit, SA.isRam(dm.cell.id) ? dmg * T.RAM_TARGET_DAMAGE : dmg);
           const tethered = (a.tether && a.tether.target === d) || (d.tether && d.tether.target === a);
-          if (alive(ma)) damage(a, null, { layer: 'body', r: am.r, c: am.c }, dmg * (tethered ? K.RAM_TETHER_SELF : K.RAM_SELF));
+          if (alive(ma)) damage(a, null, { layer: 'body', r: am.r, c: am.c, hitR: a === p ? x.r : x.re }, dmg * (tethered ? K.RAM_TETHER_SELF : K.RAM_SELF));
           if (M[ma.id].knock) { if (a === p) knockE += M[ma.id].knock; else knockP += M[ma.id].knock; }
         }
       }
@@ -766,7 +844,7 @@ SA.Battle = (() => {
   // 蒸汽撞锤：贴身时周期性猛击
   function pistons(s, o, dt) {
     for (const k in s.punch) s.punch[k] = Math.max(0, s.punch[k] - dt * T.PISTON_DECAY);
-    if (s.dead || o.dead || !B.contact) return;
+    if (s.dead || o.dead || s.power <= 0 || !B.contact) return;
     for (const pc of s.pistons) {
       // 撞锤要在自己这几行的最前端，并且其中一行正顶着对方
       const pm = SA.mod(pc.cell);
@@ -780,12 +858,12 @@ SA.Battle = (() => {
       if (s.punchT[key] > 0) continue;
       s.punchT[key] = pm.punchCd;
       const tr = row + (isP(s) ? 1 : -1) * (B.rowShift || 0);   // 对方那边同一高度的行
-      const tgt = tr >= 0 && tr < K.ROWS ? rowFront(o, tr) : null;
+      const tgt = tr >= 0 && tr < K.ROWS ? rowFrontAny(o, tr) : null;
       if (!tgt) continue;
       const dc = tgt.c;
       s.punch[key] = 1;
       s.heat += pm.heat;
-      damage(o, s, { layer: 'body', r: tgt.r, c: dc }, SA.armorCut(SA.mod(tgt.cell), pm.punch));
+      meleeDamage(o, s, { layer: 'body', r: tgt.r, c: dc, hitR: tr }, SA.armorCut(SA.mod(tgt.cell), pm.punch));
       shove(s, o, T.PISTON_SHOVE);   // 撞锤的推力同样是一对冲量：推重车时自己被弹开得更多
       const x = frontEdge(s), y = cellY(row, s) + HALF;
       for (let i = 0; i < 10; i++) emit('part', { type: 'steam', x: x, y: y, vx: rnd(-90, 90), vy: rnd(-120, -15), life: rnd(0.4, 0.8), col: undefined });
@@ -813,6 +891,7 @@ SA.Battle = (() => {
       if (chargeKw > 0) SA.V.each(s.v, cell => { if (alive(cell) && SA.mod(cell).store) effect(s, cell.id, 'energy', chargeKw * dt); });
     }
     const release = s.storeMax > 0 && baseSupply < s.demand ? Math.min(T.STORE_RELEASE_PER_SEC, s.store / Math.max(dt, 1e-6), s.demand - baseSupply) : 0;
+    s.driveRelease = release; s.driveDt = dt;
     if (release > 0) {
       s.store = Math.max(0, s.store - release * dt);
       SA.V.each(s.v, cell => { if (alive(cell) && (SA.mod(cell).store || 0)) effect(s, cell.id, 'energy', release * dt); });
@@ -990,8 +1069,8 @@ SA.Battle = (() => {
       s.moveT = s.charge ? rnd(T.AI_CHARGE_TIME[0], T.AI_CHARGE_TIME[1]) : rnd(T.AI_MOVE_TIME[0], T.AI_MOVE_TIME[1]) * (s.speed > T.AI_FAST_SPEED ? T.AI_FAST_MOVE_FACTOR : 1);
     }
     const selected = s.weapons.find(w => w.cell.id === s.sel && !w.blocked);
-    // 高抛射界有近端盲区和最远距离，沿用模块的角度配置判断，不写死巨炮的视觉参数。
-    // 近到抬不够炮口时后退，远到弹道不可达或压不低时前进；进入射界后仍按原性格移动。
+    // 高抛炮只对超出有效射界或炮口后方的目标后退；前方近点可竖直高抛。
+    // 远到弹道不可达或压不低时前进；进入射界后仍按原性格移动。
     const aimPt = selected && selected.m.indirect ? aiAimPoint(s, o) : null;
     const lob = aimPt ? aimAngle(s, selected, aimPt[0], aimPt[1]) : null;
     const fwd = isP(s) ? 1 : -1;
@@ -1289,7 +1368,7 @@ SA.Battle = (() => {
   function start(opts) {
     // 已取消的遭遇战不能从旧页面或脚本绕过出战入口启动。
     if (opts?.mode === 'side') return false;
-    // 发行版在实际开战入口再次核对关卡，防止旧页面启动未开放章节。
+    // 发行包在实际开战入口核对开放范围，旧页面不能启动后续章节。
     if (SA.RELEASE && opts?.mode === 'campaign') {
       const key = /^(\d+),(\d+)$/.exec(String(opts.storyKey || ''));
       if (!key || !SA.Camp.stage(Number(key[1]), Number(key[2]))) return false;
@@ -1408,7 +1487,7 @@ SA.Battle = (() => {
   if (SA.BattleView && SA.BattleView.create) view = SA.BattleView.create({
     constants: { h, K, T, M, P, C, PADX, W, H, GROUND, VY, VW, HALF },
     getState: () => B, startState, step, camera, kill, crippled, alive, clamp, rnd, gauss, isP, cellX, cellY, frontEdge, groundAt, crateAt, modCenter, modAt, cellAt,
-    muzzle, targetAt, aimAngle, spreadDeg, shakeOf, barrel, predict, tiltOf, pivY, toWorld, modBox, frontShift, shiftVeh, tetherState,
+    muzzle, targetAt, aimAngle, spreadDeg, shakeOf, barrel, launch, predict, tiltOf, pivY, toWorld, modBox, frontShift, shiftVeh, tetherState,
     vent, retreat, acceptSurrender, refuseSurrender, surrenderState, advanceSurrender, skipSurrenderAnimation,
     emit: (type, data) => emit(type, data),
   });

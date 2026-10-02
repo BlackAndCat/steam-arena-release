@@ -158,8 +158,6 @@ SA.Text = (() => {
     if (key in values) return values[key];
     return key in defaults ? defaults[key] : String(fallback == null ? '' : fallback);
   }
-  // 区分“作者明确清空”与“从未编辑”，剧情和聊天池据此决定是否回退默认内容。
-  const has = key => !originalView && Object.hasOwn(values, key);
 
   // Home 每次重建都可能产生新的敌手或车况文案，因此仅刷新本接口注册的默认值。
   // 已保存的自定义值仍由 get 优先读取；更新默认值本身不产生草稿或保存请求。
@@ -204,21 +202,6 @@ SA.Text = (() => {
     if (!options.silent) notify(key);
     updateToolbar();
     return next;
-  }
-
-  // 删除覆盖键才表示继承默认或上层内容；空字符串保留给作者显式清空。
-  function unset(key) {
-    if (originalView) selectVersion('edited', true);
-    if (!safeKey(key)) throw new Error('SA.Text.unset 需要非空且不超过 240 字符的 key');
-    if (!Object.hasOwn(values, key)) return;
-    delete values[key];
-    dirty = true;
-    changeRevision++;
-    applyKey(key);
-    persistLocal();
-    scheduleAutoSave();
-    notify(key);
-    updateToolbar();
   }
 
   function entryValue(entry) {
@@ -903,15 +886,12 @@ SA.Text = (() => {
     if (dirty) scheduleAutoSave();
   }
 
-  // 发行版只读随包发布的文本快照，不读取开发服务、文件句柄或本机草稿。
+  // 发行包只读取归档中的正式文本快照，不接触开发草稿和作者文件句柄。
   async function loadRelease() {
-    try {
-      const response = await fetch(fileName(), { cache: 'no-store' });
-      if (response.ok) {
-        const data = await response.json();
-        if (data && data.values && typeof data.values === 'object') replaceSnapshot(editedSnapshot(data));
-      }
-    } catch (error) { console.error('发行文案加载失败', error); }
+    const response = await fetch(fileName(), { cache: 'no-store' });
+    if (!response.ok) throw new Error(`发行文本 HTTP ${response.status}`);
+    const data = await response.json();
+    if (data && data.values && typeof data.values === 'object') replaceSnapshot(editedSnapshot(data));
     loaded = true;
     if (readyResolve) readyResolve(api);
     scan();
@@ -1016,14 +996,14 @@ SA.Text = (() => {
     wrapCanvasText();
     if (!SA.RELEASE) {
       document.addEventListener('pointerover', event => {
-        if (editing && !isUiElement(event.target)) hovered = event.target;
-      }, true);
-      document.addEventListener('keydown', event => {
-        if (!editing || isUiElement(event.target) || event.key !== 'F8' || event.repeat || event.ctrlKey || event.altKey || event.metaKey) return;
-        event.preventDefault(); event.stopImmediatePropagation(); pinHover();
-      }, true);
-      document.addEventListener('pointerdown', onPointerDown, true);
-      document.addEventListener('click', onClick, true);
+      if (editing && !isUiElement(event.target)) hovered = event.target;
+    }, true);
+    document.addEventListener('keydown', event => {
+      if (!editing || isUiElement(event.target) || event.key !== 'F8' || event.repeat || event.ctrlKey || event.altKey || event.metaKey) return;
+      event.preventDefault(); event.stopImmediatePropagation(); pinHover();
+    }, true);
+    document.addEventListener('pointerdown', onPointerDown, true);
+    document.addEventListener('click', onClick, true);
       for (const type of ['pointerup', 'mousedown', 'mouseup', 'dblclick', 'contextmenu'])
         document.addEventListener(type, suppressPageEvent, true);
     }
@@ -1059,11 +1039,10 @@ SA.Text = (() => {
   }
 
   const api = SA.RELEASE ? {
-    init, ready, get, t: get, has, register, homeLines, homeTips, bindText, bindAttr, canvas, draw, onChange,
-    isEditing: () => false,
-    file: fileName,
+    init, ready, get, t: get, register, homeLines, homeTips, bindText, bindAttr, canvas, draw, onChange,
+    isEditing: () => false, file: fileName,
   } : {
-    init, ready, load: reload, get, t: get, has, set, unset, register, homeLines, homeTips, bindText, bindAttr, canvas, draw,
+    init, ready, load: reload, get, t: get, set, register, homeLines, homeTips, bindText, bindAttr, canvas, draw,
     enterEdit, exitEdit, toggle, save, export: exportJson, reset, onChange,
     versions: () => [{ id: 'original' }, { id: 'edited' }],
     selectVersion,
@@ -1122,11 +1101,8 @@ SA.StoryData = (() => {
   // get 始终返回新对象；未编辑的场景从当前默认数据读取，不修改 SA.STORY。
   function get(id) {
     valid(id);
-    const key = `story:${id}`;
-    // 空字符串也是作者明确清空；只有真正缺键才使用内置台词。
-    if (!SA.Text.has(key)) return normalize(id, defaults(id));
-    const raw = SA.Text.get(key, '');
-    return raw === '' ? [] : clone(JSON.parse(raw));
+    const raw = SA.Text.get(`story:${id}`, '');
+    return raw ? clone(JSON.parse(raw)) : normalize(id, defaults(id));
   }
 
   // set 接受字符串或 {text,who?,scene?}；省略元数据时沿用该位置原有值。
@@ -1167,6 +1143,6 @@ SA.StoryData = (() => {
   }
 
   async function save() { await SA.Text.ready; return SA.Text.save(); }
-  // 发行版保留剧情读取与插入点定位，编辑和保存接口只给开发版。
+  // 发行包保留剧情读取与插入点，编辑和保存只向开发版开放。
   return SA.RELEASE ? { list, get, point } : { list, get, set, save, point };
 })();
