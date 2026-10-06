@@ -859,6 +859,8 @@ SA.StoryData = (() => {
   function list() {
     const ids = ['opening', 'tutorial.intro', 'before.current', 'after.current'];
     (story().tutorial?.parts || []).forEach((_, i) => ids.push(`tutorial.parts.${i}`));
+    (story().tutorial?.controls || []).forEach(c => ids.push(`tutorial.controls.${c.part}.desktop`, `tutorial.controls.${c.part}.touch`));
+    (story().guideList || []).forEach(g => ids.push(`guide.${g.id}`));
     for (const key of Object.keys(story().stage || {})) {
       if (!/^\d+,\d+$/.test(key)) continue;
       for (const outcome of ['win', 'lose']) if (story().stage[key][outcome]) ids.push(`stage.${key}.${outcome}`);
@@ -867,6 +869,8 @@ SA.StoryData = (() => {
     (SA.CAMPAIGN || []).forEach((chapter, ci) => chapter.stages.forEach((_, si) => {
       ids.push(`before.${ci},${si}`, `after.${ci},${si}`);
     }));
+    // 支线的拦路过场（SA.Side.storyId）
+    for (const line of SA.SIDE_LINES || []) for (const ep of line.episodes || []) if (ep.open?.ambush) ids.push(`side.${ep.id}.ambush`);
     return ids;
   }
 

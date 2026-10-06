@@ -21,7 +21,7 @@ SA.StoryDev = (() => {
   // ---------- 场景名 ----------
   function stageName(key) {
     const [ci, si] = key.split(',').map(Number), ch = SA.CAMPAIGN[ci], st = ch && (SA.Camp?.stage(ci, si) || ch.stages[si]);
-    return st ? `${ch.name.split(' · ')[0]} · 第 ${si + 1} 场 · ${st.name}` : key;
+    return st && st.name ? `${ch.name.split(' · ')[0]} · 第 ${si + 1} 场 · ${st.name}` : ch ? `${ch.name.split(' · ')[0]} · 第 ${si + 1} 场` : key;
   }
   const FEAT = { garage: '车间', shop: '商店', street: '街头赛', bank: '银行', side: '侧挂层', upgrade: '改装', orders: '委托', bet: '赌注', blueprints: '蓝图库', friendly: '云车库', season: '大奖赛' };
   function label(id) {
@@ -29,15 +29,25 @@ SA.StoryDev = (() => {
     if (id === 'tutorial.intro') return '第一关教程 · 开场白';
     let m = /^tutorial\.parts\.(\d+)$/.exec(id);
     if (m) { const p = SA.STORY.tutorial.parts[+m[1]]; return `第一关教程 · 讲解${p ? p.label : m[1]}`; }
+    m = /^tutorial\.controls\.(\w+)\.(desktop|touch)$/.exec(id);
+    if (m) { const c = (SA.STORY.tutorial.controls || []).find(x => x.part === m[1]); return `第一关教程 · 操作${c ? c.label : m[1]}（${m[2] === 'touch' ? '手机' : '电脑'}）`; }
+    m = /^guide\.(.+)$/.exec(id);
+    if (m) { const g = (SA.STORY.guideList || []).find(x => x.id === m[1]); return `页面教程 · ${g ? g.label : m[1]}`; }
     m = /^stage\.(\d+,\d+)\.(win|lose)$/.exec(id);
     if (m) return `${stageName(m[1])} · ${m[2] === 'win' ? '胜利后提示' : '战败后提示'}`;
     m = /^feat\.(.+)$/.exec(id);
     if (m) return `功能开放 · ${FEAT[m[1]] || m[1]}`;
     m = /^(before|after)\.(.+)$/.exec(id);
     if (m) return `${m[2] === 'current' ? '其他对战（街头赛 / 锦标赛 / 支线）' : stageName(m[2])} · ${m[1] === 'before' ? '战前' : '战后'}`;
+    m = /^side\.(.+)\.ambush$/.exec(id);
+    if (m) {
+      const f = SA.Side && SA.Side.find(m[1]);
+      return f ? `支线 · ${SA.Side.title(f.line, f.i)} · 拦路过场（${stageName(f.ep.open.ambush)} 开打前）` : id;
+    }
     return id;
   }
-  const group = (id) => id === 'opening' || id.startsWith('tutorial.') ? '开场与教程'
+  const group = (id) => id === 'opening' || id.startsWith('tutorial.') || id.startsWith('guide.') ? '开场与教程'
+    : id.startsWith('side.') ? '支线过场'
     : id.startsWith('before.') || id.startsWith('after.') ? '战前 / 战后插入' : id.startsWith('stage.') ? '过关提示' : '功能开放提示';
 
   // ---------- 简易编辑器 ----------
@@ -165,8 +175,8 @@ SA.StoryDev = (() => {
   }
   function openWorkshop(at) {
     const key = workshopKey(at);
-    // 独立窗口编辑关卡车，当前战前控制台和继续开战的回调保持原位。
-    window.open(`tools/stage-editor.html${key ? `?stage=${key}` : ''}`, '_blank');
+    // 独立窗口编辑正式关卡；当前战前控制台和继续开战的回调保持原位。
+    window.open(`tools/console.html${key ? `#/stage/${key}/build` : ''}`, '_blank');
   }
   function hook(phase, at, next) {
     let id;

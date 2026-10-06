@@ -274,7 +274,6 @@
       "rows": 3
     }
   },
-  "SHOP_EXTRAS": [],
   "FEATURES": {
     "garage": "车间",
     "shop": "商店",
@@ -1235,7 +1234,132 @@
       }
     }
   ],
-  "CAMPAIGN_LAYOUT": 2,
+  "SIDE_LINES": [
+    {
+      "id": "martha",
+      "name": "玛莎的复仇",
+      "episodes": [
+        {
+          "id": "martha.1",
+          "name": "拦路",
+          "open": {
+            "ambush": "2,0"
+          },
+          "scene": "suburb",
+          "terrain": "flat",
+          "pilot": "玛莎·布莱克",
+          "vehicleName": "煤灰寡妇",
+          "aim": 0.75,
+          "style": "wander",
+          "boss": false,
+          "prize": 0,
+          "rewardMoney": false,
+          "rewardItems": [],
+          "uniqueLoot": [],
+          "blurb": "还是后巷那辆煤灰寡妇：零件全换成了熟铁，车头两块装甲换成了钢。",
+          "cells": [
+            [
+              0,
+              6,
+              4,
+              "mortar",
+              2,
+              0
+            ],
+            [
+              1,
+              6,
+              7,
+              "rangefinder",
+              2,
+              0
+            ],
+            [
+              0,
+              6,
+              7,
+              "armor",
+              3,
+              0
+            ],
+            [
+              0,
+              7,
+              6,
+              "helmet",
+              2,
+              0
+            ],
+            [
+              0,
+              8,
+              4,
+              "boiler_s",
+              2,
+              0
+            ],
+            [
+              0,
+              8,
+              5,
+              "tank_s",
+              2,
+              0
+            ],
+            [
+              0,
+              8,
+              6,
+              "tank_tall",
+              2,
+              0
+            ],
+            [
+              0,
+              8,
+              7,
+              "armor",
+              3,
+              0
+            ],
+            [
+              0,
+              9,
+              5,
+              "tank_s",
+              2,
+              0
+            ],
+            [
+              0,
+              10,
+              4,
+              "track",
+              2,
+              0
+            ],
+            [
+              0,
+              10,
+              6,
+              "track",
+              2,
+              0
+            ]
+          ]
+        },
+        {
+          "id": "martha.2",
+          "name": "",
+          "open": {
+            "after": "2,2"
+          },
+          "unfinished": true
+        }
+      ]
+    }
+  ],
+  "CAMPAIGN_LAYOUT": 4,
   "CLOUD_PRESETS": [
     {
       "author": "齿轮先生",
@@ -1423,6 +1547,7 @@
         "right": 1280
       },
       "blurb": "老汤姆答应教你开蒸汽战车。先在后院的煤渣地上试试手：A/D 开车，按住左键瞄准开火。",
+      "plannedStages": 3,
       "stages": [
         {
           "stageRef": "0:0"
@@ -1452,13 +1577,14 @@
       }
     },
     {
-      "name": "第一章 · 后巷",
+      "name": "第一章 · 伦敦东区",
       "place": "白教堂后巷",
       "bounds": {
         "left": 0,
         "right": 1280
       },
       "blurb": "后巷里的地下赛车圈。在这里站稳脚跟，才会有人给你递锦标赛的请柬。",
+      "plannedStages": 7,
       "stages": [
         {
           "stageRef": "1:0"
@@ -1468,30 +1594,29 @@
         },
         {
           "stageRef": "1:2"
-        }
-      ],
-      "unlock": {
-        "mods": [
-          "quad",
-          "cannon",
-          "mg_heavy"
-        ],
-        "mat": 2,
-        "grid": {
-          "cols": 5,
-          "rows": 4
         },
-        "note": "熟铁材料开放：选中车上的模块就能升级材料，所有属性 ×1.2。四足、直射火炮和重机枪到手，观察镜、装弹机和侧挂件都是可击毁的实体模块。街头赛可以刷钱，银行可以贷款。"
-      }
+        {
+          "stageRef": "1:3"
+        },
+        {
+          "stageRef": "1:4"
+        },
+        {
+          "stageRef": "1:5"
+        },
+        {
+          "stageRef": "1:6"
+        }
+      ]
     },
     {
-      "name": "第二章 · 码头区",
-      "place": "泰晤士河码头",
+      "name": "第二章 · 兰开夏工业联赛",
+      "place": "兰开夏纺织厂",
       "bounds": {
         "left": 0,
         "right": 1280
       },
-      "blurb": "码头区先让你用侧炮和近战贴身，随后把战场抬到头顶：货箱和厚甲挡住平射，臼炮从后排越过掩体落下。",
+      "plannedStages": 6,
       "stages": [
         {
           "stageRef": "2:0"
@@ -1501,111 +1626,32 @@
         },
         {
           "stageRef": "2:2"
-        }
-      ],
-      "unlock": {
-        "mat": 3,
-        "grid": {
-          "cols": 6,
-          "rows": 4
         },
-        "note": "钢材料开放（×1.45）。你已经见过泥地、双足和抛射火力，下一章会把贴身缠斗推到更高强度。"
-      }
+        {
+          "stageRef": "2:3"
+        },
+        {
+          "stageRef": "2:4"
+        }
+      ]
     },
     {
-      "name": "第三章 · 工厂区",
-      "place": "兰开夏纺织厂",
-      "blurb": "工厂区进入缠斗：撞角、鱼叉和蒸汽喷射器轮番把距离变成优势，贴身后要在反震和持续加热之间做取舍。",
-      "stages": [
-        {
-          "stageRef": "3:0"
-        },
-        {
-          "stageRef": "3:1"
-        },
-        {
-          "stageRef": "3:2"
-        }
-      ],
-      "unlock": {
-        "feat": [
-          "upgrade"
-        ],
-        "mat": 4,
-        "grid": {
-          "cols": 6,
-          "rows": 5
-        },
-        "note": "镀镍材料开放（×1.75）。改装（炮盾 / 附加装甲）开放；侧挂层、抛射和缠斗装备已经在前两章逐步拿到。"
-      }
-    },
-    {
-      "name": "第四章 · 北方矿区",
+      "name": "第三章 · 约克郡北方联赛",
       "place": "约克郡煤矿",
-      "blurb": "第四章先按下主题：矿区把前几章的构筑混在一起，先学会管理重炮、储压和抛射架的空间，Boss 后开放大部分剩余装备。",
-      "stages": [
-        {
-          "stageRef": "4:0"
-        },
-        {
-          "stageRef": "4:1"
-        },
-        {
-          "stageRef": "4:2"
-        }
-      ],
-      "unlock": {
-        "feat": [
-          "bet",
-          "blueprints",
-          "friendly"
-        ],
-        "mods": [
-          "mg2",
-          "radiator",
-          "gyroscope",
-          "boiler_l",
-          "water_l"
-        ],
-        "grid": {
-          "cols": 7,
-          "rows": 5
-        },
-        "note": "第四章 Boss 后开放大部分剩余装备：双联机枪、散热片、陀螺仪、大型锅炉和大水箱补齐火力、控制与后勤；下注和蓝图库开放。"
-      }
+      "plannedStages": 6,
+      "stages": []
+    },
+    {
+      "name": "第四章 · 伍尔维奇皇家兵工厂",
+      "place": "伍尔维奇皇家兵工厂",
+      "plannedStages": 6,
+      "stages": []
     },
     {
       "name": "第五章 · 水晶宫",
       "place": "海德公园 · 水晶宫",
-      "blurb": "帝国蒸汽大奖赛。全英国最好的战车都在这里，卫冕冠军的女王号在决赛等你。",
-      "stages": [
-        {
-          "stageRef": "5:0"
-        },
-        {
-          "stageRef": "5:1"
-        },
-        {
-          "stageRef": "5:2"
-        }
-      ],
-      "unlock": {
-        "feat": [
-          "season"
-        ],
-        "mods": [
-          "cannon_giant"
-        ],
-        "mat": 6,
-        "grid": {
-          "cols": 8,
-          "rows": 6
-        },
-        "ingots": {
-          "wootz": 1
-        },
-        "note": "你是帝国冠军了！改装台扩到 8×6。终局「伦敦蒸汽大奖赛」开放：每个赛季对手更强，夺冠奖励以太结晶。"
-      }
+      "plannedStages": 6,
+      "stages": []
     }
   ],
   "ORDERS": [

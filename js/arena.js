@@ -8,10 +8,11 @@ SA.Arena = (() => {
   const d = () => SA.S.d;
   const money = (n) => SA.UI.money(n);
   // [页签, 名称, 需要的功能]
-  const MODES = [['camp', SA.Config.text("arena_7ae0219da3ae"), null], ['street', SA.Config.text("arena_dc638f0b9759"), 'street'], ['tour', SA.Config.text("arena_d152ba4020fe"), 'season']];
-  const modes = () => MODES.filter(([, , f]) => !f || SA.Camp.has(f));
+  // 支线页签只在有支线开放（SA.Side）以后出现
+  const MODES = [['camp', SA.Config.text("arena_7ae0219da3ae"), null], ['side', SA.Config.text('arena_side_tab'), 'sideLine'], ['street', SA.Config.text("arena_dc638f0b9759"), 'street'], ['tour', SA.Config.text("arena_d152ba4020fe"), 'season']];
+  const modes = () => MODES.filter(([, , f]) => !f || (f === 'sideLine' ? !!SA.Side?.anyOpen() : SA.Camp.has(f)));
   // openCh：战役列表展开了哪几章（默认只展开当前这一章和选中的那一场所在的章）
-  const st = { mode: 'camp', pick: { camp: null, tour: null, street: null, friendly: null }, bet: null, openCh: null };
+  const st = { mode: 'camp', pick: { camp: null, side: null, tour: null, street: null, friendly: null }, bet: null, openCh: null };
   let root = null;
 
   // quiet：战后结算会接着弹窗，先不弹章节开场
@@ -22,6 +23,7 @@ SA.Arena = (() => {
     root = SA.Home.board({ instant: !!quiet });   // 院子里拉下黑板，返回黑板上的内容容器
     render();
     if (!quiet) SA.Camp.introIfNew();
+    if (!quiet && SA.Guide) SA.Guide.arena();   // 第一次正式进出战黑板（第二关）：讲黑板和拉杆
   }
   function unmount() { root = null; }
 
@@ -30,7 +32,12 @@ SA.Arena = (() => {
     if (!e) return [];
     let raw = [];
     if (st.mode === 'camp') { const [ci, si] = String(e.key).split(',').map(Number); raw = (SA.CAMPAIGN[ci] && SA.CAMPAIGN[ci].stages[si].uniqueLoot) || []; }
-    return raw.map(r => ({ id: r.id, mt: r.mt || 1, claimed: SA.S.hasUnique(r.id) }));
+    if (st.mode === 'side') raw = SA.Side.find(e.key)?.ep.uniqueLoot || [];
+    // 唯一腿型按变体身份记账和起名（「步行履带」而不是「钢四足底盘」）
+    return raw.map(r => {
+      const leg = r.key ? (SA.LEG_VARIANTS || []).find(x => x.key === r.key) : null;
+      return { id: r.id, mt: (leg && leg.mt) || r.mt || 1, name: leg ? leg.name : null, claimed: SA.S.hasUnique(r.key || r.id) };
+    });
   }
   // ---------- 页面（界面重建 v3）：左黑板赛程 · 中对决海报 · 右对手档案 + 下注凭单 + 调速杆 ----------
   function render() {
@@ -52,12 +59,17 @@ SA.Arena = (() => {
       h('section', { class: 'ar-side' }, side(cur, s)));
   }
 
+  // 支线开放条件里的主线关：做好了写关名，没做好写「第几章第几关」
+  function sideStage(key) {
+    const [ci, si] = String(key).split(',').map(Number), stage = SA.Camp.stage(ci, si);
+    return stage ? stage.name : SA.Config.text('arena_side_stage', ci, si + 1);
+  }
   // ---------- 左：黑板（打过的划掉，要打的圈起来，选中的框起来；底下粉笔画场地）----------
   function board(list, cur) {
     const D = d(), UI = SA.PX.ui, X = SA.PX, ms = modes();
     const tabs = ms.length > 1 ? h('div', { class: 'ch-tabs' }, ms.map(([k, n]) => h('button', { class: `ch-tab ${st.mode === k ? 'on' : ''}`, onclick: () => { st.mode = k; render(); } }, n, k === 'tour' ? ` · ${D.round + 1}` : ''))) : null;
     const line = (e) => {
-      const name = st.mode === 'camp' ? e.name : e.title.replace(/^第 \d+ 轮 · /, '');
+      const name = st.mode === 'camp' ? e.name : st.mode === 'side' ? SA.Config.text('arena_side_row', e.index + 1, e.name) : e.title.replace(/^第 \d+ 轮 · /, '');
       const done = e.replay || (e.tag && e.tag[0] === 'ok'), next = e.next || (e.tag && e.tag[0] === 'next');
       const w = Math.round(([...name].length * 18 + 8) / 2);
       return h('button', { class: `ch-row ${cur && cur.key === e.key ? 'on' : ''} ${e.lock && !done ? 'lock' : ''}`, 'data-page-key': `arena:${st.mode}:${e.key}`, onclick: () => { st.pick[st.mode] = e.key; render(); } },
@@ -78,13 +90,33 @@ SA.Arena = (() => {
         const open = st.openCh.has(ci);
         rows.push(h('button', { class: `ch-head ${open ? 'open' : ''}`, 'data-page-key': `chapter:${ci}`, onclick: () => { if (open) st.openCh.delete(ci); else st.openCh.add(ci); render(); } }, open ? '▾ ' : '▸ ', SA.CAMPAIGN[ci].name));
         if (open) rows.push(...rs.map(line));
+        // 这一章还没做完：已有的关下面写一行「还有几关 · 制作中」
+        const chapter = SA.CAMPAIGN[ci], left = SA.Camp.plannedStages(chapter) - chapter.stages.filter(x => !x.unfinished).length;
+        if (open && left > 0) rows.push(h('div', { class: 'ch-row lock' }, h('span', { class: 'ck' }, '…'), h('span', { class: 'nm' }, SA.Config.text('arena_stages_wip', left))));
       }
       const nextCh = SA.CAMPAIGN[SA.Camp.chIndex() + 1];
       if (nextCh && !SA.Camp.done()) rows.push(h('div', { class: 'ch-row lock' }, h('span', { class: 'ck' }, '?'), h('span', { class: 'nm' }, SA.Config.text("arena_b3dca196e267", `${nextCh.name.split(' · ').pop()}`))));
+    } else if (st.mode === 'side') {
+      // 支线：每条线一个标题，下面是开放的关；还没做好的写「制作中」，下一关只写开放条件
+      const lock = (text) => h('div', { class: 'ch-row lock' }, h('span', { class: 'ck' }, '…'), h('span', { class: 'nm' }, text));
+      rows = [];
+      for (const { line: L, rows: eps } of SA.Side.board()) {
+        rows.push(h('div', { class: 'ch-head open', 'data-page-key': `side:${L.id}` }, '▾ ', L.name));
+        for (const r of eps) {
+          const e = list.find(x => x.key === r.ep.id);
+          if (r.state === 'open' && e) rows.push(line(e));
+          else if (r.state === 'wip') rows.push(lock(SA.Config.text('arena_side_wip', r.i + 1)));
+          else if (r.state === 'locked') rows.push(lock(r.after ? SA.Config.text('arena_side_after', r.i + 1, sideStage(r.after)) : SA.Config.text('arena_side_wip', r.i + 1)));
+        }
+      }
     } else rows = list.map(line);
-    const foot = st.mode === 'street' ? h('button', { class: 'ch-tab', onclick: () => { SA.Street.offers(true); render(); } }, SA.Config.text("arena_b111553da074"))
+    const foot = st.mode === 'side' ? h('div', { class: 'ch-foot' }, SA.Config.text('arena_side_foot'))
+      : st.mode === 'street' ? h('button', { class: 'ch-tab', onclick: () => { SA.Street.offers(true); render(); } }, SA.Config.text("arena_b111553da074"))
       : st.mode === 'camp' ? h('div', { class: 'ch-foot' }, SA.Config.text("arena_76babf5f99db")) : null;
-    return [tabs, h('div', { class: 'ch-list' }, rows), foot];
+    // 黑板左下角钉一块朝左的木路牌：直接回车间改车（和右下角的出战拉杆左右对着）
+    const garage = SA.Camp.has('garage') ? h('div', { class: 'ar-garage' },
+      UI.sign(SA.Config.text('home_98d39d5eed3f'), -1, 72, { onclick: () => SA.nav('garage'), title: SA.Config.text('arena_back_garage'), seed: 11 })) : null;
+    return [tabs, h('div', { class: 'ch-list' }, rows), foot, garage];
   }
   // 便签（贴在海报下面）：场地剖面、线人情报、能缴获的唯一件
   function notes(e) {
@@ -95,7 +127,7 @@ SA.Arena = (() => {
       t ? note(SA.Config.text("arena_ef520ff326a4", `${t.name}`), UI.img(sketch(t, '#4a3a18', 76), 2), h('div', { class: 'nb', title: t.desc }, t.desc.split(/[。；]/)[0])) : null,
       e.blurb ? note(SA.Config.text("arena_0499bfda46ca"), h('div', { class: 'nb', title: e.blurb }, UI.hand(SA.Config.text("arena_741522735269", `${e.blurb}`), 14, 'white-space:normal'))) : null,
       rs.length ? note(SA.Config.text("arena_c51834a41645"), ...rs.map(r => h('div', { class: 'nu' }, SA.SPR.moduleCanvas(r.id, 0.5, r.mt),
-        h('div', {}, h('b', {}, `${r.mt > 1 ? SA.MATS[r.mt].name : ''}${M[r.id].name}`), h('div', { class: 'px-small' }, r.claimed ? SA.Config.text("arena_260e1d99c461") : e.replay ? SA.Config.text("arena_8c9eaa468201") : SA.Config.text("arena_1c589341288b")))))) : null,
+        h('div', {}, h('b', {}, r.name || `${r.mt > 1 ? SA.MATS[r.mt].name : ''}${M[r.id].name}`), h('div', { class: 'px-small' }, r.claimed ? SA.Config.text("arena_260e1d99c461") : e.replay ? SA.Config.text("arena_8c9eaa468201") : SA.Config.text("arena_1c589341288b")))))) : null,
     ];
   }
   // 场地剖面（便签上用墨线画）：地面一条线，土坡是鼓包，货箱是方块（带一道斜撑），泥地是点点
@@ -132,7 +164,8 @@ SA.Arena = (() => {
   function poster(e, s) {
     const D = d(), UI = SA.PX.ui, X = SA.PX;
     if (!e) return h('p', {}, SA.Config.text("arena_7bd3bb3555fd"));
-    const where = st.mode === 'camp' ? (() => { const [ci, si] = String(e.key).split(',').map(Number); return SA.Config.text("arena_d72d11a730b7", `${SA.CAMPAIGN[ci].name}`, `${si + 1}`); })() : st.mode === 'tour' ? SA.Config.text("arena_c177769a100d", `${Number(e.key) + 1}`) : SA.Config.text("arena_dc638f0b9759");
+    const where = st.mode === 'camp' ? (() => { const [ci, si] = String(e.key).split(',').map(Number); return SA.Config.text("arena_d72d11a730b7", `${SA.CAMPAIGN[ci].name}`, `${si + 1}`); })()
+      : st.mode === 'side' ? SA.Config.text('arena_side_where', SA.Side.find(e.key)?.line.name || '', e.index + 1) : st.mode === 'tour' ? SA.Config.text("arena_c177769a100d", `${Number(e.key) + 1}`) : SA.Config.text("arena_dc638f0b9759");
     const out = [
       h('div', { class: 'ar-kick' }, where),
       e.boss || (e.tag && e.tag[1] === 'Boss')
@@ -180,8 +213,15 @@ SA.Arena = (() => {
       field(SA.Config.text("arena_96fff2e26c8d"), UI.num(e.rating), h('span', { class: 'px-small' }, SA.Config.text("arena_9418357cc52f")), UI.num(s.rating)),
       field(SA.Config.text("arena_0e14d148b46b"), SA.kmh(fs.topSpeed), h('span', { class: 'px-small' }, fs.topSpeed > s.topSpeed * 1.2 ? SA.Config.text("arena_96be43b63aef") : fs.topSpeed < s.topSpeed * 0.8 ? SA.Config.text("arena_94d82552037a") : SA.Config.text("arena_2a57cb0e602a")))]));
     const why = e.lock || (!s.canDeploy ? SA.Config.text("arena_ea58e9813630") : null);
-    const label = st.mode === 'camp' ? (e.replay ? SA.Config.text("arena_c0db7b4d07f1") : SA.Config.text("arena_a7caf88fcaa9")) : st.mode === 'tour' ? SA.Config.text("arena_a7caf88fcaa9") : SA.Config.text("arena_38c6f68eba39");
-    const go = () => { if (why) { SA.UI.toast(why); return; } document.querySelector('#modal').hidden = true; SA.StoryDev.before({ key: st.mode === 'camp' ? e.key : 'current', replay: e.replay }, () => e.start()); };
+    const label = st.mode === 'camp' || st.mode === 'side' ? (e.replay ? SA.Config.text("arena_c0db7b4d07f1") : SA.Config.text("arena_a7caf88fcaa9")) : st.mode === 'tour' ? SA.Config.text("arena_a7caf88fcaa9") : SA.Config.text("arena_38c6f68eba39");
+    const go = () => {
+      if (why) { SA.UI.toast(why); return; }
+      document.querySelector('#modal').hidden = true;
+      // 第一次开打某一主线关时，支线的人可能先在路上拦住你（SA.Side：过场 + 正式战斗，打完那一关照旧没过）
+      const ambush = st.mode === 'camp' && !e.replay && SA.Side ? SA.Side.ambushAt(e.key) : null;
+      if (ambush) { SA.Side.start(ambush.ep.id, true); return; }
+      SA.StoryDev.before({ key: st.mode === 'camp' ? e.key : 'current', replay: e.replay }, () => e.start());
+    };
     return [
       D.news ? UI.sk('paper', [UI.stamp(SA.Config.text("arena_01b255a26588")), ' ', D.news], 'padding:0 6px;font-size:13px', 'px-drop') : null,
       dossier,

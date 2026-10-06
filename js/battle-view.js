@@ -15,6 +15,9 @@ SA.BattleView.create = function createBattleView(api) {
   const step = api.step;
   let B = null, cv, g, dg, wc, wrap, hud = {};
   let DPX = 1;
+  // 触屏（手指为主的设备）：战斗换成手机布局（js 加 .touchui，css/style.css 排版），教程讲触屏操作
+  let touchUI = false;
+  const isTouchUI = () => !!(window.matchMedia && matchMedia('(pointer: coarse)').matches);
   const ZMIN = 0.62;
   const sync = () => { B = api.getState(); return B; };
   const part = (type, x, y, vx, vy, life, col) => emit('part', { type, x, y, vx, vy, life, col });
@@ -130,19 +133,20 @@ SA.BattleView.create = function createBattleView(api) {
     present(vw, vh, ox, oy, true);
     // 氛围（js/scenes.js，设备分辨率、平滑）：车后面一层雾、灯光、车底软影；车前面一层薄雾、调色、超近景虚化剪影、暗角
     const fxc = { W: cv.width, H: cv.height, Z: cam.z * DPX, dpx: DPX, zoom: cam.z, camx: cam.x, camy: cam.y, ox, oy, vw, vh, t: sceneT(), opts: B.opts, aim: B.aim,
-      cars: [B.p, B.e].map(s => { const b = sideBox(s); return isFinite(b.x0) ? { ...b, ground: groundAt(b.cx) } : null; }).filter(Boolean) };
+      cars: [B.p, B.e].map(s => { const b = sideBox(s), ix = introDx(s); return isFinite(b.x0) ? { ...b, x0: b.x0 + ix, x1: b.x1 + ix, cx: b.cx + ix, ground: groundAt(b.cx + ix) } : null; }).filter(Boolean) };
     SA.Scenes.fxBack(BD, dg, fxc);
 
     // 第 2 层：车。车会跟着坡度连续倾斜，在世界像素里最近邻旋转会让像素行断成台阶、每帧还跳来跳去（撕裂 / 闪烁），
     // 所以车直接画在设备分辨率上：车身画布先整数倍最近邻放大，再带着旋转双线性画上去 —— 像素块大小一致，斜边平滑不抖
     const Z = cam.z * DPX;
     const aimT = B.aim && !B.e.dead ? targetAt(B.e, B.aim[0], B.aim[1]) : null;
-    const opts = (s, key, extra) => ({ key, t, heat: s.heat / s.heatMax, water: s.water / Math.max(1, s.waterMax), dyn: s.anim, elev: s.elev, punch: s.punch, tetherCell: s.tether ? s.tether.cell : null, store: s.storeMax > 0 ? s.store / s.storeMax : 0, moving: s.moving, speed: Math.abs(s.vx), gnd: s.gnd, ...extra });
-    const pc = SA.SPR.renderVehicle(B.p.v, opts(B.p, 'bp'));
+    const opts = (s, key, extra) => ({ key, t, heat: s.heat / s.heatMax, water: s.water / Math.max(1, s.waterMax), dyn: s.anim, elev: s.elev, punch: s.punch, tetherCell: s.tether ? s.tether.cell : null, store: s.storeMax > 0 ? s.store / s.storeMax : 0, moving: s.moving, speed: Math.abs(s.vx), gnd: s.gnd, crouch: s.crouch || 0, air: (s.airDuration || 0) > 0, tuck: s.tuck || 0, ...extra });
+    const pc = SA.SPR.renderVehicle(B.p.v, opts(B.p, 'bp', introCar(B.p)));
     const sur = api.surrenderState();
-    const ec = SA.SPR.renderVehicle(B.e.v, opts(B.e, 'be', sur ? { crewExpr: sur.crewExpression } : null));
+    const ec = SA.SPR.renderVehicle(B.e.v, opts(B.e, 'be', { ...(sur ? { crewExpr: sur.crewExpression } : null), ...introCar(B.e) }));
     dg.setTransform(Z, 0, 0, Z, (shx - cam.x) * Z, (shy - cam.y) * Z);
     g = dg;
+    bipedAir(B.p); bipedAir(B.e);
     drawVehicle(B.p, pc, null, Z); drawVehicle(B.e, ec, aimT, Z);
 
     // 第 3 层：炮弹、粒子、伤害数字（世界像素，透明底）
@@ -311,17 +315,17 @@ SA.BattleView.create = function createBattleView(api) {
     g.fillStyle = full ? hi : P.white; g.fillRect(x - 1, y - 1, 3, 3);
   }
 
-  // 当前武器组的装填进度（0 → 1）：齐射要等最慢的那门炮，所以取最小值；全部装好才返回 null
+  // 当前组任一门炮满装即可单独开火；全组空炮时显示最接近完成的一门。
   function reloadFrac(s) {
     if (s.dead || !s.sel) return null;
-    let worst = null;
+    let next = null;
     for (const w of s.weapons) {
-      if (w.cell.id !== s.sel || w.blocked) continue;
-      const left = Math.max(0, s.timers[w.key] || 0);
-      const f = 1 - left / w.m.reload;
-      if (worst == null || f < worst) worst = f;
+      if (w.cell.id !== s.sel) continue;
+      if ((s.timers[w.key] || 0) <= 0) return null;
+      const f = SA.Battle.reloadProgress(s, w);
+      if (next == null || f > next) next = f;
     }
-    return worst == null || worst >= 1 ? null : clamp(worst, 0, 1);
+    return next;
   }
   // 跟着准星走的小沙漏：上半沙子漏到下半 = 装填进度
   function hourglass(x, y, f) {
@@ -573,6 +577,26 @@ SA.BattleView.create = function createBattleView(api) {
     hud.stage.append(hud.sur);
   }
 
+  // 真双足跳跃（docs/biped-plan.md §5.2）：车在空中时地上画一块影子（离地越高越小越淡）；起跳那一帧脚下喷汽、落地那一帧扬尘 + 小震屏。
+  // 只是画面：粒子进 B.parts（vpart，不占战斗随机流），影子画在车下面
+  const airWas = new WeakMap();
+  function bipedAir(s) {
+    if (s.chassisId !== 'biped') return;
+    const a = SA.V.bipedOf(s.v), air = (s.airDuration || 0) > 0, was = airWas.get(s) || false;
+    airWas.set(s, air);
+    if (!a) return;
+    const x = cellX(s, a.c) + C, gy = GROUND + (s.yo || 0);
+    if (air) {
+      const hgt = s.airHeight || 0, w = Math.max(12, 26 - hgt * 0.14), alpha = Math.max(0.3, 0.55 - hgt * 0.004);
+      g.save(); g.fillStyle = `rgba(7,8,12,${alpha.toFixed(2)})`;
+      g.beginPath(); g.ellipse(x, gy - 1, w, 3.5, 0, 0, Math.PI * 2); g.fill(); g.restore();
+    }
+    if (air && !was) for (let i = 0; i < 9; i++) vpart('steam', x + vr(-12, 12), gy - 3, vr(-50, 50), vr(-70, -20), vr(0.4, 0.75));
+    if (!air && was) {
+      for (let i = 0; i < 10; i++) vpart('dust', x + vr(-22, 22), gy - 2, vr(-60, 60), vr(-45, -10), vr(0.3, 0.55));
+      B.shake = Math.max(B.shake || 0, 2.5);
+    }
+  }
   function drawVehicle(s, cvs, hl, Z) {
     const w = s.anim.body.x;                        // 后坐：本地坐标里往后挪（负 = 被往后推）
     const py = K.ROWS * C;                          // 车身画布底边 = 车底
@@ -580,7 +604,7 @@ SA.BattleView.create = function createBattleView(api) {
     const n = Math.max(1, Math.floor(Z + 0.001));
     g.save();
     g.imageSmoothingEnabled = true; g.imageSmoothingQuality = 'low';
-    g.translate(s.pivX, pivY(s) - s.rock * 2);      // 设备分辨率下不取整：爬坡时平滑移动
+    g.translate(s.pivX + introDx(s), pivY(s) - s.rock * 2);      // 设备分辨率下不取整：爬坡时平滑移动（拦路过场里车在画面上平移 introDx）
     g.rotate(tiltOf(s));                            // 跟着坡度倾斜（整车绕车底中点转）
     if (!isP(s)) g.scale(-1, 1);
     // 撞击件在底盘残骸里艰涩地挤：整车高频抖 1~2px（两车相位错开）
@@ -623,7 +647,7 @@ SA.BattleView.create = function createBattleView(api) {
       const py = pivY(o), dx = x - o.pivX, dy = y - py, c = Math.cos(a), n = Math.sin(a);
       x = o.pivX + dx * c + dy * n; y = py - dx * n + dy * c;
     }
-    return [(isP(o) ? x - o.x - PADX : o.x + VW - PADX - x) / C, (y - VY - (o.yo || 0)) / C];
+    return [(isP(o) ? x - o.x - PADX : o.x + VW - PADX - x) / C, (y - VY - (pivY(o) - GROUND)) / C];   // pivY 含地形和双足姿态位移
   }
   // 一小段弦（一步 ≈ 7px，弦和抛物线相差不到 0.01px）最先撞到什么：返回 [λ, key]，λ ∈ [0, 1] 是弦上的位置。
   // 模块：在格子坐标里逐格走（DDA），第一个有活模块的格子就是入射点 —— 精确到擦边，不会从角上一穿而过；
@@ -677,20 +701,28 @@ SA.BattleView.create = function createBattleView(api) {
   // 一条弹道：返回折线点、终点和撞到的东西（'tail' = 淡出尾巴走完，'out' = 飞出画面）
   function fanTrace(ctx, jit) {
     const L = fanLaunch(ctx.s, ctx.w, ctx.deg, jit);
-    const pts = [[L.x0, L.y0]];
+    // 第三项记录飞行时间，供相邻弹道按同一时刻拼接；碰撞后的终点仍停在真实入射时刻。
+    const pts = [[L.x0, L.y0, 0]];
     let [px, py] = pts[0];
     for (let i = 1; i <= T.PREVIEW_STEPS; i++) {
       const [x, y] = fanAt(L, i * FAN_STEP), hit = fanSeg(ctx, px, py, x, y);
       if (hit) {
         const e = [px + (x - px) * hit[0], py + (y - py) * hit[0]];
-        pts.push(e);
+        const t = (i - 1 + hit[0]) * FAN_STEP;
+        if (t > pts[pts.length - 1][2]) pts.push([e[0], e[1], t]);
         return { jit, pts, end: e, key: hit[1] };
       }
-      if (i % 3 === 0) pts.push([x, y]);
-      if (y > H + 100 || (B.cam && (x < B.cam.x - 200 || x > B.cam.x + B.cam.w + 200))) { pts.push([x, y]); return { jit, pts, end: [x, y], key: 'out' }; }
+      if (y > H + 100 || (B.cam && (x < B.cam.x - 200 || x > B.cam.x + B.cam.w + 200))) { pts.push([x, y, i * FAN_STEP]); return { jit, pts, end: [x, y], key: 'out' }; }
+      if (i % 3 === 0) pts.push([x, y, i * FAN_STEP]);
       px = x; py = y;
     }
     return { jit, pts, end: [px, py], key: 'out' };
+  }
+  // 在已采样的折线上取同一飞行时刻的位置；一条弹道先撞上目标时，后续固定在入射点。
+  function fanPoint(pts, i, t) {
+    if (i >= pts.length - 1) return pts[pts.length - 1];
+    const a = pts[i], b = pts[i + 1], f = (t - a[2]) / (b[2] - a[2]);
+    return [a[0] + (b[0] - a[0]) * f, a[1] + (b[1] - a[1]) * f];
   }
   // 准星处的法平面：不受阻挡的中心弹道上离准星最近的点 + 那里的飞行方向。
   // 参数 t 做轻微平滑，高抛弧线两段都靠近准星时也不会在两处之间跳
@@ -729,17 +761,56 @@ SA.BattleView.create = function createBattleView(api) {
       refine(a, m, depth + 1); rays.push(m); refine(m, b, depth + 1);
     };
     for (let i = 0; i < N - 1; i++) { refine(base[i], base[i + 1], 0); rays.push(base[i + 1]); }
-    // 相邻两条弹道之间围成条带，全部放进同一条路径一次填满（nonzero，重叠处不叠深）；
+    // 整条弹道闭合成条带会在高抛轨迹交叉处产生正负绕数，相互抵消后漏掉中间弹道。
+    // 按飞行时间拆片，连续同向的片合并成一条边界；转向处统一绕向后一次填满，重叠处仍不叠深。
     // 填充用沿弹道方向的渐变：准星法平面之前是正常浓度，之后 FAN_TAIL 像素内淡到 0
     const pl = ctx.plane, gr = g.createLinearGradient(pl.x, pl.y, pl.x + pl.dx * FAN_TAIL, pl.y + pl.dy * FAN_TAIL);
     gr.addColorStop(0, col); gr.addColorStop(1, 'rgba(244,247,238,0)');
     g.save(); g.globalAlpha = 0.16; g.fillStyle = gr; g.beginPath();
+    const triangle = (a, b, c) => {
+      const cross = (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0]);
+      if (Math.abs(cross) < 0.001) return;
+      g.moveTo(a[0], a[1]);
+      if (cross > 0) { g.lineTo(b[0], b[1]); g.lineTo(c[0], c[1]); }
+      else { g.lineTo(c[0], c[1]); g.lineTo(b[0], b[1]); }
+      g.closePath();
+    };
     for (let i = 0; i < rays.length - 1; i++) {
       const a = rays[i].pts, b = rays[i + 1].pts;
-      g.moveTo(a[0][0], a[0][1]);
-      for (let k = 1; k < a.length; k++) g.lineTo(a[k][0], a[k][1]);
-      for (let k = b.length - 1; k >= 0; k--) g.lineTo(b[k][0], b[k][1]);
-      g.closePath();
+      let ai = 0, bi = 0, a0 = a[0], b0 = b[0];
+      let sign = 0, as = [], bs = [];
+      const flush = () => {
+        if (!sign) return;
+        g.moveTo(as[0][0], as[0][1]);
+        if (sign > 0) {
+          for (const p of bs) g.lineTo(p[0], p[1]);
+          for (let k = as.length - 1; k > 0; k--) g.lineTo(as[k][0], as[k][1]);
+        } else {
+          for (let k = 1; k < as.length; k++) g.lineTo(as[k][0], as[k][1]);
+          for (let k = bs.length - 1; k >= 0; k--) g.lineTo(bs[k][0], bs[k][1]);
+        }
+        g.closePath(); sign = 0;
+      };
+      while (ai < a.length - 1 || bi < b.length - 1) {
+        const at = ai < a.length - 1 ? a[ai + 1][2] : Infinity;
+        const bt = bi < b.length - 1 ? b[bi + 1][2] : Infinity;
+        const t = Math.min(at, bt);
+        if (at === t) ai++;
+        if (bt === t) bi++;
+        const a1 = fanPoint(a, ai, t), b1 = fanPoint(b, bi, t);
+        const c1 = (b0[0] - a0[0]) * (b1[1] - a0[1]) - (b0[1] - a0[1]) * (b1[0] - a0[0]);
+        const c2 = (b1[0] - a0[0]) * (a1[1] - a0[1]) - (b1[1] - a0[1]) * (a1[0] - a0[0]);
+        const s1 = Math.abs(c1) < 0.001 ? 0 : Math.sign(c1), s2 = Math.abs(c2) < 0.001 ? 0 : Math.sign(c2);
+        if (s1 && s2 && s1 !== s2) {
+          flush(); triangle(a0, b0, b1); triangle(a0, b1, a1);
+        } else if (s1 || s2) {
+          const next = s1 || s2;
+          if (sign !== next) { flush(); sign = next; as = [a0]; bs = [b0]; }
+          as.push(a1); bs.push(b1);
+        } else flush();
+        a0 = a1; b0 = b1;
+      }
+      flush();
     }
     g.fill('nonzero'); g.restore();
   }
@@ -845,18 +916,29 @@ SA.BattleView.create = function createBattleView(api) {
     hud.keys = h('div', { class: 'dash-keys' });
     hud.keySig = null;
     hud.vent = PXI().btn(SA.Config.text('battle_view_vent'), { kind: 'dng', title: SA.Config.text('battle_view_vent_title'), onclick: () => { if (api.vent()) { hud.vent.disabled = true; hud.vent.className = 'px-btn off'; } } });
-    return h('div', { class: 'bt-dash px-sk px-sk-iron' },
-      h('div', { class: 'dash-car' },
-        hud.gaugeFig = fig(hud.gauge, SA.Config.text('battle_view_boiler')), hud.tubeFig = fig(hud.tube, SA.Config.text('battle_view_water')),
-        h('div', { class: 'dash-hull' },
-          h('div', { class: 'dash-hp' }, h('span', {}, SA.Config.text('battle_view_armor')), hud.hpNum), hud.plates,
-          h('div', { class: 'dash-lamps' }, LAMPS.map((_, i) => h('div', { class: 'dash-lamp' }, hud.lamps[i], hud.lampLabels[i]))))),
+    const car = h('div', { class: 'dash-car' },
+      hud.gaugeFig = fig(hud.gauge, SA.Config.text('battle_view_boiler')), hud.tubeFig = fig(hud.tube, SA.Config.text('battle_view_water')),
+      h('div', { class: 'dash-hull' },
+        h('div', { class: 'dash-hp' }, h('span', {}, SA.Config.text('battle_view_armor')), hud.hpNum), hud.plates,
+        h('div', { class: 'dash-lamps' }, hud.lampBox = LAMPS.map((_, i) => h('div', { class: 'dash-lamp' }, hud.lamps[i], hud.lampLabels[i])))));
+    const act = h('div', { class: 'dash-act' },
+      h('div', { class: 'dash-vent' }, hud.vent, h('span', { class: 'px-cap' }, SA.Config.text('battle_view_once'))),
+      PXI().btn(SA.Config.text('battle_view_retreat'), { title: SA.Config.text('battle_view_retreat_title'), onclick: () => { if (!B.p.dead) SA.UI.dialog(SA.Config.text('battle_view_retreat_title_short'), h('p', {}, SA.Config.text('battle_view_retreat_confirm')), [{ label: SA.Config.text('battle_view_retreat'), primary: true, onClick: () => { endIntro(); api.retreat(); } }], SA.Config.text('battle_view_continue')); } }),
+      !SA.RELEASE ? speedSlider() : null);
+    // 手机：左栏 = 车况 + 左圈，右栏 = 泄压 / 撤退 + 武器键 + 右圈待命位，两栏各自从上往下排（css 的 .bt-rail）
+    if (touchUI) {
+      touchPads();
+      return h('div', { class: 'bt-dash px-sk px-sk-iron' },
+        h('div', { class: 'bt-rail l' }, car, hud.stick),
+        h('div', { class: 'dash-mid' }, hud.note),
+        h('div', { class: 'bt-rail r' }, act, hud.keys, hud.aimHome));
+    }
+    return h('div', { class: 'bt-dash px-sk px-sk-iron' }, car,
       h('div', { class: 'dash-mid' }, hud.note, hud.keys),
-      h('div', { class: 'dash-act' },
-        h('div', { class: 'dash-vent' }, hud.vent, h('span', { class: 'px-cap' }, SA.Config.text('battle_view_once'))),
-        PXI().btn(SA.Config.text('battle_view_retreat'), { title: SA.Config.text('battle_view_retreat_title'), onclick: () => { if (!B.p.dead) SA.UI.dialog(SA.Config.text('battle_view_retreat_title_short'), h('p', {}, SA.Config.text('battle_view_retreat_confirm')), [{ label: SA.Config.text('battle_view_retreat'), primary: true, onClick: () => { endIntro(); api.retreat(); } }], SA.Config.text('battle_view_continue')); } }),
-        !SA.RELEASE ? speedSlider() : null),
-      h('div', { class: 'bt-touch' }, holdBtn(SA.Config.text('battle_view_backward'), 'left'), holdBtn(SA.Config.text('battle_view_forward'), 'right'), holdBtn(SA.Config.text('battle_view_fire'), 'fire')));
+      act,
+      h('div', { class: 'bt-touch' },
+        hud.move = h('div', { class: 'bt-move' }, holdBtn(SA.Config.text('battle_view_backward'), 'left'), holdBtn(SA.Config.text('battle_view_forward'), 'right')),
+        hud.fireBtn = holdBtn(SA.Config.text('battle_view_fire'), 'fire', 'bt-fire')));
   }
   // 你的车现在的警报（按紧急程度）：亮哪几盏灯 + 纸条上的红字
   function alertsOf(s) {
@@ -871,6 +953,33 @@ SA.BattleView.create = function createBattleView(api) {
     if (!s.weapons.some(w => !w.blocked)) out.push(['gun', SA.Config.text('battle_view_alert_no_weapon')]);
     return out;
   }
+  // 仪表台五盏灯：0 灭 / 1 常亮（有问题，留意）/ 2 闪（危险）；悬停灯看原因。
+  // 纸条红字只报 alertsOf 的危险项，灯把「已经在拖后腿」的状况也亮出来（动力不足、水偏少、部件受损）
+  const LAMP_WARN = { heat: 0.5, water: 0.45, power: 0.995, part: 0.5 };
+  function lampsOf(s) {
+    const L = { heat: [0, ''], water: [0, ''], power: [0, ''], track: [0, ''], gun: [0, ''] }, pct = (v) => Math.round(clamp(v, 0, 1) * 100);
+    if (s.dead) return L;
+    const set = (id, lv, text) => { if (lv > L[id][0]) L[id] = [lv, text]; };
+    for (const [id, text] of alertsOf(s)) set(id, 2, text);
+    const heat = s.heat / s.heatMax;
+    if (heat > LAMP_WARN.heat) set('heat', 1, SA.Config.text('battle_view_lamp_heat_warn', pct(heat)));
+    if (!s.waterMax) set('water', 1, SA.Config.text('battle_view_lamp_no_tank'));
+    else if (s.water / s.waterMax < LAMP_WARN.water) set('water', 1, SA.Config.text('battle_view_lamp_water_warn', pct(s.water / s.waterMax)));
+    // 动力：锅炉供不上设备 + 满速行驶的需求时，装填按比例变慢、也跑不到全速；不到一半算危险
+    if (s.supply > 0 && s.power < LAMP_WARN.power) set('power', s.power < 0.5 ? 2 : 1, SA.Config.text('battle_view_lamp_power_warn', pct(s.power)));
+    // 底盘：动不了算危险（掉链、腿断、失衡），有一段伤过半算留意
+    let chHp = 0, chMax = 0, worst = 1, gunDead = 0;
+    SA.V.each(s.v, (cell) => {
+      const m = M[cell.id];
+      if (m.layer === 'chassis') { const mx = SA.V.maxHp(cell); chHp += Math.max(0, cell.hp); chMax += mx; worst = Math.min(worst, Math.max(0, cell.hp) / Math.max(1, mx)); }
+      else if (m.dmg && cell.hp <= 0) gunDead++;
+    });
+    if (chMax && s.speed <= 0) set('track', 2, SA.Config.text('battle_view_lamp_chassis_stuck'));
+    else if (chMax && worst < LAMP_WARN.part) set('track', 1, SA.Config.text('battle_view_lamp_chassis_warn', pct(chHp / chMax)));
+    const blocked = s.weapons.filter(w => w.blocked).length;
+    if (gunDead || blocked) set('gun', 1, SA.Config.text('battle_view_lamp_weapon_warn', gunDead, blocked));
+    return L;
+  }
   // 操作提示属于教程：目前只在序章第一关出现
   const tutorialHint = () => B.opts.mode === 'campaign' && B.opts.storyKey === '0,0';
   // 纸条：警报（红）> 瞄准出了问题（墨）> 教程提示 > 瞄准的目标和命中率（淡墨）
@@ -879,7 +988,7 @@ SA.BattleView.create = function createBattleView(api) {
     if (p.dead) return ['alert', p.reason || SA.Config.text('battle_view_disabled')];
     const al = alertsOf(p);
     if (al.length) return ['alert', [...new Set(al.map(a => a[1]))].join(' · ')];
-    if (!p.sel) return ['warn', SA.Config.text('battle_view_no_weapon')];
+    if (!p.sel) return ['warn', SA.Config.text(touchUI ? 'battle_view_no_weapon_touch' : 'battle_view_no_weapon')];
     const pi = B.previewInfo, aimT = B.aim ? targetAt(B.e, B.aim[0], B.aim[1]) : null;
     const alt = p.groups.includes('mortar') && p.sel !== 'mortar' ? SA.Config.text('battle_view_try_mortar') : '';
     if (pi && pi.blocked) return ['warn', SA.Config.text('battle_view_blocked')];
@@ -888,7 +997,7 @@ SA.BattleView.create = function createBattleView(api) {
     if (aimT && pi && pi.cover && !pi.hit) return ['warn', pi.cover === 'crate' ? SA.Config.text('battle_view_crate_cover') : SA.Config.text('battle_view_hill_cover', alt || SA.Config.text('battle_view_try_mortar_alt'))];
     if (aimT && pi && pi.hit && !sameCell(pi.hit, aimT)) return ['warn', SA.Config.text('battle_view_hit_other', M[B.e.v[pi.hit.layer][pi.hit.r][pi.hit.c].id].name, alt)];
     if (p.spooling) return ['warn', SA.Config.text('battle_view_spooling')];
-    if (tutorialHint()) return ['tut', SA.Config.text('battle_view_tutorial_hint', p.groups.length > 1 ? SA.Config.text('battle_view_weapon_keys') : '')];
+    if (tutorialHint()) return ['tut', SA.Config.text(touchUI ? 'battle_view_tutorial_hint_touch' : 'battle_view_tutorial_hint', p.groups.length > 1 ? SA.Config.text(touchUI ? 'battle_view_weapon_keys_touch' : 'battle_view_weapon_keys') : '')];
     if (!aimT) return ['info', ''];
     const parts = [aimT.layer === 'side' ? SA.Config.text('battle_view_aim_side_cannon') : SA.Config.text('battle_view_aim_enemy', M[B.e.v[aimT.layer][aimT.r][aimT.c].id].name)];
     if (pi && pi.chance != null) parts.push(SA.Config.text('battle_view_hit_chance', pi.chance));
@@ -912,11 +1021,14 @@ SA.BattleView.create = function createBattleView(api) {
     const hp = a / Math.max(1, m), pct = Math.round(hp * 100);
     paint(hud.hpNum, `${pct}`, () => X.num(`${pct}%`, pct <= 25 ? '#ff8a5c' : '#e4e0d6', { shadow: P.dark[0] }));
     paint(hud.plates, `${Math.ceil(hp * 10)}`, () => X.plates(Math.ceil(hp * 10 - 1e-6), 10));
-    const on = new Set(alertsOf(p).map(x => x[0]));
-    LAMPS.forEach(([id, , col], i) => {
-      const lit = on.has(id) && (blink || id === 'power' || id === 'track');
+    const lamps = lampsOf(p);
+    LAMPS.forEach(([id, nm, col], i) => {
+      const [lv, why] = lamps[id], lit = lv === 1 || (lv === 2 && blink);
       paint(hud.lamps[i], `${lit}`, () => X.lamp(lit, col));
-      hud.lampLabels[i].classList.toggle('on', on.has(id));
+      hud.lampLabels[i].classList.toggle('on', lv === 1);
+      hud.lampLabels[i].classList.toggle('crit', lv === 2);
+      const title = why ? `${nm}：${why}` : SA.Config.text('battle_view_lamp_ok', nm);
+      if (hud.lampBox[i].title !== title) hud.lampBox[i].title = title;
     });
     const [kind, text] = noteOf();
     if (hud.note.dataset.k !== kind || hud.note.textContent !== text) { hud.note.dataset.k = kind; hud.note.textContent = text; }
@@ -930,9 +1042,13 @@ SA.BattleView.create = function createBattleView(api) {
   // 名字写在键上（不另外占地方），键底一条装填条，选中的键按下去（黄铜），整组打不了是暗铁
   const keyOf = (i) => (i === 9 ? '0' : String(i + 1));
   function groupReload(p, id) {
-    let worst = 1;
-    for (const w of p.weapons) { if (w.cell.id !== id || w.blocked) continue; worst = Math.min(worst, 1 - Math.max(0, p.timers[w.key] || 0) / w.m.reload); }
-    return clamp(worst, 0, 1);
+    let next = 0;
+    for (const w of p.weapons) {
+      if (w.cell.id !== id) continue;
+      if ((p.timers[w.key] || 0) <= 0) return 1;
+      next = Math.max(next, SA.Battle.reloadProgress(p, w));
+    }
+    return next;
   }
   function renderKeys() {
     const p = B.p, co = p.coGroups || [], stop = cantFire(p);
@@ -964,12 +1080,14 @@ SA.BattleView.create = function createBattleView(api) {
   }
 
   // ---------- 流程 ----------
-  const KEYMAP = { KeyA: 'left', ArrowLeft: 'left', KeyD: 'right', ArrowRight: 'right', Space: 'fire' };
+  const KEYMAP = { KeyA: 'left', ArrowLeft: 'left', KeyD: 'right', ArrowRight: 'right', Space: 'fire', KeyW: 'jump', ArrowUp: 'jump', KeyS: 'crouch', ArrowDown: 'crouch' };   // 跳 / 蹲只对真双足有效（battle.js updateBiped）
   function onKey(e) {
     if (!B || B.done || SA.current !== 'battle') return;
     // 开场期间不接操作；开战动画可以用空格 / 回车 / Esc 跳过（教程对话框自己处理按键）
     if (B.intro) {
       if (B.intro.mode === 'cine' && e.type === 'keydown' && /^(Space|Enter|NumpadEnter|Escape)$/.test(e.code)) { e.preventDefault(); endIntro(); }
+      // 拦路过场：只在没有对话框、也不在编辑器里打字时跳过开车这一段
+      else if (B.intro.mode === 'ambush' && e.type === 'keydown' && /^(Space|Enter|NumpadEnter|Escape)$/.test(e.code) && !e.target.closest?.('input, textarea, select, .sd')) { e.preventDefault(); ambushSkip(); }
       return;
     }
     if (B.surrender === 'raising') {
@@ -1014,8 +1132,114 @@ SA.BattleView.create = function createBattleView(api) {
     return h('label', { class: 'bt-speed', title: SA.Config.text('battle_view_speed_title') }, SA.Config.text('battle_view_speed'), range, out, status);
   }
 
-  function holdBtn(label, key) {
-    const b = h('button', { class: 'btn' }, label);
+  // ---------- 手机双圈操作（.touchui）：左圈开车、右圈瞄准 + 开火 ----------
+  // 左圈固定在左下：按住往右推前进、往左拉倒车（只看横向），松手摇杆回中、车停下。
+  // 右圈不固定：左圈和按钮以外的战斗界面任意一处按下，圈就出现在手指下面、一直跟着手指；
+  //   手指在画面上 = 准星就在手指下（指哪打哪）；在画面外（两侧栏、竖屏下面的空地）= 像触控板一样拖着准星走。
+  //   按着就是按住开火（准星收紧，收满自动打，机枪一直打），抬手打出去。两个圈可以同时按。
+  // 整块战斗界面 touch-action: none（css），浏览器不会把双指 / 双击当成缩放。
+  function pxRing(r, w, col, fill) {
+    const n = r * 2 + 2, c = document.createElement('canvas'); c.width = c.height = n; c.className = 'px-img';
+    const x = c.getContext('2d');
+    for (let py = 0; py < n; py++) for (let px = 0; px < n; px++) {
+      const dd = Math.hypot(px + 0.5 - n / 2, py + 0.5 - n / 2);
+      let col2 = null;
+      if (dd > r + 1) continue;
+      else if (dd > r) col2 = P.black;
+      else if (dd > r - w) col2 = dd > r - 1 && px + py < n ? P.brass[3] : col;
+      else if (dd > r - w - 1) col2 = P.black;
+      else col2 = fill;
+      if (!col2) continue;
+      x.fillStyle = col2; x.fillRect(px, py, 1, 1);
+    }
+    c.style.width = `${n * 2}px`; c.style.height = `${n * 2}px`;
+    return c;
+  }
+  const STICK_R = 26;
+  function touchPads() {
+    const base = pxRing(STICK_R, 3, P.brass[2], 'rgba(11,14,21,0.5)');
+    // 圈里左右两枚小三角：往哪边推就往哪边开
+    const bx = base.getContext('2d'), n = base.width;
+    for (const [col, grow] of [[P.black, 1], [P.brass[3], 0]]) for (const dir of [-1, 1]) for (let i = 0; i < 5; i++) {
+      const x0 = Math.round(n / 2 + dir * (STICK_R - 7) - dir * i), hh = 4 - i;
+      bx.fillStyle = col; bx.fillRect(x0 - grow, Math.round(n / 2) - hh - grow, 1 + grow * 2, hh * 2 + 1 + grow * 2);
+    }
+    hud.knob = pxRing(11, 11, P.brass[2]);
+    hud.knob.classList.add('bt-knob');
+    hud.stick = h('div', { class: 'bt-stick' }, base, hud.knob);
+    hud.move = hud.stick;
+    hud.aimHome = h('div', { class: 'bt-aimhome' }, h('i'), h('span', {}, SA.Config.text('battle_view_aim_pad')));
+    hud.aimRing = h('div', { class: 'bt-aimring' }, pxRing(22, 2, P.brass[2]));
+    hud.fireBtn = hud.aimHome;   // 教程讲开火时让右圈的待命位发光
+  }
+  // 右圈：没按时停在右下的待命位（半透明），按下就跳到手指下面
+  function placeAimRing(x, y, on) {
+    const r = hud.aimRing;
+    if (!r || !r.isConnected) return;
+    if (x == null) { const b = hud.aimHome.firstChild.getBoundingClientRect(); x = b.left + b.width / 2; y = b.top + b.height / 2; }
+    r.style.transform = `translate(${Math.round(x)}px, ${Math.round(y)}px)`;
+    r.classList.toggle('on', !!on);
+  }
+  function bindTouch(root, toNative) {
+    let stick = null, aim = null;
+    const stickMove = (e) => {
+      const b = hud.stick.getBoundingClientRect(), R = b.width / 2 - 8;
+      const dx = clamp(e.clientX - (b.left + b.width / 2), -R, R), dy = clamp(e.clientY - (b.top + b.height / 2), -R, R);
+      hud.knob.style.transform = `translate(${Math.round(dx / 2) * 2}px, ${Math.round(dy / 2) * 2}px)`;
+      B.keys.left = dx < -R * 0.22; B.keys.right = dx > R * 0.22;
+      B.keys.jump = dy < -R * 0.55; B.keys.crouch = dy > R * 0.55;   // 上推跳、下拉蹲（真双足）
+      hud.stick.classList.toggle('on', B.keys.left || B.keys.right || B.keys.jump || B.keys.crouch);
+    };
+    const stickEnd = () => { stick = null; if (B) B.keys.left = B.keys.right = B.keys.jump = B.keys.crouch = false; hud.knob.style.transform = ''; hud.stick.classList.remove('on'); };
+    const inCanvas = (e) => { const rc = cv.getBoundingClientRect(); return e.clientX >= rc.left && e.clientX <= rc.right && e.clientY >= rc.top && e.clientY <= rc.bottom; };
+    root.addEventListener('pointerdown', (e) => {
+      if (!B || B.done) return;
+      if (hud.stick.contains(e.target)) {
+        e.preventDefault();
+        if (B.intro || stick != null) return;
+        stick = e.pointerId; try { root.setPointerCapture(e.pointerId); } catch (_) { /* 合成事件没有活动指针 */ }
+        stickMove(e); return;
+      }
+      if (e.target.closest('button, input, a, select, .vn')) return;   // 武器键、泄压、撤退、对话框照常点
+      e.preventDefault();
+      if (B.intro) { if (B.intro.mode === 'cine') endIntro(); else if (B.intro.vn && B.intro.vn.advance) B.intro.vn.advance(); else if (B.intro.mode === 'ambush') ambushSkip(); return; }
+      if (B.surrender === 'raising') { api.skipSurrenderAnimation(); return; }
+      if (aim) return;
+      const abs = inCanvas(e);
+      aim = { id: e.pointerId, abs, x: e.clientX, y: e.clientY };
+      try { root.setPointerCapture(e.pointerId); } catch (_) { /* 合成事件没有活动指针 */ }
+      if (abs) B.aimScreen = toNative(e);
+      else if (!B.aimScreen) B.aimScreen = [W * 0.72, H * 0.62];
+      B.keys.fire = true;
+      placeAimRing(e.clientX, e.clientY, true);
+    });
+    root.addEventListener('pointermove', (e) => {
+      if (!B) return;
+      if (e.pointerId === stick) { stickMove(e); return; }
+      if (!aim || e.pointerId !== aim.id) return;
+      if (aim.abs) { const [x, y] = toNative(e); B.aimScreen = [clamp(x, 0, W), clamp(y, 0, H)]; }
+      else {
+        // 触控板：手指走多少，准星按画布比例走 1.6 倍
+        const k = 1.6 * W / Math.max(1, cv.getBoundingClientRect().width);
+        B.aimScreen = [clamp(B.aimScreen[0] + (e.clientX - aim.x) * k, 0, W), clamp(B.aimScreen[1] + (e.clientY - aim.y) * k, 0, H)];
+        aim.x = e.clientX; aim.y = e.clientY;
+      }
+      placeAimRing(e.clientX, e.clientY, true);
+    });
+    const end = (e) => {
+      if (e.pointerId === stick) { stickEnd(); return; }
+      if (aim && e.pointerId === aim.id) { aim = null; if (B) B.keys.fire = false; placeAimRing(null, null, false); }
+    };
+    root.addEventListener('pointerup', end);
+    root.addEventListener('pointercancel', end);
+    root.addEventListener('contextmenu', (e) => e.preventDefault());
+    // iOS Safari 的双指缩放手势不走 touch-action，单独拦一下；双击放大也拦掉
+    for (const ev of ['gesturestart', 'gesturechange', 'dblclick']) root.addEventListener(ev, (e) => e.preventDefault());
+    requestAnimationFrame(() => placeAimRing(null, null, false));
+  }
+
+  function holdBtn(label, key, cls = '') {
+    const b = h('button', { class: `btn ${cls}` }, label);
     const set = (v) => (e) => { e.preventDefault(); if (B) B.keys[key] = v; };
     b.addEventListener('pointerdown', set(true));
     for (const ev of ['pointerup', 'pointerleave', 'pointercancel']) b.addEventListener(ev, set(false));
@@ -1084,7 +1308,8 @@ SA.BattleView.create = function createBattleView(api) {
   function beginIntro(opts) {
     const I = { mode: 'cine', t: 0, clock: 0, home: { ...B.cam }, from: null, focus: null, arrows: null, puffs: [], vn: null, shook: {} };
     B.intro = I;
-    const tut = SA.Story && SA.Story.tutorial(opts);
+    if (opts.ambush) { beginAmbush(I, opts.ambush); return; }
+    const tut = SA.Story && SA.Story.tutorial(opts, touchUI ? 'touch' : 'desktop');
     if (!tut) { I.from = { cx: camCx(), z: B.cam.z, bot: camBottom() }; return; }
     I.mode = 'tutor';
     const box = sideBox(B.p);
@@ -1104,18 +1329,139 @@ SA.BattleView.create = function createBattleView(api) {
       if (!I.arrows.some(a => a.part === p.part)) continue;
       for (const L of p.lines) lines.push({ ...L, on: () => { I.focus = p.part; } });
     }
-    I.vn = SA.Story.talk(lines, { host: wrap, cls: 'vn-battle', onDone: () => {
+    // 操作教学（旁白）：开车 / 瞄准 / 开火 / 换武器，电脑和触屏各一套；画面上同步演示，对应的真按钮发光
+    const ctl = (tut.controls || []).filter(c => c.lines.length);
+    if (ctl.length && touchUI && window.innerHeight > window.innerWidth) lines.push({ text: SA.Config.text('battle_view_tutorial_rotate'), on: () => { I.focus = null; } });
+    for (const c of ctl) for (const L of c.lines) lines.push({ ...L, on: () => { if (I.focus !== CTL + c.part) I.ctlT = 0; I.focus = CTL + c.part; } });
+    I.vn = SA.Story.talk(lines, { host: wrap, cls: `vn-battle${touchUI ? ' vn-touch' : ''}`, onDone: () => {
       SA.Story.mark('tutorial');
       if (B.intro !== I) return;
       I.vn = null; I.mode = 'cine'; I.t = 0; I.from = { cx: camCx(), z: B.cam.z, bot: camBottom() };
     } });
   }
+  // ---------- 拦路过场（支线第一次出现，SA.Side）----------
+  // 你的车沿着路开进画面停下；对方的车从右边冲进来，急刹横在路上（扬尘、震屏、你头上冒一个「！」）。
+  // 接着演这一段的台词（剧情编号 opts.ambush.story，作者在剧情编辑器里写；没写就直接开战），演完接正常开战动画的后半段（徽记 + 「开战！」）。
+  // 车只在画面上平移（I.dx），战斗状态里的位置不动；腿式底盘走整数步，停下时正好是战斗开始的站姿。
+  const AMB = { pIn: 2.1, eAt: 1.6, eIn: 0.8, talk: 3.2, run: 140 };
+  const introDx = (s) => (B.intro && B.intro.dx ? B.intro.dx[isP(s) ? 'p' : 'e'] || 0 : 0);
+  const introCar = (s) => (B.intro && B.intro.spd ? { moving: B.intro.spd[isP(s) ? 'p' : 'e'] > 4, speed: B.intro.spd[isP(s) ? 'p' : 'e'] } : null);
+  function beginAmbush(I, amb) {
+    Object.assign(I, { mode: 'ambush', story: amb.story, dust: [], mark: -1, talked: false, hold: null });
+    const pb = sideBox(B.p), eb = sideBox(B.e);
+    // 镜头框住两车停下的位置（场地两头的路障在框外）；两辆车的起点都在框外
+    const x0 = pb.x0 - 60, x1 = eb.x1 + 60, z = clamp(W / (x1 - x0), 1.2, 2.2), cx = (x0 + x1) / 2, half = W / z / 2;
+    I.frame = { cx, z };
+    I.run = { p: { d0: cx - half - 24 - pb.x1, dur: AMB.pIn }, e: { d0: cx + half + 24 - eb.x0, dur: AMB.eIn } };
+    for (const k of ['p', 'e']) {
+      const s = B[k], run = I.run[k], dist = Math.abs(run.d0), legs = s.chassisId === 'quad' || s.chassisId === 'biped';
+      const stride = legs ? (s.chassisId === 'quad' ? SA.LEGLAB.quadStride : SA.LEGLAB.strideFor)(dist / run.dur) : 1;
+      run.phase0 = s.anim.phase;
+      run.total = legs ? Math.PI * 2 * Math.max(1, Math.round(dist / (4 * stride))) : dist;
+    }
+    I.dx = { p: I.run.p.d0, e: I.run.e.d0 };
+    I.spd = { p: 0, e: 0 };
+    camAt(cx, z * 0.94, GROUND + 44);
+  }
+  function ambushStep(I, dt) {
+    I.t += dt;
+    const t = I.t, stop = AMB.eAt + AMB.eIn, f = I.frame;
+    B.p.anim.step(dt); B.e.anim.step(dt);
+    // 你的车缓缓停下；她的车冲得快、刹得急
+    const prog = { p: 1 - Math.pow(1 - clamp(t / AMB.pIn, 0, 1), 3), e: 1 - Math.pow(1 - clamp((t - AMB.eAt) / AMB.eIn, 0, 1), 2.4) };
+    for (const k of ['p', 'e']) {
+      const run = I.run[k], dx = run.d0 * (1 - prog[k]);
+      I.spd[k] = dt > 0 ? Math.abs(dx - I.dx[k]) / dt : 0;
+      I.dx[k] = dx;
+      B[k].anim.phase = run.phase0 + run.total * prog[k];
+      // 车尾扬尘
+      if (I.spd[k] > 50 && Math.random() < dt * (k === 'e' ? 40 : 18)) {
+        const b = sideBox(B[k]), back = k === 'p' ? b.x0 + dx : b.x1 + dx;
+        I.dust.push({ x: back + vr(-6, 6), y: GROUND - vr(2, 10), vx: (k === 'p' ? -1 : 1) * vr(20, 60), vy: -vr(10, 40), life: vr(0.5, 0.9), max: 0.9, r: vr(5, 10) });
+      }
+    }
+    // 急刹：车头往前一扑、你的车往后一缩，扬一大片尘，你头上冒「！」
+    if (t >= stop && !I.shook.stop) {
+      I.shook.stop = true;
+      B.shake = Math.max(B.shake, 6);
+      SA.Dyn.kick(B.e.anim.body, 7); SA.Dyn.kick(B.p.anim.body, -3);
+      const b = sideBox(B.e);
+      for (let i = 0; i < 26; i++) I.dust.push({ x: b.x0 + vr(-14, (b.x1 - b.x0) * 0.7), y: GROUND - vr(0, 10), vx: vr(-170, 70), vy: -vr(20, 100), life: vr(0.7, 1.4), max: 1.4, r: vr(8, 18) });
+      I.mark = 0;
+    }
+    if (I.mark >= 0) I.mark += dt;
+    for (const p of I.dust) { p.life -= dt; const k = Math.exp(-2.6 * dt); p.vx *= k; p.vy = p.vy * k - 12 * dt; p.x += p.vx * dt; p.y += p.vy * dt; }
+    I.dust = I.dust.filter(p => p.life > 0);
+    // 镜头：开进来时慢慢推近；刹住以后再往前推一点，等台词
+    const zk = t < stop ? 0.94 + 0.06 * easeIO(t / stop) : 1 + 0.06 * easeIO((t - stop) / 0.8);
+    camAt(f.cx, f.z * zk, GROUND + 44);
+    if (t >= AMB.talk && !I.talked) { I.talked = true; ambushTalk(I); }
+    if (I.hold != null && (I.hold -= dt) <= 0) ambushGo(I);
+  }
+  function ambushTalk(I) {
+    let rows = [];
+    try { rows = SA.StoryData ? SA.StoryData.get(I.story) : []; } catch (e) { rows = []; }
+    const dev = !SA.RELEASE && SA.StoryDev && SA.StoryDev.enabled && SA.StoryDev.enabled();
+    if (!rows.length && dev) rows = [{ text: SA.Config.text('battle_view_ambush_dev_hint') }];
+    if (!rows.length || !SA.Story) { I.hold = 0.5; return; }   // 还没写台词：停一下直接开战
+    I.vn = SA.Story.talk(rows, { host: wrap, cls: `vn-battle${touchUI ? ' vn-touch' : ''}`,
+      onDone: () => { if (B.intro !== I) return; I.vn = null; ambushGo(I); },
+      // 开发者：对话框上的「编排剧情」直接改这一段，保存后接着开战
+      onEdit: SA.RELEASE || !SA.StoryDev || !SA.StoryDev.editor ? null : () => { I.vn = null; SA.StoryDev.editor(I.story, { cont: () => { if (B.intro === I) ambushGo(I); } }); } });
+  }
+  // 台词演完：接开战动画的后半段（镜头拉回全景、徽记落地、「开战！」）
+  function ambushGo(I) {
+    if (I.mode !== 'ambush') return;
+    Object.assign(I, { mode: 'cine', short: true, hold: null, dx: { p: 0, e: 0 }, spd: null, puffs: [] });
+    I.t = I.fromT = CINE.drop - 0.5;
+    I.from = { cx: camCx(), z: B.cam.z, bot: camBottom() };
+  }
+  // 点击 / 空格：开车阶段直接跳到停稳；没台词的停顿直接开战（台词由对话框自己翻）
+  function ambushSkip() {
+    const I = B.intro;
+    if (!I || I.mode !== 'ambush' || I.vn) return;
+    if (!I.talked) I.t = Math.max(I.t, AMB.talk - 0.01);
+    else if (I.hold != null) ambushGo(I);
+  }
+  function ambushDraw(I) {
+    const Z = DPX;
+    dg.setTransform(Z, 0, 0, Z, 0, 0);
+    dg.imageSmoothingEnabled = false;
+    // 扬尘（碎石路上的黄白土）：按 3 像素对齐的方块，越淡越大
+    for (const p of I.dust) {
+      const k = p.life / p.max, [sx, sy] = toScreen(p.x, p.y), r = Math.max(3, Math.round(p.r * B.cam.z * (1.5 - k * 0.5) / 3) * 3);
+      dg.globalAlpha = Math.min(1, k * 1.6) * 0.75;
+      dg.fillStyle = k > 0.55 ? P.steam[2] : P.steam[1];
+      dg.fillRect(Math.round((sx - r / 2) / 3) * 3, Math.round((sy - r / 2) / 3) * 3, r, r);
+    }
+    dg.globalAlpha = 1;
+    // 「！」：像素感叹号，弹出来再停住，一秒后淡掉
+    if (I.mark >= 0 && I.mark < 1.3) {
+      // 6 × 12 格的字形：黑描边、亮黄铜、右边一列暗面；弹出时整体放大，停住后上下轻晃
+      const b = sideBox(B.p), [sx, sy] = toScreen(b.cx + I.dx.p, b.y0);
+      const u = Math.round(6 * (I.mark < 0.15 ? 1 + 0.5 * (1 - I.mark / 0.15) : 1)), a = I.mark > 1 ? 1 - (I.mark - 1) / 0.3 : 1;
+      const x = Math.round(sx - u * 3), y = Math.round(sy - 20 - u * 12 - (I.mark < 0.15 ? 0 : Math.round(Math.sin((I.mark - 0.15) * 9) * 2)));
+      const px = (col, cx, cy, w, hh) => { dg.fillStyle = col; dg.fillRect(x + cx * u, y + cy * u, w * u, hh * u); };
+      dg.globalAlpha = Math.max(0, a);
+      px(P.black, 0, 0, 6, 8); px(P.black, 0, 9, 6, 3);
+      px(P.brass[3], 1, 1, 4, 6); px(P.brass[3], 1, 10, 4, 1);
+      px(P.brass[1], 4, 1, 1, 6); px(P.brass[1], 4, 10, 1, 1);
+      dg.globalAlpha = 1;
+    }
+    // 开车阶段：右下角提示可以跳过
+    if (!I.talked) {
+      dg.font = '12px "Microsoft YaHei", sans-serif'; dg.textAlign = 'right'; dg.textBaseline = 'alphabetic';
+      dg.fillStyle = P.steam[1]; dg.fillText(SA.Config.text('battle_view_skip_intro'), W - 16, H - 16);
+      dg.textAlign = 'start';
+    }
+  }
   function endIntro() {
     const I = B.intro;
     if (!I) return;
     if (I.vn) { const vn = I.vn; I.vn = null; vn.close(); }
+    tutGlow(null);
     B.intro = null;
-    B.keys.left = B.keys.right = B.keys.fire = false;
+    B.keys.left = B.keys.right = B.keys.fire = B.keys.jump = B.keys.crouch = false;
     B.shake = 0;
   }
   // 关键帧插值：[[t, 值…]...]
@@ -1131,18 +1477,26 @@ SA.BattleView.create = function createBattleView(api) {
     I.clock += dt;
     tick(dt);   // 粒子和震屏照常衰减
     if (I.mode === 'tutor') {
-      // 讲解部件时镜头推到玩家车上，旁白时回到全景。
-      const pb = sideBox(B.p);
+      // 讲解部件和开车时镜头推到玩家车上；旁白、瞄准、开火演示时回到全景（两辆车都看得见）。
+      const pb = sideBox(B.p), ctl = I.focus && I.focus.startsWith(CTL) ? I.focus.slice(CTL.length) : null;
+      I.ctlT = (I.ctlT || 0) + dt;
+      tutGlow(ctl);
       // 对话框压在画面上方，讲解时把车往画面下方放，给箭头和标签留出空间
-      const [tx, tz, tb] = I.focus ? [pb.cx, 2.2, GROUND + 22] : [I.home.x + I.home.w / 2, I.home.z, GROUND + 60];
+      const close = I.focus && (!ctl || ctl === 'move');
+      // 瞄准 / 开火演示：大屏看全景；手机上画面窄，推到对方车上，手指和准星才看得清
+      const foe = (ctl === 'aim' || ctl === 'fire') && legible() > 1.2 ? sideBox(B.e) : null;
+      const [tx, tz, tb] = close ? [pb.cx, tutZoom(), GROUND + 22] : foe ? [foe.cx - 40, tutZoom() * 0.8, GROUND + 22] : [I.home.x + I.home.w / 2, I.home.z, GROUND + 60];
       const k = Math.min(1, dt * 4);
       camAt(camCx() + (tx - camCx()) * k, B.cam.z + (tz - B.cam.z) * k, camBottom() + (tb - camBottom()) * k);
       return;
     }
+    if (I.mode === 'ambush') { ambushStep(I, dt); return; }
     I.t += dt;
     const t = I.t, pb = sideBox(B.p), eb = sideBox(B.e), home = I.home.x + I.home.w / 2;
     const G0 = GROUND + 60, G1 = GROUND + 30;
-    const [cx, z, bot] = keyCam([[0, I.from.cx, I.from.z, I.from.bot], [CINE.pIn, pb.cx, CZ, G1], [CINE.pHold, pb.cx, CZ, G1], [CINE.pan, eb.cx, CZ, G1], [CINE.eHold, eb.cx, CZ, G1], [CINE.back, home, I.home.z, G0]], t);
+    // 拦路过场之后（short）两辆车都看过了：镜头直接拉回全景，接徽记和「开战！」
+    const [cx, z, bot] = keyCam(I.short ? [[I.fromT, I.from.cx, I.from.z, I.from.bot], [CINE.back, home, I.home.z, G0]]
+      : [[0, I.from.cx, I.from.z, I.from.bot], [CINE.pIn, pb.cx, CZ, G1], [CINE.pHold, pb.cx, CZ, G1], [CINE.pan, eb.cx, CZ, G1], [CINE.eHold, eb.cx, CZ, G1], [CINE.back, home, I.home.z, G0]], t);
     camAt(cx, z, bot);
     const once = (k, fn) => { if (!I.shook[k]) { I.shook[k] = true; fn(); } };
     if (t >= CINE.land) once('land', () => {
@@ -1180,35 +1534,141 @@ SA.BattleView.create = function createBattleView(api) {
     }
     return (arrowCache[key] = c);
   }
+  // ---------- 操作教学的演示（第一关教程讲完部件后，旁白讲操作）----------
+  const CTL = 'ctl:';
+  // 画布在屏幕上越窄，教程的箭头和铭牌越要放大才看得清：先把镜头推近一些（最多 1.5 倍），剩下的靠放大箭头和字
+  const legible = () => clamp(900 / Math.max(1, cv.clientWidth), 1, 3);
+  const tutZoom = () => 2.2 * Math.min(1.5, legible());
+  const tutL = () => legible() / Math.min(1.5, legible());
+  // 讲到哪一步，仪表台上对应的真按钮就发光（电脑上没有移动 / 开火键，只有武器键会亮）
+  function tutGlow(part) {
+    for (const [k, el] of [['move', hud.move], ['fire', hud.fireBtn], ['weapon', hud.keys]]) if (el) el.classList.toggle('tut-glow', k === part);
+  }
+  // 演示用的指针：电脑 = 鼠标箭头，触屏 = 白手套食指（指尖朝上，指尖就是瞄准点）。X 黑边 / w 亮 / s 暗
+  const POINTERS = {
+    mouse: { tip: [0, 0], rows: ['X', 'XX', 'XwX', 'XwwX', 'XwwwX', 'XwwwwX', 'XwwwwwX', 'XwwwwwwX', 'XwwwwwwwX', 'XwwwwwXXXX', 'XwwXwwX', 'XwX XwwX', 'XX  XwwX', '     XwwX', '      XX'] },
+    finger: { tip: [5, 0], rows: ['    XXX', '   XwwwX', '   XwwsX', '   XwwsX', '   XwwsXXX', '   XwwsXwwXX', ' XXXwwsXwsXwX', 'XwwXwwwwwwsXwX', 'XwsXwwwwwwwwsX', 'XwwwwwwwwwwwsX', ' XwwwwwwwwwwsX', '  XwwwwwwwwsX', '   XwwwwwwsX', '    XsssssX', '    XXXXXXX'] },
+  };
+  const pointerCache = {};
+  function pointerSprite(kind) {
+    if (pointerCache[kind]) return pointerCache[kind];
+    const def = POINTERS[kind], w = Math.max(...def.rows.map(r => r.length)), c = document.createElement('canvas');
+    c.width = w; c.height = def.rows.length;
+    const x = c.getContext('2d'), col = { X: P.black, w: '#f2ecdc', s: '#b9b09a' };
+    def.rows.forEach((row, y) => [...row].forEach((ch, i) => { if (col[ch]) { x.fillStyle = col[ch]; x.fillRect(i, y, 1, 1); } }));
+    return (pointerCache[kind] = { cv: c, tip: def.tip });
+  }
+  // 世界坐标 → 画面坐标（W × H）
+  const toScreen = (x, y) => [(x - B.cam.x) * B.cam.z, (y - B.cam.y) * B.cam.z];
+  // 黄铜小铭牌（同部件讲解的标签）；当前变换下画，字号跟着变换缩放。side：0 = x 是中心，1 = x 是左边，-1 = x 是右边
+  function brassTag(text, x, y, fs, side = 0) {
+    dg.font = `900 ${fs}px "Microsoft YaHei", "PingFang SC", sans-serif`;
+    const w = dg.measureText(text).width + fs, hh = Math.round(fs * 1.5), b = Math.max(1, Math.round(fs / 9));
+    x += side * w / 2;
+    dg.fillStyle = P.black; dg.fillRect(Math.round(x - w / 2) - b, Math.round(y - hh / 2) - b, Math.round(w) + b * 2, hh + b * 2);
+    dg.fillStyle = P.brass[2]; dg.fillRect(Math.round(x - w / 2), Math.round(y - hh / 2), Math.round(w), hh);
+    dg.fillStyle = '#2a1a05'; dg.textAlign = 'center'; dg.textBaseline = 'middle';
+    dg.fillText(text, x, y);
+    dg.textAlign = 'start'; dg.textBaseline = 'alphabetic';
+  }
+  function ctlDraw(I, part, Z) {
+    const t = I.ctlT || 0;
+    dg.imageSmoothingEnabled = false;
+    if (part === 'move') {
+      // 车两边各一支箭头：前进 / 后退轮流亮起、往外顶，旁边写上对应的键
+      const b = sideBox(B.p), y = Math.round(b.y1 - 14), fwd = Math.floor(t / 1.2) % 2 === 0, L = tutL();
+      dg.setTransform(Z, 0, 0, Z, -B.cam.x * Z, -B.cam.y * Z);
+      for (const [dir, on, label] of [[1, fwd, touchUI ? SA.Config.text('battle_view_forward') : 'D / →'], [-1, !fwd, touchUI ? SA.Config.text('battle_view_backward') : 'A / ←']]) {
+        // 箭头尾巴离车边 4 像素、尖朝外，亮着的那支往外顶；键名写在箭头上方、朝外摆，两边不会叠在车上
+        const bob = on ? 2 + 3 * Math.sin(I.clock * 7) : 0, edge = dir > 0 ? b.x1 : b.x0;
+        const mid = edge + dir * (18 + bob) * L, spr = arrowSprite(dir > 0 ? 0 : Math.PI);
+        dg.globalAlpha = on ? 1 : 0.35;
+        dg.drawImage(spr, Math.round(mid - spr.width * L / 2), Math.round(y - spr.height * L / 2), spr.width * L, spr.height * L);
+        brassTag(label, edge + dir * 6 * L, y - 20 * L, 9 * L, dir);
+        dg.globalAlpha = 1;
+      }
+      return;
+    }
+    if (part !== 'aim' && part !== 'fire') return;   // 换武器：只让仪表台的武器键发光
+    // 目标：对方驾驶舱（打掉就赢）
+    const at = findPart(B.e, 'cockpit');
+    const tb = at ? modBox(B.e, at.r, at.c, at.id) : sideBox(B.e);
+    const gx = (tb.x0 + tb.x1) / 2, gy = (tb.y0 + tb.y1) / 2;
+    let px = gx, py = gy, focus = 0, pressed = false, shot = -1;
+    if (part === 'aim') {
+      // 指针从两车中间上方滑到驾驶舱上，再在附近慢慢晃（按住拖动 / 移动鼠标挑部件）
+      const k = easeIO(clamp((t % 3.6) / 1.1, 0, 1)), sb = sideBox(B.p);
+      const sx = (sb.x1 + tb.x0) / 2, sy = Math.min(sb.y0, tb.y0) - 30;
+      const wob = clamp(((t % 3.6) - 1.1) / 0.4, 0, 1);
+      px = sx + (gx - sx) * k + wob * 5 * Math.sin(t * 2.4); py = sy + (gy - sy) * k + wob * 3 * Math.sin(t * 3.1);
+      pressed = touchUI && k > 0.02;
+    } else {
+      // 按住 → 准星收紧变绿 → 自动打出去 → 松开，循环
+      const c = t % 3.4;
+      pressed = c >= 0.4 && c < 2.1;
+      focus = pressed ? easeIO(clamp((c - 0.4) / 1.5, 0, 1)) : 0;
+      if (c >= 2.1) shot = c - 2.1;
+    }
+    dg.setTransform(Z, 0, 0, Z, -B.cam.x * Z, -B.cam.y * Z);
+    g = dg;
+    const near = Math.hypot(px - gx, py - gy) < 8;
+    if (near) {
+      cornerMark(Math.round(tb.x0) - 2, Math.round(tb.y0) - 2, tb.x1 - tb.x0 + 4, tb.y1 - tb.y0 + 4);
+      if (at) brassTag(M[at.id].name, tb.x0 - 8 * tutL(), gy - 14 * tutL(), 9 * tutL(), -1);   // 写在目标左边（两车中间是空地）
+    }
+    gearReticle(px, py, focus, null, { fast: false, ticks: 0, flash: 0, rl: null });
+    // 打出去的一下：命中点一颗白星芒 + 几粒火花
+    if (shot >= 0 && shot < 0.5) {
+      const k = shot / 0.5, L = Math.round(4 + 12 * Math.sin(Math.PI * Math.min(1, k * 1.6))), x = Math.round(gx), y = Math.round(gy);
+      dg.globalAlpha = 1 - k;
+      dg.fillStyle = P.white; dg.fillRect(x - L, y - 1, L * 2 + 1, 3); dg.fillRect(x - 1, y - L, 3, L * 2 + 1);
+      dg.fillStyle = P.fire[3];
+      for (let i = 0; i < 6; i++) { const a = i * 1.05 + 0.4, r = 6 + 22 * k; dg.fillRect(Math.round(x + Math.cos(a) * r) - 1, Math.round(y - Math.abs(Math.sin(a)) * r) - 1, 3, 3); }
+      dg.globalAlpha = 1;
+    }
+    g = wc.getContext('2d');
+    // 指针和提示字画在画面坐标里，大小跟着画布在屏幕上的实际宽度走（手机上不会小成一粒）
+    dg.setTransform(DPX, 0, 0, DPX, 0, 0);
+    const [sx, sy] = toScreen(px, py), k = clamp(Math.round(2.6 * W / Math.max(1, cv.clientWidth)), 2, 8);
+    const sp = pointerSprite(touchUI ? 'finger' : 'mouse');
+    if (pressed) {   // 按下：指尖外一圈涟漪
+      const r = k * (4 + 3 * ((I.clock * 1.6) % 1));
+      dg.globalAlpha = 0.8 - 0.6 * ((I.clock * 1.6) % 1); dg.strokeStyle = P.brass[3]; dg.lineWidth = k;
+      dg.beginPath(); dg.arc(sx, sy, r, 0, Math.PI * 2); dg.stroke(); dg.globalAlpha = 1;
+    }
+    const dy = pressed ? k : 0;
+    dg.drawImage(sp.cv, Math.round(sx - sp.tip[0] * k), Math.round(sy - sp.tip[1] * k + dy), sp.cv.width * k, sp.cv.height * k);
+    if (part === 'fire') {
+      const tag = shot >= 0 && shot < 0.8 ? SA.Config.text('battle_view_demo_release') : pressed ? SA.Config.text('battle_view_demo_hold') : '';
+      if (tag) brassTag(tag, sx + sp.cv.width * k + 8 * k, sy + 8 * k, 5 * k);
+    }
+  }
   function introDraw() {
     const I = B.intro;
     if (!I) return;
     const Z = B.cam.z * DPX;
     // 电影黑边：教程和开战动画期间上下各一条
-    const barK = I.mode === 'tutor' ? 1 : 1 - easeIO((I.t - CINE.fade) / (CINE.end - CINE.fade));
+    const barK = I.mode === 'tutor' || I.mode === 'ambush' ? 1 : 1 - easeIO((I.t - CINE.fade) / (CINE.end - CINE.fade));
     dg.setTransform(DPX, 0, 0, DPX, 0, 0);
     dg.fillStyle = P.black;
     dg.fillRect(0, 0, W, Math.round(44 * barK)); dg.fillRect(0, H - Math.round(44 * barK), W, Math.round(44 * barK));
+    if (I.mode === 'ambush') { ambushDraw(I); return; }
+    if (I.mode === 'tutor' && I.focus && I.focus.startsWith(CTL)) { ctlDraw(I, I.focus.slice(CTL.length), Z); return; }
     if (I.mode === 'tutor' && I.arrows && I.focus) {
       dg.setTransform(Z, 0, 0, Z, -B.cam.x * Z, -B.cam.y * Z);
       dg.imageSmoothingEnabled = false;
       g = dg;
+      const L = tutL();
       for (const a of I.arrows) {
-        const on = a.part === I.focus, bob = on ? 3 + 3 * Math.sin(I.clock * 7) : 3;
-        // 箭头尖端贴着部件边缘，身子朝车外；精灵中心在尖端后 10 像素
+        const on = a.part === I.focus, bob = (on ? 3 + 3 * Math.sin(I.clock * 7) : 3) * L;
+        // 箭头尖端贴着部件边缘，身子朝车外；精灵中心在尖端后 10 像素（手机上整体放大 L 倍）
         const tx = a.mx + a.ox * (a.reach + bob), ty = a.my + a.oy * (a.reach + bob);
-        const spr = arrowSprite(Math.atan2(-a.oy, -a.ox)), ax = tx + a.ox * 10, ay = ty + a.oy * 10;
+        const spr = arrowSprite(Math.atan2(-a.oy, -a.ox)), ax = tx + a.ox * 10 * L, ay = ty + a.oy * 10 * L;
         dg.globalAlpha = on ? 1 : 0.35;
-        dg.drawImage(spr, Math.round(ax - spr.width / 2), Math.round(ay - spr.height / 2));
+        dg.drawImage(spr, Math.round(ax - spr.width * L / 2), Math.round(ay - spr.height * L / 2), spr.width * L, spr.height * L);
         if (on) {
           cornerMark(a.b.x0 - 2, a.b.y0 - 2, a.b.x1 - a.b.x0 + 4, a.b.y1 - a.b.y0 + 4);
-          const lx = tx + a.ox * 36, ly = ty + a.oy * 36;
-          dg.font = '900 9px "Microsoft YaHei", "PingFang SC", sans-serif';
-          const w = dg.measureText(a.label).width + 8;
-          dg.fillStyle = P.black; dg.fillRect(Math.round(lx - w / 2) - 1, Math.round(ly - 7) - 1, Math.round(w) + 2, 15);
-          dg.fillStyle = P.brass[2]; dg.fillRect(Math.round(lx - w / 2), Math.round(ly - 7), Math.round(w), 13);
-          dg.fillStyle = '#2a1a05'; dg.textAlign = 'center'; dg.textBaseline = 'middle';
-          dg.fillText(a.label, lx, ly);
+          brassTag(a.label, tx + a.ox * 36 * L, ty + a.oy * 36 * L, 9 * L);
         }
         dg.globalAlpha = 1;
       }
@@ -1303,25 +1763,30 @@ SA.BattleView.create = function createBattleView(api) {
       h('span', { class: 'bt-plate px-sk px-sk-iron' }, B.e.name));
     hud.stage = h('div', { class: 'bt-stage' }, cv, hud.top);
     wrap = h('div', { class: 'bt-canvas-wrap' }, hud.stage);
+    touchUI = hasPX && isTouchUI();
+    hud.aimRing = null;
     hud.dash = hasPX ? dashboard() : null;
-    screen.append(h('div', { class: 'bt' }, wrap, hud.dash || ''));
+    const btRoot = h('div', { class: `bt${touchUI ? ' touchui' : ''}` }, wrap, hud.dash || '', hud.aimRing || '');
+    screen.append(btRoot);
 
     const toNative = (e) => {
       const rc = cv.getBoundingClientRect();
       return [(e.clientX - rc.left) / rc.width * W, (e.clientY - rc.top) / rc.height * H];
     };
-    cv.addEventListener('pointermove', (e) => { B.aimScreen = toNative(e); });
-    cv.addEventListener('pointerleave', (e) => { if (e.pointerType === 'mouse') B.aimScreen = null; B.keys.fire = false; });
+    if (touchUI) bindTouch(btRoot, toNative);   // 手机：双圈操作接管整块战斗界面，画布自己的鼠标处理不再用
+    cv.addEventListener('pointermove', (e) => { if (!touchUI) B.aimScreen = toNative(e); });
+    cv.addEventListener('pointerleave', (e) => { if (touchUI) return; if (e.pointerType === 'mouse') B.aimScreen = null; B.keys.fire = false; });
     cv.addEventListener('pointerdown', (e) => {
       e.preventDefault();
-      if (B.intro) { if (B.intro.mode === 'cine') endIntro(); return; }
+      if (touchUI) return;
+      if (B.intro) { if (B.intro.mode === 'cine') endIntro(); else if (B.intro.vn && B.intro.vn.advance) B.intro.vn.advance(); else if (B.intro.mode === 'ambush') ambushSkip(); return; }
       if (B.surrender === 'raising') { api.skipSurrenderAnimation(); return; }   // 点击跳过升旗，只打开确认框
       B.aimScreen = toNative(e);
       if (e.button !== 0) return;
       B.keys.fire = true;
       cv.setPointerCapture(e.pointerId);
     });
-    cv.addEventListener('pointerup', () => { B.keys.fire = false; });
+    cv.addEventListener('pointerup', () => { if (!touchUI) B.keys.fire = false; });
     cv.addEventListener('contextmenu', (e) => e.preventDefault());
     window.addEventListener('keydown', onKey);
     window.addEventListener('keyup', onKey);
@@ -1356,8 +1821,12 @@ SA.BattleView.create = function createBattleView(api) {
 
   function fit() {
     if (!wrap || !wrap.isConnected) return;
-    const aw = wrap.clientWidth - 16;
-    const ah = Math.max(240, window.innerHeight - (hud.dash ? hud.dash.offsetHeight : 140) - 28);
+    let aw = wrap.clientWidth - 16;
+    let ah = Math.max(240, window.innerHeight - (hud.dash ? hud.dash.offsetHeight : 140) - 28);
+    // 手机布局：横屏时画面占中间一格（两边是仪表栏），竖屏时画面占满宽、控制件排在下面
+    const touch = touchUI && wrap.parentElement && wrap.parentElement.classList.contains('touchui');
+    if (touch && hud.aimRing && !hud.aimRing.classList.contains('on')) requestAnimationFrame(() => placeAimRing(null, null, false));
+    if (touch) { aw = wrap.clientWidth; ah = window.innerHeight > window.innerWidth ? aw * H / W : wrap.clientHeight; }
     let s = Math.min(aw / W, ah / H);
     const cw = Math.round(W * s), ch = Math.round(H * s), dpr = window.devicePixelRatio || 1;
     cv.style.width = `${cw}px`;
@@ -1365,7 +1834,7 @@ SA.BattleView.create = function createBattleView(api) {
     const bw = Math.round(cw * dpr), bh = Math.round(ch * dpr);
     if (cv.width !== bw || cv.height !== bh) { cv.width = bw; cv.height = bh; }
     DPX = bw / W;
-    if (hud.dash) hud.dash.style.width = `${Math.max(cw, Math.min(wrap.clientWidth, 1040))}px`;   // 仪表台和画面一样宽，窄屏时最少 1040
+    if (hud.dash) hud.dash.style.width = touch ? '' : `${Math.max(cw, Math.min(wrap.clientWidth, 1040))}px`;   // 仪表台和画面一样宽，窄屏时最少 1040
   }
 
   return {

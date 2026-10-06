@@ -4,7 +4,7 @@
   "locale": "zh-CN",
   "values": {
     "story:opening": "[{\"text\":\"伦敦的春季酷烈无情，冷风像一颗颗钉子从门缝吹进来。你像无数普通人一样背井离乡，身无分文。\",\"scene\":\"sleep\"},{\"text\":\"就在你于梦中探寻着家中的厨房时，你的窝棚顶突然被掀开了——\",\"scene\":\"roof\"},{\"text\":\"许久未见的远房亲戚滚了进来……还有你的房东铁匠。\",\"scene\":\"roll\"},{\"text\":\"为了女皇的寿辰！现在继承我的战车，赢取荣耀吧！\",\"who\":\"uncle\",\"scene\":\"car\"},{\"text\":\"……和奖金！\",\"who\":\"smith\"},{\"text\":\"这群人来干嘛的？但不容你细想，就被推上了车\"}]",
-    "story:tutorial.intro": "[{\"text\":\"女皇的寿辰在即，十年一遇的大竞技赛就要开始了。我们得抓紧时间训练，好在生日宴那天出现在竞技场上。\",\"who\":\"uncle\"},{\"text\":\"我给你找来了我的徒弟提米对练！\",\"who\":\"smith\"},{\"text\":\"说真的，为什么他们自作主张就把你推上了车？呃……可能是欠了很多房租？也可能是亲戚之前来过信但被你丢掉了。\"},{\"text\":\"不论如何，新生活已经开始了！\"}]",
+    "story:tutorial.intro": "[{\"text\":\"女皇的寿辰在即，十年一遇的大竞技赛就要开始了。我们得抓紧时间训练，好在生日宴那天出现在竞技场上。\",\"who\":\"uncle\"},{\"text\":\"我给你找来了我的徒弟皮普对练！\",\"who\":\"smith\"},{\"text\":\"说真的，为什么他们自作主张就把你推上了车？呃……可能是欠了很多房租？也可能是亲戚之前来过信但被你丢掉了。\"},{\"text\":\"不论如何，新生活已经开始了！\"}]",
     "story:tutorial.parts.0": "[{\"text\":\"驾驶舱：一切的核心，就像心脏。失去了它你就输了。\",\"who\":\"uncle\"}]",
     "story:tutorial.parts.1": "[{\"text\":\"履带：本世纪最好的发明。\"},{\"text\":\"……上个世纪的。\",\"who\":\"smith\"}]",
     "story:tutorial.parts.2": "[{\"text\":\"锅炉：一切的核心，就像心脏。失去了它你就输了。\",\"who\":\"uncle\"},{\"text\":\"……我刚刚是不是这么说过？\",\"who\":\"uncle\"},{\"text\":\"是的，你个老年痴呆。\",\"who\":\"smith\"}]",
@@ -17,6 +17,7 @@
     "story:stage.0,2.lose": "[]",
     "story:before.0,2": "[{\"text\":\"哦——老家伙，你的小朋友还真是有两把刷子，这回该换我上场了！\",\"who\":\"smith\"}]",
     "story:feat.garage": "[{\"text\":\"你现在可以使用车间了，为了大不列颠女皇的荣耀！\",\"who\":\"uncle\"},{\"text\":\"我们得有一辆好车。\",\"who\":\"uncle\"},{\"text\":\"所以你的车为什么这么破？\",\"who\":\"smith\"},{\"text\":\"说来话长……说来话长……\",\"who\":\"uncle\"}]",
+    "story:feat.pip_pair": "[{\"text\":\"双人驾驶舱装好了，皮普已经坐进去了。\",\"who\":\"smith\"},{\"text\":\"该让你和皮普一起战斗了！\",\"who\":\"uncle\"},{\"text\":\"皮普可以操作第二门武器。再装上一门，你们就能各管一门。\",\"who\":\"smith\"}]",
     "story:feat.shop": "[{\"text\":\"商店开张了：你可以从汤姆那里直接买到新零件，当然要付钱……\",\"who\":\"uncle\"},{\"text\":\"真是个吝啬鬼（小声）\",\"who\":\"uncle\"},{\"text\":\"你还欠着我的钱呢！\",\"who\":\"smith\"}]",
     "story:feat.street": "[]",
     "story:feat.bank": "[{\"text\":\"哦！看看这是什么？伦敦银行的开户信息，现在你可以借钱了！\",\"who\":\"uncle\"},{\"text\":\"那我的欠款……\",\"who\":\"smith\"},{\"text\":\"哦！瞧我这记性，该去喝酒了！\",\"who\":\"uncle\"}]",
@@ -47,6 +48,30 @@
     "story:before.0,1": "[{\"text\":\"我刚替你看了看，除了水罐，汤姆还给车上加了额外的甲片！真是卑鄙！这不公平！\",\"who\":\"uncle\"},{\"text\":\"你怎么还来偷看！作弊的老东西！\",\"who\":\"smith\"},{\"text\":\"你要想办法打掉他的武器，只要没有武器你就算赢了！\",\"who\":\"uncle\"},{\"text\":\"这不公平！\",\"who\":\"smith\"}]",
     "dom:main::screen:arena::div#modal/div.panel.dialog:n1/div.panel-body:n2/div.salvage:n1/div.dlg-item:n1/div:n1/div.muted:n1::text:0": "耐久 260 · 装甲厚度 5 · 重量 0.70 t ",
     "dom:main::screen:home::div#modal/div.panel.dialog:n1/div.panel-body:n2::text:0": "这是一个占位符",
+    "story:tutorial.controls.move.desktop": "[{\"text\":\"开车：按住A/D、←/→前进后退。\"}]",
+    "story:tutorial.controls.move.touch": "[{\"text\":\"左侧圆环操控前进后退\"}]",
+    "story:tutorial.controls.aim.desktop": "[]",
+    "story:tutorial.controls.aim.touch": "[{\"text\":\"瞄准：按住画面，准星自动跟随。\"}]",
+    "story:tutorial.controls.fire.desktop": "[{\"text\":\"开火：按住鼠标左键连续开火。\"}]",
+    "story:tutorial.controls.fire.touch": "[{\"text\":\"开火：按住连续开火。\"}]",
+    "story:tutorial.controls.weapon.desktop": "[]",
+    "story:tutorial.controls.weapon.touch": "[]",
+    "story:guide.arena": "[{\"text\":\"这块黑板就是出战台。左边粉笔写着赛程：打过的划掉，下一场用圈圈起来。\"},{\"text\":\"中间贴着这一场的对决海报，右边是对手的档案：评分、车速，心里先有个数。\"},{\"text\":\"右下角是出战拉杆。按住杆头往右推到底，就开打；往左扳到底，回院子。\"},{\"text\":\"想回去改车，就点左下角的「车间」路牌。\"}]",
+    "story:guide.arena.lever": "[{\"text\":\"试一下：按住右下角的拉杆，往右推到底——出战！\"}]",
+    "story:guide.garage": "[{\"text\":\"这里是车间。你的车摆在中间的改装台上，每一格都能装零件。\"},{\"text\":\"右边是零件清单。刚拿到的小水罐就在这里。\"}]",
+    "story:guide.garage.tank": "[{\"text\":\"把水罐装上：按住清单里的水罐，拖到车上的空格里松手；也可以先点一下水罐，再点格子。\"}]",
+    "story:guide.stats": "[{\"text\":\"装好了！左边这张性能单会跟着你的改动变化，一项一项看：\"}]",
+    "story:guide.stats.rating": "[{\"text\":\"评分：整台车大致有多强。出战前可以和对手档案上的评分比一比。\"}]",
+    "story:guide.stats.power": "[{\"text\":\"动力：锅炉供得上的蒸汽，和设备、行驶要用的蒸汽。条过了红线，车跑不动，武器也会变慢。\"}]",
+    "story:guide.stats.weight": "[{\"text\":\"重量：整车装满水时有多重。红线是底盘的承重，超过就开不动；越重撞人越疼，但起步和爬坡越慢。\"}]",
+    "story:guide.stats.speed": "[{\"text\":\"速度：平地上最快能跑多快。动力不够时会打折扣。\"}]",
+    "story:guide.stats.heat": "[{\"text\":\"热量：全力开火时，产热和冷却的比。到 100% 就会越打越烫，过热了锅炉减压、武器停火。\"}]",
+    "story:guide.stats.water": "[{\"text\":\"水：水罐里的冷却水，靠它把热量带走；烧干了就只剩散热片。刚装的水罐就加在这一项上。\"}]",
+    "story:guide.stats.exit": "[{\"text\":\"每一项停一下都能看到细账。车弄好了，就点下面的「出战 →」去黑板那边。\"}]",
+    "story:guide.shop": "[{\"text\":\"商店开张了！零件清单上方多了一个「商店」开关。\"},{\"text\":\"拨到「商店」，清单里会列出能买的零件、标着价钱；拨回去，就只看自己的库存。\"}]",
+    "story:before.5,2": "[{\"text\":\"寿辰前夜。铁匠铺的院子里溜进来一辆茶点车，车顶上挂着个大茶壶。\"},{\"text\":\"哈灵顿的管家！他想往你的锅炉里倒糖！\",\"who\":\"uncle\"},{\"text\":\"（拎起铁锤）在我的院子里？\",\"who\":\"smith\"}]",
+    "story:stage.5,2.win": "[{\"text\":\"管家举起白手帕：「爵士吩咐我……只是来送一盒饼干。」\"},{\"text\":\"……饼干留下，人走。\",\"who\":\"smith\"},{\"text\":\"明天就是决赛。女王号的主锅炉，最后一道焊缝是歪的——那是我的签名。打它。\",\"who\":\"smith\"},{\"text\":\"在哪边？左边还是右边？\",\"who\":\"uncle\"},{\"text\":\"……打锅炉就行。\",\"who\":\"smith\"}]",
+    "story:stage.5,2.lose": "[]",
     "home:tip:rel": "",
     "home:tip:tom": "",
     "home:tip:tim": ""
@@ -110,6 +135,10 @@
       "smith": {
         "name": "铁匠 老汤姆",
         "coal": "铁匠 老汤姆"
+      },
+      "martha": {
+        "name": "玛莎·布莱克",
+        "coal": "玛莎·布莱克"
       }
     },
     "tutorialParts": [
@@ -129,8 +158,80 @@
         "part": "mg",
         "label": "机枪"
       }
+    ],
+    "tutorialControls": [
+      {
+        "part": "move",
+        "label": "开车"
+      },
+      {
+        "part": "aim",
+        "label": "瞄准"
+      },
+      {
+        "part": "fire",
+        "label": "开火"
+      },
+      {
+        "part": "weapon",
+        "label": "换武器"
+      }
+    ],
+    "guides": [
+      {
+        "id": "arena",
+        "label": "出战黑板 · 讲解"
+      },
+      {
+        "id": "arena.lever",
+        "label": "出战黑板 · 推拉杆（操作提示）"
+      },
+      {
+        "id": "garage",
+        "label": "车间 · 讲解"
+      },
+      {
+        "id": "garage.tank",
+        "label": "车间 · 装水罐（操作提示）"
+      },
+      {
+        "id": "stats",
+        "label": "车间 · 性能单开头"
+      },
+      {
+        "id": "stats.rating",
+        "label": "车间 · 性能单 · 评分"
+      },
+      {
+        "id": "stats.power",
+        "label": "车间 · 性能单 · 动力"
+      },
+      {
+        "id": "stats.weight",
+        "label": "车间 · 性能单 · 重量"
+      },
+      {
+        "id": "stats.speed",
+        "label": "车间 · 性能单 · 速度"
+      },
+      {
+        "id": "stats.heat",
+        "label": "车间 · 性能单 · 热量"
+      },
+      {
+        "id": "stats.water",
+        "label": "车间 · 性能单 · 水"
+      },
+      {
+        "id": "stats.exit",
+        "label": "车间 · 性能单结尾"
+      },
+      {
+        "id": "shop",
+        "label": "商店开关"
+      }
     ]
   },
-  "updatedAt": "2026-10-02T08:11:11.072712+00:00",
+  "updatedAt": "2026-10-03T06:58:19.582872+00:00",
   "edited": true
 }

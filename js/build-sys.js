@@ -29,3 +29,41 @@ SA.BUILD_SYS += '+config-single-source'; // 模块、战役、关卡、规则与
 SA.BUILD_SYS += '+rookie-free-repair'; // 教学 AI 与前三关全结果自动免修。
 SA.BUILD_SYS += '+wreck-chassis-grind'; // 撞击件顶进已毁底盘：不弹回，限速艰涩深入，按节拍减弱反震（用户授权 Opus 改）。
 SA.BUILD_SYS += '+centered-starter-shift-vehicle'; // 初始车居中，并支持 Shift 拖动已装模块整体横移。
+SA.BUILD_SYS += '+crew-clearance-heat-water-shop-progress'; // 驾驶员分摊、高抛净空、产热储水及商店进度门槛。
+SA.BUILD_SYS += '+campaign-layout-3-five-stages'; // 关卡布局 3：主线新增大铁壶、棉花包、圣堂侍从、四号样车「攻城臼炮」、寿辰前夜，第三～五章末关顺延一位（用户授权 Opus 改）。
+SA.BUILD_SYS += '+rush-contact-repeat'; // 纯近战短撤再撞；混合武装撞后游走开火再冲锋。
+SA.BUILD_SYS += '+single-weapon-reload'; // 每名驾驶员同一时间只装填一门炮，开局全部满装。
+SA.BUILD_SYS += '+campaign-layout-4-trim'; // 关卡布局 4：只留序章三关和第一章前三关，每章只记计划关数（3/7/6/6/6/6），没做完的章节打完已有的关就停在章内（用户要求 Opus 改）。
+SA.BUILD_SYS += '+progress-priority-mortar-spread-melee-recoil'; // 逐门优先装填、臼炮可调散布与近战反震。
+SA.BUILD_SYS += '+stage-create-shortcuts'; // 控制台从关卡工作台或战役地图新增计划关卡，保存时登记稳定编号。
+SA.BUILD_SYS += '+cockpit-pip-rules'; // 驾驶舱禁售；双人舱装车与首次剧情共用实际装配判定。
+SA.BUILD_SYS += '+stage-create-budget-rollback'; // 新建关卡同时登记逐关预算（按设计稿序号每关 ×1.2），三份文件任一写失败都回滚；检查跳过占位空关。
+SA.BUILD_SYS += '+evolve-route-after'; // 进化擂台按真实原点车预演后续主线计划关，并支持工作台交接。
+SA.BUILD_SYS += '+side-mount-host-rules'; // 侧挂完整承托于装甲，装弹机只增强兼容宿主武器。
+SA.BUILD_SYS += '+side-lines-martha'; // 支线系统（SA.Side，content.json SIDE_LINES）：拦路关 / 打完某主线关开放；支线战斗照常带回战损，首胜发固定奖励并缴获，赢过以后按重打；「玛莎的复仇」两关（用户要求 Opus 改）。
+
+SA.BUILD_SYS += '+workbench-session-v1'; // 工作台按正式关卡或候选车目标隔离草稿与保存；移除旧关卡缓存回灌。
+SA.BUILD_SYS += '+ai-styles-15'; // 十五种性格、统一等级目录及固定样本行为验收。
+SA.BUILD_SYS += '+evolve-progression-diversity-v1'; // 逐关强度、解锁约束和形态多样性进化筛选。
+SA.BUILD_SYS += '+armor-speed-cache'; // 装甲罚速随损毁刷新，避免逐帧重复遍历车身。
+SA.BUILD_SYS += '+evolve-f32-heat-split-duel'; // 进化预热使用近似 f32 热量预测，最终复测按双向种子对并行拆包。
+SA.BUILD_SYS += '+stage-stat-multipliers-no-zero-text'; // 关卡敌车四项倍率与零伤害数字过滤。
+
+// 原点车出战失败时报告本关范围、违规部件与具体位置。
+SA.BUILD_SYS += '+stage-deploy-diagnostics';
+SA.BUILD_SYS += '+manual-stage-full-grid'; // 手工关卡车编辑、出战、进化席位与原点车统一使用完整 8×6 范围。
+SA.BUILD_SYS += '+evolve-route-continue-diagnostics'; // 未达标候选保留并作临时参考继续后续关，运行完成与筛选达标分别报告。
+SA.BUILD_SYS += '+stage-create-preserve-preview-rule'; // 新关首次保存复用已有预演预算，缺规则才补行，事务失败仍完整回滚。
+SA.BUILD_SYS += '+evolve-authoritative-stage-record'; // 用户显式关卡奖励与历史解锁优先，旧预设不得重新注入已删除模块。
+SA.BUILD_SYS += '+tool-budget-warnings'; // 工作台与擂台显示实际造价和生成预算，超限只提示不禁用手工席位。
+SA.BUILD_SYS += '+evolve-required-reward-fallback'; // 多奖励随机构筑耗尽后用最简武器布局补齐奖励，并按真实章节定位失败。
+
+SA.BUILD_SYS += '+evolve-budget-pressure-v1'; // 强度90%＋节约10%、预算指数罚及参考胜率罚，合法新变体向预算靠近。
+SA.BUILD_SYS += '+full-workshop-grid'; // 新旧玩家车、关卡车与全部候选统一开放8×6大格，其他规则不变。
+SA.BUILD_SYS += '+mail-load-6000'; // 仅锁甲骑士腿实例的最终承重固定6000kg，普通双足和其它变体保留原值。
+SA.BUILD_SYS += '+biped-actions-knights-v1'; // 双足蹲跳、腿挂件、轻重腿与骑士机制；输入和外观由视觉层接入。
+SA.BUILD_SYS += '+harpoon-ai-inward-pull'; // 鱼叉按质量向内收绳，AI 优先有效牵引并及时恢复其他火力。
+SA.BUILD_SYS += '+harpoon-power-overload'; // 鱼叉材料决定强度，向外拉扯的富余动力超限后累计断绳风险。
+SA.BUILD_SYS += '+knight-waist-exclusive-refit'; // 骑士腰胯侧挂、双足专属、功能改造与腿部承重换速。
+SA.BUILD_SYS += '+ai-design-chapters-4-5'; // 第四、五章直接设计候选；工作台种子保留专项改造，新关草稿采用明确缴获提案。
+SA.BUILD_SYS += '+release-through-ch2-05'; // 正式发布开放到第二章第五关，序章与第一章一并开放。

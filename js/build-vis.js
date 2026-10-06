@@ -35,3 +35,38 @@ SA.BUILD_VIS += '+settings-player-restart'; // 设置菜单两次确认后重开
 SA.BUILD_VIS += '+wreck-grind-shudder'; // 撞击件顶进已毁底盘时整车高频抖动、火花碎铁（规则见 battle.js grindWreck）。
 SA.BUILD_VIS += '+shift-whole-vehicle-drag'; // 车间按住 Shift 拖动已装模块时预览并横移整车。
 SA.BUILD_VIS += '+story-narration-expressions'; // 剧情旁白改成铁灰框 + 冷色字、不再借用亲戚头像；台词可选表情（expr）；后台剧情页加表情窗（说话动作 + 全部表情）和完整重放（tools/story-player.html，游戏自己的对话框）
+SA.BUILD_VIS += '+mobile-battle-tutorial'; // 触屏设备的战斗手机布局（横屏左右两栏、竖屏上下排）；第一关教程讲完部件后加旁白操作教学（开车 / 瞄准 / 开火 / 换武器，电脑和手机各一套，画面演示 + 真按钮发光）
+SA.BUILD_VIS += '+twin-stick-touch'; // 手机战斗操作改成手游式两个半透明圆圈：左圈左右推开车，右圈跟着手指瞄准、按住开火（画面上指哪打哪，画面外像触控板）；战斗界面禁止浏览器缩放
+SA.BUILD_VIS += '+page-guides'; // 页面教程（js/tutorial.js，旁白 + 聚光框）：第一次进出战黑板讲赛程 / 海报 / 拉杆并让玩家推一次拉杆；黑板左下加「车间」木路牌直接回车间；第一场赢下后直接带去车间，教装水罐（等玩家装上）再逐项讲性能单；商店开张后指一下「商店」开关
+SA.BUILD_VIS += '+campaign-map'; // 后台「战役地图」：按设计稿把主线 34 关 + 三条支线 13 关画成一张图，悬浮看关名、车的剪影和奖励，点了进工作台或剧情。
+SA.BUILD_VIS += '+map-card-preview'; // 战役地图悬浮卡片放大一倍（窄了上下叠），主线车用正常画面；文字与奖励 / 强度 / 院子闲聊页签现场预览，底部按钮传送到工作台；出战海报的唯一腿型奖励按变体起名。
+SA.BUILD_VIS += '+track-center-wheels'; // 履带负重轮补齐：单节熟铁托轮加大提亮，钢及以上单节补中间一只轮；镀镍两节接缝补轮，乌兹钢 / 以太前后对称。
+SA.BUILD_VIS += '+dash-lamps-two-level'; // 仪表台指示灯分两级：常亮 = 留意（动力不足、水偏少、无水箱、偏热、底盘 / 武器受损），闪 = 危险；悬停看原因。
+SA.BUILD_VIS += '+wrought-track-rollers'; // 熟铁履带托轮加大提亮、吊杆伸到轮心，战斗里缩小看也认得出（多节履带同样）。
+SA.BUILD_VIS += '+wrought-track-prototype'; // 熟铁（T2）履带改回定稿样机画法：整条按体育场形路径摆木板条，吊杆、托轮按整条均分，每格裁出自己那段。
+SA.BUILD_VIS += '+track-backing-plate'; // 履带后面补上定稿样机的 y+6～y+36 车体底板（熟铁另加链带里侧阴影），中间不再透出背景。
+SA.BUILD_VIS += '+arena-stages-wip'; // 出战黑板在没做完的章节末尾写「还有 N 关 · 制作中」；后台战役地图按计划关数直接按编号对齐。
+SA.BUILD_VIS += '+wrought-track-road-wheels'; // 熟铁（T2）履带中间补上真正的负重轮：驱动轮轴到诱导轮轴一根下梁，9×9 铸铁负重轮挂在下梁下压住链带，吊杆吊住下梁；板条恢复熟铁色（09-29 用户定）。
+SA.BUILD_VIS += '+group-ready-reload-hud'; // 任一同组武器满装即隐藏沙漏并点亮装填条。
+SA.BUILD_VIS += '+campaign-module-preview'; // 战役地图下方展示全模块，并随节点预览累计解锁。
+SA.BUILD_VIS += '+campaign-module-status-glow'; // 已解锁模块浅绿发光，未解锁普通剪影整体调淡。
+SA.BUILD_VIS += '+pip-yard-story'; // 双人舱上的皮普离开院子，首次装车在院子播放专门剧情。
+SA.BUILD_VIS += '+material-upgrade-mode'; // 升级材质改成画布上方单独的按钮（熟铁解锁后出现）：按下后点模块逐件升一级，悬停金色闪烁；Shift + 点击 = 全部升级（只升材料最低的那一批，弹窗确认，按住 Shift 预览这一批）。
+SA.BUILD_VIS += '+stage-create-defaults'; // 新关草稿按设计稿填好默认参数、车抄前一关；工作台每章「＋ 新建 / 补上」行；地图空白车图做成新建按钮；拼装台打开与保存排队，防止存错关。
+SA.BUILD_VIS += '+suburb-scene'; // 第二章伦敦郊区场景：远处伦敦天际线（水晶宫 / 圣保罗 / 威斯敏斯特钟楼 / 塔桥）、对岸树林、泰晤士河上的帆驳 / 蒸汽艇 / 天鹅、垂柳和栈桥、少量围观者、草地 + 碎石路；两头收费栅门路障；试驾场可选两头路障
+SA.BUILD_VIS += '+mortar-fan-fill'; // 高抛散布预览按飞行时间拼接弹道，避免交叉条带的绕数相消漏填。
+SA.BUILD_VIS += '+side-ambush-cutscene'; // 支线拦路过场：第一次开打第二章第 1 关时，伦敦郊区路上你的车开进来、玛莎的车从右边冲出来急刹横在路上（扬尘、震屏、头上「！」），演完台词接开战动画；出战黑板加「支线」页签；对话框任意两人同框（玛莎在右）。
+SA.BUILD_VIS += '+evolve-arena-redo'; // 进化擂台按后台外观重做：第一屏每关一张选关卡（大车图、强度 / 同档胜率 / 表现、打上一关车的胜率、硬条件、筛选点阵、重跑这关），车图框按窗口高度自适应；往下是逐关筛选、散点、毒瘤 / 奇特车、报告信息
+
+// 关卡车性能单显示进化范围校验，并保留完整数值与警告。
+SA.BUILD_VIS += '+stage-workbench-diagnostics';
+SA.BUILD_VIS += '+stage-car-one-save'; // 关卡车只剩一种保存（关卡工作台「保存」，改过车自动勾「手动选择」）；进化擂台卡片先显示手动选择的关卡车和它的成绩、可勾掉；点卡片在那一排下面展开全部候选，「换上这辆」交给关卡工作台当草稿
+SA.BUILD_VIS += '+stage-sheet-sidebar-seed-export'; // 用户授权本次工作台性能单左侧竖栏、完整种子复制与导出入口。
+SA.BUILD_VIS += '+evolve-route-diagnostic-results'; // 进化进度区完整列出未达标关及候选，明细标注后续模拟所用的临时参考。
+SA.BUILD_VIS += '+biped-pose-params'; // legs.js：双足下蹲 / 空中收腿 / 快跑腾空 / 腿部件挂点参数（默认画面逐像素不变），当前开发页双足强化 v5。
+SA.BUILD_VIS += '+biped-gait-v2'; // 双足走路 / 跑步重做：按步频算步幅，走 = 倒立摆、跑 = 弹簧 + 腾空，关键姿势插值，车速 76～100 走跑过渡，跑起来躯干前倾。
+SA.BUILD_VIS += '+biped-mech-looks'; // 机甲套件 v4 进游戏：双足躯干顶角的甲片 = 肩甲，最后一列的竖式锅炉 / 小水罐 / 加压舱 = 背负锅炉 / 背水罐 / 喷汽背包（只换画面）；bipedArt 加 hipPart 挂点。
+SA.BUILD_VIS += '+mech-helm'; // 新模块机甲头盔 mech_helm（2×1，头盔居中一格 + 两侧防御饰件；5 种造型，游戏先用 A）；跳跃件 / 提速件画法定稿进 legs.js；头盔和肩甲不垫车体框架。
+SA.BUILD_VIS += '+biped-in-game'; // 头盔定稿 D；骑士手臂 6 种专用画法（近战挥动、武器绕肘瞄准）；腿部件画在腿骨 / 胯上；下蹲 / 跳跃接线（按键、触屏、腿姿、地影、喷汽、扬尘）；走跑区间 92～118。
+SA.BUILD_VIS += '+knight-arm-below-helm'; // 当前开发 v9 样车改成头盔第 4 行、手臂挂在头盔下面（规则见 vehicle.js helmBottom）。
+SA.BUILD_VIS += '+knight-refit-options'; // 用户授权本次在现有改装菜单中接入骑士、承重改造及数值说明。

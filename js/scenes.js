@@ -1,4 +1,4 @@
-// 战斗场景：铁匠铺后院（序章，就是主页面的院子，画法在 js/home-scene.js）、野地（竞技场外遭遇战）、预选赛（其余竞技场比赛）。
+// 战斗场景：铁匠铺后院（序章，就是主页面的院子，画法在 js/home-scene.js）、后巷（第一章）、伦敦郊区（第二章）、野地（竞技场外遭遇战）、预选赛（其余竞技场比赛）。
 // 每个场景分五层，从远到近：天空（不跟镜头）→ 远景（×0.05）→ 中远景（×0.15～0.2）→ 中景（×0.45）→ 地面（1:1，世界坐标）→ 近景（×1.4，压在车前面的画面最下沿）。
 // 规则同 docs/art-style.md：硬像素、左上光、渐变用 4×4 Bayer 抖动；背景只用中低明度、低饱和，只有炉火、灯这类发光物可以亮。
 // 纹理一次画好（按场景缓存），每帧只做平铺 / 圆筒采样，再叠一点程序化的小动效（烟、火星、风车、火车、人群、草）。
@@ -10,7 +10,7 @@ SA.Scenes = (() => {
   const W = 1280, H = 720, GROUND = 648, HZ = 408, GE = 538, F0 = 552;
   const TW = 1248;   // 可平铺纹理的周期
   const SKY0 = -640;   // 天空纹理顶端的世界 y（镜头拉到最远时顶上还是天）
-  const NAMES = { forge: SA.Config.text("scenes_7b027a6f1bfd"), alley: SA.Config.text("scenes_40ce848ef910"), wild: SA.Config.text("scenes_9d0944117539"), qual: SA.Config.text("scenes_4681f19cf96d") };
+  const NAMES = { forge: SA.Config.text("scenes_7b027a6f1bfd"), alley: SA.Config.text("scenes_40ce848ef910"), suburb: SA.Config.text("scenes_5e2b07c4d91a"), wild: SA.Config.text("scenes_9d0944117539"), qual: SA.Config.text("scenes_4681f19cf96d") };
 
   // 哪一场用哪个场景：序章 → 铁匠铺后院；竞技场外遭遇战 → 野地；其余（战役第一章起、街头赛、锦标赛、试驾场）→ 预选赛。opts.scene 可以直接指定
   function pick(opts = {}) {
@@ -18,6 +18,7 @@ SA.Scenes = (() => {
     if (opts.mode === 'side') return 'wild';
     if (opts.mode === 'campaign' && /^0,/.test(opts.storyKey || '')) return 'forge';
     if (opts.mode === 'campaign' && /^1,/.test(opts.storyKey || '')) return 'alley';   // 第一章 · 白教堂后巷
+    if (opts.mode === 'campaign' && /^2,/.test(opts.storyKey || '')) return 'suburb';  // 第二章 · 伦敦郊区
     return 'qual';
   }
 
@@ -935,8 +936,426 @@ SA.Scenes = (() => {
     return S;
   }
 
+  // =====================================================================
+  // 伦敦郊区（第二章）：泰晤士河上游的河畔郊外，夏天午后（参考从里士满山远眺圣保罗的那条视线）。
+  // 远景：地平线上一溜蓝灰色的伦敦——水晶宫的玻璃拱顶和两座水塔、圣保罗的圆顶、威斯敏斯特宫和钟楼、塔桥，夹着工厂烟囱和教堂尖塔；
+  //       地标都在纹理前 1300 像素里（镜头拉到最远时右边接的是没有地标的市郊，不会看到第二座圣保罗）。
+  // 中远景：对岸连成片的树林、一座白色庄园、村里的教堂塔；下面是泰晤士河（树林倒影、波光），赭红帆的驳船慢慢漂、小蒸汽艇突突开过、两只天鹅。
+  // 中景：这边河岸的垂柳和橡树、纤道（碎石小路）、栈桥、船屋、木栅栏。围观的人很少：树下野餐的一对、栈桥上钓鱼的（偶尔回头看）、
+  //       拴在栈桥边小划艇里的孩子、骑高轮自行车来回溜达的绅士；两头路障上各坐一个（见 barriers）。
+  // 地面：草地 + 一条碎石路（两道车辙，中间长着草），车就在碎石路上打。两头的路障是关上的收费栅门 + 树篱 + 草捆（见 barricade）
+  // =====================================================================
+  function buildSuburb() {
+    const S = { id: 'suburb' };
+    const C = {
+      sky: [[SKY0, '#33435a'], [20, '#3a4b5e'], [150, '#475869'], [240, '#556573'], [310, '#64717a'], [360, '#757f7e'], [400, '#878b7c'], [HZ + 160, '#878b7c']],
+      cloud: ['#5a6670', '#6a757d', '#8c928e'],
+      city: ['#4e5b63', '#56636b', '#606c72', '#74808a'],   // 地标暗部 / 地标 / 普通街区（更远更淡）/ 朝太阳的受光边
+      glass: ['#5e6c72', '#6e7c82', '#8c9a9a'], clock: '#868c7e', land: ['#5c6665', '#646e6c'], farTree: ['#52605c', '#5a6763'],
+      bank: ['#222c23', '#28332a', '#2f3c30', '#3a4938'], field: ['#3b4835', '#44523c'],
+      house: ['#686659', '#7a776a', '#3c4046', '#363a38'], church: ['#55564e', '#62625a'], cottage: '#4a3c34',
+      water: ['#2e3d44', '#36474e', '#405259', '#566a6e', '#7a8a8a'], refl: ['#1f2925', '#25302a'],
+      grass: ['#253020', '#2c3824', '#344229', '#3e4d30', '#4a5a38'],
+      leaf: ['#1c271b', '#233121', '#2c3c27', '#37482e'], willow: ['#283823', '#30432a', '#3b5132', '#475f3b'],
+      trunk: ['#1b1713', '#27211a', '#352d22'], wood: ['#231a13', '#32261b', '#433424', '#544230'], iron: ['#16181a', '#24272a', '#34383c'],
+      reed: ['#2f3622', '#3c432a', '#4c5233', '#3a2a1e'],
+      gravel: ['#33312a', '#3e3b32', '#49453a', '#555043', '#625c4d', '#6e6856'], soil: ['#1b1813', '#25211a', '#2f2a20', '#463f30', '#57503f'],
+      cloth: ['#5a3430', '#76695a'], sail: ['#5e3626', '#6e4430', '#4a2c20'], near: '#0c100b',
+    };
+    S.skyTop = C.sky[0][1];
+    S.sky = skyTex(C.sky);
+    S.clouds = [0, 1, 2, 3, 4, 5].map(i => ({ img: cloud(150 + (i % 3) * 60, 34 + (i % 2) * 12, C.cloud, 121 + i), x: i * 330, y: i < 4 ? 50 + (i % 3) * 64 : -260 + (i - 4) * 120, v: 3 + (i % 3) * 1.5, par: 0.015 }));
+    // 远处往城里飞的小飞艇
+    S.airship = (() => {
+      const p = Pix(40, 14), [, cM, cB] = C.city;
+      p.disc(18, 5, 17, (x, y, a, b) => (b < -0.3 ? cB : cM), 5); p.rect(33, 2, 3, 6, cM); p.rect(31, 4, 7, 2, cM);
+      p.rect(14, 10, 9, 3, C.city[0]); p.line(15, 9, 14, 10, cM); p.line(21, 9, 22, 10, cM);
+      return p.done();
+    })();
+    // ---- 远景：伦敦天际线（两屏宽，地标都在前 1300 像素）----
+    {
+      const y0 = 290, FW = TW * 2, h = F0 - y0, p = Pix(FW, h, true), r = rng(101), BL = 128;   // BL = 城市地平线（世界 y 418）
+      const [cD, cM, cB, cL] = C.city, lit = (x, y, hh) => p.rect(x, y, 1, hh, cL);   // 朝左（朝太阳）的一道受光边
+      for (let x = 0; x < FW; x++) { const top = BL + Math.round(ridge(x, 1, [[1.5, 3], [1, 8]], 0.4)); for (let y = top; y < h; y++) p.put(x, y, y === top ? C.land[1] : C.land[0]); }   // 城市脚下的远地
+      // 普通街区：平顶 / 坡顶的楼、烟囱垛；地标那几段让开；1500 以后渐渐矮下去变成市郊（夹着树丛）
+      const skip = [[60, 300], [996, 1206]];
+      for (let x = 0; x < FW;) {
+        const sk = skip.find(([a, b]) => x >= a && x < b); if (sk) { x = sk[1]; continue; }
+        const w = 8 + Math.floor(r() * 18), sub = x > 1500 ? Math.min(1, (x - 1500) / 600) : 0, hh = Math.max(3, Math.round((5 + r() * 14) * (1 - sub * 0.65)));
+        if (sub > 0.3 && r() < sub * 0.6) { p.disc(x + w / 2, BL - 4, w / 2 + 2, (xx, yy, a, b) => (yy > BL ? null : b < -0.3 && a < 0 ? C.farTree[1] : C.farTree[0]), 7 + r() * 4); x += w; continue; }
+        p.rect(x, BL - hh, w, hh + 1, cB);
+        if (r() < 0.35) for (let k = 0; k < w; k++) { const rh = Math.floor((w / 2 - Math.abs(k + 0.5 - w / 2)) * 0.6); if (rh > 0) p.rect(x + k, BL - hh - rh, 1, rh, cB); }
+        else if (r() < 0.5) p.rect(x + 2 + Math.floor(r() * (w - 5)), BL - hh - 3, 2, 3, cM);
+        x += w;
+      }
+      // 工厂烟囱（冒烟）、雷恩式教堂尖塔、两座储气罐
+      const chim = [];
+      const stack = (x, hh) => { p.rect(x, BL - hh, 3, hh, cM); p.rect(x - 1, BL - hh, 5, 1, cD); chim.push([x + 1, y0 + BL - hh - 1]); };
+      const spire = (x, hh) => { const th = Math.round(hh * 0.5), sh = hh - th; p.rect(x - 2, BL - th, 5, th, cM); lit(x - 2, BL - th, th); for (let k = 0; k < sh; k++) { const w = Math.max(1, Math.round(3 * (1 - k / sh))); p.rect(x - Math.floor(w / 2), BL - th - k - 1, w, 1, cM); } };
+      for (const [x, hh] of [[332, 30], [590, 26], [962, 32], [1290, 28], [1452, 24], [1588, 22]]) stack(x, hh);
+      for (const [x, hh] of [[366, 34], [560, 40], [646, 30], [930, 36], [1230, 32], [1530, 28], [1820, 26], [2160, 24]]) spire(x, hh);
+      for (const gx of [1330, 1362]) { p.rect(gx, BL - 13, 26, 14, cB); p.rect(gx, BL - 13, 26, 1, cM); for (let k = 0; k <= 26; k += 6) p.rect(gx + k, BL - 22, 1, 22, cM); p.rect(gx, BL - 22, 27, 1, cM); }
+      // 水晶宫：小山上一长溜玻璃厅（两层台阶、亮一阶的玻璃、每 3px 一根竖框），正中和两头是朝外的半圆拱；两头是布鲁内尔的两座水塔
+      for (let x = 60; x < 300; x++) { const k = (x - 180) / 120, hy = Math.round(13 * (1 - k * k)); if (hy > 0) { p.rect(x, BL - hy, 1, hy, C.land[0]); p.put(x, BL - hy, C.land[1]); } }
+      const [g0, g1, g2] = C.glass;
+      p.rect(110, BL - 22, 140, 12, g1); p.rect(118, BL - 28, 124, 6, g1); p.rect(122, BL - 30, 116, 2, g2);
+      for (let x = 111; x < 250; x += 3) p.rect(x, x > 118 && x < 242 ? BL - 27 : BL - 21, 1, x > 118 && x < 242 ? 17 : 11, g0);
+      p.rect(110, BL - 17, 140, 1, g0); p.rect(110, BL - 23, 140, 1, g2); p.rect(110, BL - 10, 140, 2, cM);
+      for (const [ax, ar] of [[180, 16], [132, 8], [228, 8]]) p.disc(ax, BL - 28, ar, (x, y, a, b) => (y >= BL - 28 ? null : Math.hypot(a, b) > 0.82 ? (a < 0.2 ? g2 : g0) : Math.abs(Math.atan2(b, a) / (Math.PI / 6) % 1) < 0.18 ? g0 : g1), ar);
+      for (const wx of [94, 262]) { p.rect(wx, BL - 52, 4, 46, cM); lit(wx, BL - 52, 46); p.rect(wx - 1, BL - 56, 6, 4, cM); p.rect(wx + 1, BL - 59, 2, 3, cM); }
+      S.glass = [110, 250, y0 + BL - 22, 11];
+      // 圣保罗大教堂：中殿 + 西端塔楼 + 东端半圆后殿，鼓座一圈柱廊，穹顶左上受光，顶上采光亭、金球、十字
+      const SP = 470;
+      p.rect(SP - 48, BL - 26, 98, 27, cM); p.rect(SP - 48, BL - 27, 98, 1, cD); lit(SP - 48, BL - 26, 26);
+      for (let x = SP - 44; x < SP + 46; x += 6) { p.rect(x, BL - 21, 1, 4, cD); p.rect(x, BL - 12, 1, 4, cD); }
+      p.rect(SP - 58, BL - 50, 12, 51, cM); lit(SP - 58, BL - 50, 50); p.rect(SP - 56, BL - 58, 8, 8, cM); p.disc(SP - 52, BL - 59, 4, cM, 3); p.rect(SP - 53, BL - 66, 2, 5, cM);
+      for (let y = BL - 44; y < BL - 28; y += 6) p.rect(SP - 54, y, 1, 3, cD);
+      p.disc(SP + 50, BL - 13, 8, (x) => (x < SP + 50 ? null : cM), 13);
+      p.rect(SP - 18, BL - 44, 36, 18, cM); for (let x = SP - 16; x < SP + 17; x += 3) p.rect(x, BL - 42, 1, 13, cD); p.rect(SP - 19, BL - 45, 38, 2, cB); lit(SP - 18, BL - 44, 18);
+      p.rect(SP - 14, BL - 50, 28, 5, cM);
+      p.disc(SP, BL - 50, 18, (x, y, a, b) => (y >= BL - 50 ? null : a < -0.45 && b < -0.25 ? cL : a > 0.6 ? cD : cM), 18);
+      p.rect(SP - 3, BL - 76, 7, 9, cM); lit(SP - 3, BL - 76, 9); p.rect(SP - 4, BL - 68, 9, 1, cD); p.disc(SP + 0.5, BL - 77, 4, cM, 2); p.disc(SP + 0.5, BL - 81, 2, cB); p.rect(SP, BL - 90, 1, 8, cM); p.rect(SP - 2, BL - 87, 5, 1, cM);
+      // 威斯敏斯特宫：长长的哥特立面（一排尖顶小塔、窄长窗），左头维多利亚塔（旗杆，旗子另画）、中间尖塔、右头钟楼（钟面亮一点，分针另画）
+      const WX = 700;
+      p.rect(WX, BL - 22, 186, 23, cM); p.rect(WX, BL - 22, 186, 1, cB);
+      for (let x = WX + 2; x < WX + 184; x += 5) { p.rect(x, BL - 25, 1, 3, cM); p.rect(x + 2, BL - 17, 1, 6, cD); }
+      p.rect(WX + 2, BL - 80, 24, 80, cM); lit(WX + 2, BL - 80, 80); for (let k = 0; k < 4; k++) p.rect(WX + 7 + k * 5, BL - 72, 2, 40, cD);
+      for (const px of [WX + 2, WX + 9, WX + 17, WX + 24]) p.rect(px, BL - 86, 2, 6, cM);
+      p.rect(WX + 14, BL - 100, 1, 14, cD); S.flag = [WX + 15, y0 + BL - 100];
+      const CX = WX + 96; p.rect(CX - 5, BL - 40, 11, 18, cM); lit(CX - 5, BL - 40, 18); for (let k = 0; k < 22; k++) { const w = Math.max(1, Math.round(9 * (1 - k / 22))); p.rect(CX - Math.floor(w / 2), BL - 41 - k, w, 1, cM); }
+      const BX = WX + 172;
+      p.rect(BX, BL - 84, 12, 85, cM); lit(BX, BL - 84, 84); for (let y = BL - 78; y < BL - 26; y += 8) { p.rect(BX + 3, y, 1, 4, cD); p.rect(BX + 8, y, 1, 4, cD); }
+      p.rect(BX - 2, BL - 98, 16, 14, cM); lit(BX - 2, BL - 98, 14); p.disc(BX + 6, BL - 91, 5, C.clock); p.put(BX + 5, BL - 92, cD);
+      p.rect(BX - 1, BL - 106, 14, 8, cM); for (let k = 0; k < 3; k++) p.rect(BX + 2 + k * 4, BL - 104, 2, 5, cD);
+      for (let k = 0; k < 18; k++) { const w = Math.max(1, Math.round(14 * (1 - k / 18))); p.rect(BX + 6 - Math.floor(w / 2), BL - 107 - k, w, 1, cM); }
+      p.rect(BX + 5, BL - 130, 1, 6, cM); for (const px of [BX - 2, BX + 12]) p.rect(px, BL - 112, 2, 6, cM);
+      S.clock = [BX + 5, y0 + BL - 92];
+      // 塔桥：两座哥特塔（尖顶 + 四角小塔），上层两道人行桥夹斜撑，下层开合桥面；两边悬索吊跨弯下来接到岸边桥墩
+      p.rect(996, BL - 1, 210, 2, C.land[1]);
+      for (const tx of [1052, 1130]) {
+        p.rect(tx, BL - 64, 16, 65, cM); lit(tx, BL - 64, 64); p.rect(tx + 4, BL - 58, 2, 10, cD); p.rect(tx + 10, BL - 58, 2, 10, cD); p.rect(tx + 5, BL - 32, 6, 12, cD);
+        for (let k = 0; k < 12; k++) { const w = Math.max(1, Math.round(12 * (1 - k / 12))); p.rect(tx + 8 - Math.floor(w / 2), BL - 65 - k, w, 1, cM); }
+        for (const px of [tx - 1, tx + 15]) { p.rect(px, BL - 72, 2, 9, cM); p.put(px + (px < tx ? 1 : 0), BL - 74, cM); }
+        p.rect(tx + 7, BL - 82, 2, 6, cM);
+      }
+      p.rect(1068, BL - 54, 62, 2, cM); p.rect(1068, BL - 47, 62, 2, cM); for (let x = 1069; x < 1128; x += 4) p.line(x, BL - 52, x + 3, BL - 48, cD);
+      p.rect(1068, BL - 18, 62, 2, cD);
+      for (const [x0, x1] of [[1052, 1000], [1146, 1200]]) {
+        const n = Math.abs(x1 - x0), sg = Math.sign(x1 - x0);
+        for (let k = 0; k <= n; k++) { const tt = k / n, y = Math.round(BL - 48 + 32 * tt + 14 * tt * (1 - tt)); p.rect(x0 + sg * k, y, 1, 2, cD); if (k % 6 === 3) p.rect(x0 + sg * k, y + 2, 1, BL - 16 - y - 2, cD); }
+        p.rect(Math.min(x0, x1), BL - 16, n, 2, cD);
+      }
+      p.rect(996, BL - 22, 6, 22, cM); p.rect(1198, BL - 22, 6, 22, cM);
+      S.far = p.done(); S.farY = y0; S.farChim = chim;
+    }
+    // ---- 中远景：对岸树林 + 庄园 + 村子，下面是泰晤士河（倒影、波光）----
+    {
+      const y0 = 400, FW = TW * 2, h = F0 - y0, p = Pix(FW, h, true), r = rng(131), WL = 78, B = C.bank;   // WL = 水线（世界 y 478）
+      const slope = (x) => Math.round(ridge(x, 50, [[6, 2], [3, 5]], 1.1));
+      const canopy = (x) => Math.round(ridge(x, 44, [[7, 3], [4, 7], [2, 13]], 2.4));
+      const gaps = [[566, 716], [1118, 1214], [1880, 1990]];
+      const inGap = (x) => gaps.some(([a, b]) => x > a && x < b);
+      // 草坡（树林的空当里露出来），树林底下的暗处
+      for (let x = 0; x < FW; x++) { const t = slope(x); for (let y = t; y < WL; y++) p.put(x, y, y === t ? C.field[1] : C.field[0]); if (!inGap(x)) for (let y = canopy(x) + 10; y < WL; y++) p.put(x, y, B[0]); }
+      // 庄园：白色乔治式大宅（中间柱廊、四坡石板顶、两根烟囱），前面一片草坪
+      const hx = 612, hb = slope(650) + 16;
+      p.rect(hx - 10, hb, 76, WL - hb, C.field[1]);
+      p.rect(hx, hb - 18, 56, 18, C.house[0]); p.rect(hx, hb - 18, 1, 18, C.house[1]);
+      for (let k = 0; k < 58; k++) { const rh = Math.min(5, k + 1, 58 - k); p.rect(hx - 1 + k, hb - 18 - rh, 1, rh, C.house[2]); }
+      for (const ry of [hb - 15, hb - 8]) for (let wx = hx + 4; wx < hx + 54; wx += 6) if (wx < hx + 22 || wx > hx + 32) p.rect(wx, ry, 2, 4, C.house[3]);
+      p.rect(hx + 22, hb - 21, 12, 21, C.house[1]); for (let k = 0; k < 12; k++) p.rect(hx + 22 + k, hb - 21 - Math.floor((6 - Math.abs(k - 5.5)) * 0.6), 1, Math.floor((6 - Math.abs(k - 5.5)) * 0.6) + 1, C.house[1]);
+      for (let k = 0; k < 4; k++) p.rect(hx + 23 + k * 3, hb - 16, 1, 16, C.house[0]);
+      for (const cx of [hx + 6, hx + 47]) p.rect(cx, hb - 27, 3, 6, C.house[2]);
+      S.villaChim = [[hx + 7, y0 + hb - 28], [hx + 48, y0 + hb - 28]];
+      // 村子：诺曼式方塔教堂（城垛）+ 几间坡顶小屋
+      const vx = 1150, vb = slope(1160) + 12;
+      p.rect(vx, vb - 30, 12, 30, C.church[0]); p.rect(vx, vb - 30, 1, 30, C.church[1]); for (let k = 0; k < 12; k += 3) p.rect(vx + k, vb - 32, 2, 2, C.church[0]); p.rect(vx + 5, vb - 24, 2, 4, C.house[3]);
+      p.rect(vx + 12, vb - 14, 26, 14, C.church[0]); for (let k = 0; k < 26; k++) p.rect(vx + 12 + k, vb - 14 - Math.min(5, Math.floor(k / 3)), 1, Math.min(5, Math.floor(k / 3)), C.house[2]);
+      for (const [cx, cw] of [[vx - 30, 16], [vx + 44, 18]]) { p.rect(cx, vb - 9, cw, 9, C.house[0]); for (let k = 0; k < cw; k++) { const rh = Math.floor((cw / 2 - Math.abs(k + 0.5 - cw / 2)) * 0.7); p.rect(cx + k, vb - 9 - rh, 1, rh + 1, C.cottage); } p.rect(cx + 3, vb - 6, 2, 3, C.house[3]); }
+      // 树林：一团团圆树冠沿起伏线排开，按高低先远后近画（低的在前），左上受光
+      const crowns = [];
+      for (let i = 0; i < 560; i++) { const cx = r() * FW; if (inGap(cx)) continue; const rr = 6 + r() * 8; crowns.push([cx, canopy(cx) + rr * 0.6 + r() * 7, rr]); }
+      crowns.sort((a, b) => a[1] - b[1]);
+      for (const [cx, cy, rr] of crowns) p.disc(cx, cy, rr * 1.15, (x, y, a, b) => (b < -0.35 && a < 0.2 ? B[3] : a > 0.45 || b > 0.5 ? B[1] : B[2]), rr);
+      // 空当两边的树林收边：几棵单独的树
+      for (const gx of [570, 712, 1122, 1210]) { p.rect(gx - 1, canopy(gx) + 14, 2, 10, C.trunk[1]); p.disc(gx, canopy(gx) + 12, 7, (x, y, a, b) => (b < -0.35 && a < 0.2 ? B[3] : B[2]), 9); }
+      // 对岸水边：一道暗边 + 芦苇
+      for (let x = 0; x < FW; x++) { p.put(x, WL - 1, B[0]); if (hash(x, 31) < 0.12) p.rect(x, WL - 2 - Math.floor(hash(x, 32) * 4), 1, 3, C.reed[1]); }
+      // 河：上面一截是对岸的倒影（压暗、一行行断开），往下是天光，越近越亮一点
+      for (let x = 0; x < FW; x++) {
+        const rl = inGap(x) ? 5 : Math.max(5, Math.round((WL - canopy(x)) * 0.5));
+        for (let y = WL; y < h; y++) {
+          const d = y - WL;
+          let col;
+          if (d < rl) col = (d % 3 === 2 && hash((x + d * 7) >> 3, d) < 0.55) ? C.water[1] : inGap(x) ? C.water[0] : C.refl[d < rl * 0.5 ? 0 : 1];
+          else if (d < rl + 2) col = bayer(x, y) < 0.5 ? C.water[1] : C.water[0];
+          else col = d < 20 ? C.water[1] : d < 22 ? (bayer(x, y) < 0.5 ? C.water[2] : C.water[1]) : C.water[2];
+          p.put(x, y, col);
+        }
+      }
+      for (let i = 0; i < 260; i++) { const x = Math.floor(r() * FW), y = WL + 14 + Math.floor(r() * 22), w = 3 + Math.floor(r() * 6); p.rect(x, y, w, 1, y > WL + 22 ? C.water[3] : C.water[2]); }   // 静止的波纹
+      S.mid2 = p.done(); S.mid2Y = y0; S.WL = y0 + WL;
+    }
+    // 驳船（泰晤士帆驳：黑船身、赭红的斜桁帆 + 顶帆 + 前帆）、小蒸汽艇、天鹅
+    S.barge = (() => {
+      const p = Pix(72, 48), [s0, s1, s2] = C.sail, hull = 41;
+      p.rect(4, hull, 60, 5, '#1a1816'); p.rect(2, hull, 4, 2, '#1a1816'); p.rect(62, hull - 1, 6, 3, '#1a1816'); p.rect(4, hull, 60, 1, '#3a3630'); p.disc(30, hull + 3, 6, '#242220', 3);   // 船身 + 披水板
+      p.rect(28, 4, 1, hull - 4, C.wood[1]);
+      for (let y = 8; y < hull - 2; y++) { const k = (y - 8) / (hull - 10); p.rect(29, y, Math.round(8 + k * 22), 1, y % 7 === 0 ? s2 : s1); p.put(29, y, s0); }   // 主帆（往后张开）
+      p.line(29, hull - 3, 54, 9, C.wood[0]);   // 斜桁
+      for (let y = 0; y < 8; y++) p.rect(29, y + 1, Math.round(8 - y * 0.6), 1, s1);   // 顶帆
+      for (let y = 10; y < hull - 2; y++) { const k = (y - 10) / (hull - 12); p.rect(Math.round(27 - k * 16), y, Math.round(k * 16), 1, k > 0.5 && y % 5 === 0 ? s2 : s0); }   // 前帆
+      p.rect(60, 26, 1, hull - 26, C.wood[1]); for (let y = 28; y < hull - 2; y++) p.rect(61, y, 4, 1, s0);   // 后桅小帆
+      return p.done();
+    })();
+    S.launch = (() => {
+      const p = Pix(34, 16);
+      p.rect(2, 11, 30, 3, '#6e6b60'); p.rect(0, 10, 4, 2, '#6e6b60'); p.rect(2, 11, 30, 1, '#86837a'); p.rect(3, 14, 26, 1, '#2a2c2c');
+      p.rect(12, 6, 12, 5, '#4a3a2a'); p.rect(12, 6, 12, 1, '#5e4a34'); for (let k = 0; k < 3; k++) p.rect(14 + k * 3, 8, 2, 2, '#2a2c2c');
+      p.rect(8, 2, 3, 9, '#2a2c2c'); p.rect(8, 2, 3, 1, '#7a6a40');   // 烟囱（黄铜箍）
+      p.rect(30, 8, 1, 3, '#2a2c2c'); p.rect(25, 7, 1, 4, '#2a2c2c');
+      return p.done();
+    })();
+    // ---- 中景：这边的河岸（两屏宽）：草岸、纤道、橡树、栈桥、船屋、栅栏、长椅；垂柳另画（随风摆） ----
+    {
+      const y0 = 300, MW = TW * 2, h = F0 - y0, p = Pix(MW, h, true), r = rng(151), Y = (wy) => wy - y0;
+      const G = C.grass, bankAt = (x) => 511 + Math.round(ridge(x, 0, [[1.5, 3], [1, 9]], 3.3));
+      for (let x = 0; x < MW; x++) {
+        const t = Y(bankAt(x));
+        for (let y = t; y < h; y++) { const d = y - t; p.put(x, y, d === 0 ? G[4] : d === 1 ? G[3] : d < 5 ? (bayer(x, y) < 0.5 ? G[3] : G[2]) : G[2]); }
+        if (hash(x, 41) < 0.25) p.put(x, t - 1, G[3]);   // 岸边的草尖
+      }
+      // 纤道：一条碎石小路，上沿受光、下沿压暗，稀疏的石子
+      for (let x = 0; x < MW; x++) { p.put(x, Y(520), C.gravel[1]); p.rect(x, Y(521), 1, 6, C.gravel[3]); p.put(x, Y(521), C.gravel[4]); p.put(x, Y(527), C.gravel[1]); if (hash(x, 43) < 0.18) p.put(x, Y(522) + Math.floor(hash(x, 44) * 4), hash(x, 45) < 0.5 ? C.gravel[5] : C.gravel[2]); }
+      // 芦苇丛：一簇簇竖线，几根顶着香蒲棒
+      for (let i = 0; i < 70; i++) {
+        const cx = Math.floor(r() * MW), t = Y(bankAt(cx));
+        for (let k = 0; k < 7; k++) { const x = cx + k * 2 - 6 + Math.floor(r() * 2), hh = 6 + Math.floor(r() * 9); p.rect(x, t - hh, 1, hh + 1, k % 3 ? C.reed[1] : C.reed[2]); if (r() < 0.2) p.rect(x, t - hh - 3, 2, 4, C.reed[3]); }
+      }
+      // 橡树：一团团平涂的树冠（暗 → 中 → 亮三层往左上错开），树干左边受光；树下平涂影子（光从左上来，影子偏右）
+      const oak = (tx, k) => {
+        const b = Y(GE) - 2 + Math.round(hash(tx, 3) * 3), th = Math.round(54 * k), tw = Math.round(8 * k);
+        for (let i = -30; i <= 40; i++) p.rect(tx + i, b - 1, 1, 2, G[0]);
+        p.line(tx, b - th + 4, tx - 24 * k, b - th - 26 * k, C.trunk[1], 4); p.line(tx, b - th + 4, tx + 22 * k, b - th - 30 * k, C.trunk[1], 4); p.line(tx, b - th, tx + 2, b - th - 40 * k, C.trunk[1], 3);
+        p.rect(tx - tw / 2 - 2, b - 3, tw + 4, 3, C.trunk[1]); p.rect(tx - tw / 2, b - th, tw, th, C.trunk[1]); p.rect(tx - tw / 2, b - th, 2, th, C.trunk[2]); p.rect(tx + tw / 2 - 2, b - th, 2, th, C.trunk[0]);
+        const cy = b - th - 34 * k, blobs = [[-30, 6, 24], [-6, -14, 30], [24, -2, 26], [-18, 20, 20], [14, 20, 22], [38, 16, 16], [-40, 22, 14]];
+        for (const [dx, dy, rr] of blobs) p.disc(tx + dx * k, cy + dy * k, rr * k, C.leaf[1], rr * k * 0.85);
+        for (const [dx, dy, rr] of blobs) p.disc(tx + (dx - 4) * k, cy + (dy - 5) * k, rr * k * 0.78, C.leaf[2], rr * k * 0.62);
+        for (const [dx, dy, rr] of blobs) if (dy < 10) p.disc(tx + (dx - 9) * k, cy + (dy - 10) * k, rr * k * 0.42, C.leaf[3], rr * k * 0.32);
+        for (let i = 0; i < 5; i++) p.disc(tx + (-22 + i * 12) * k, cy + (26 + (i % 2) * 3) * k, 3 * k, C.leaf[0], 2 * k);
+      };
+      for (const [tx, k] of [[30, 1.1], [652, 1.15], [1268, 1.05], [1380, 0.9], [2120, 1.1], [2230, 0.95], [2400, 1.15]]) oak(tx, k);
+      // 栈桥：木板桥面 + 一排桩子插进水里，栏杆柱子；钓鱼的坐在头上
+      const jx = 770, jy = Y(505);
+      for (let x = jx; x < jx + 66; x += 9) { p.rect(x, jy, 2, 10, C.wood[1]); p.put(x, jy, C.wood[2]); }
+      p.rect(jx - 2, jy - 3, 70, 3, C.wood[2]); p.rect(jx - 2, jy - 3, 70, 1, C.wood[3]); for (let x = jx; x < jx + 66; x += 5) p.put(x, jy - 2, C.wood[1]);
+      for (const x of [jx, jx + 33]) { p.rect(x, jy - 13, 2, 10, C.wood[1]); p.put(x, jy - 13, C.wood[3]); }
+      p.rect(jx, jy - 11, 35, 1, C.wood[2]);
+      S.jetty = [jx, y0 + jy - 3];
+      // 船屋：两层木板房、陡山墙、二楼阳台栏杆、下面黑洞洞的船库门通到水里，屋脊上一根旗杆（小旗另画）
+      const bx = 1536, bb = Y(512);
+      p.rect(bx, bb - 44, 64, 44, C.wood[2]); for (let x = bx + 3; x < bx + 64; x += 4) p.rect(x, bb - 44, 1, 44, C.wood[1]); p.rect(bx, bb - 44, 2, 44, C.wood[3]);
+      for (let k = 0; k < 74; k++) { const rh = Math.round((37 - Math.abs(k - 36.5)) * 0.62); p.rect(bx - 5 + k, bb - 44 - rh, 1, rh + 1, k < 37 ? '#3e4246' : '#34383c'); p.put(bx - 5 + k, bb - 44 - rh, '#7a776a'); }
+      p.rect(bx + 14, bb - 22, 36, 22, '#141a18'); p.rect(bx + 12, bb - 24, 40, 2, C.wood[3]);
+      p.rect(bx - 2, bb - 30, 68, 1, '#7a776a'); for (let x = bx - 2; x < bx + 66; x += 4) p.rect(x, bb - 29, 1, 5, '#6a675c'); p.rect(bx - 2, bb - 25, 68, 1, '#6a675c');
+      p.rect(bx + 26, bb - 40, 12, 7, '#1e2422'); p.rect(bx + 31, bb - 40, 1, 7, C.wood[2]);
+      p.rect(bx + 31, bb - 84, 1, 22, C.wood[1]); S.boatFlag = [bx + 32, y0 + bb - 84];
+      p.line(bx + 14, bb + 2, bx + 50, bb + 2, C.gravel[2], 2);   // 船台
+      // 栅栏（柱子 + 两道横杆）和一张铸铁长椅，都按脚落地 + 平涂影子
+      for (const [a, b2] of [[880, 1010], [1430, 1520], [1700, 1860]]) {
+        for (let x = a; x <= b2; x += 18) { p.rect(x, Y(530), 2, 11, C.wood[1]); p.put(x, Y(530), C.wood[3]); p.rect(x + 2, Y(540), 3, 1, G[0]); }
+        p.rect(a, Y(532), b2 - a + 2, 1, C.wood[2]); p.rect(a, Y(536), b2 - a + 2, 1, C.wood[2]);
+      }
+      const bn = 1312; p.rect(bn, Y(531), 18, 2, C.wood[3]); p.rect(bn, Y(525), 18, 1, C.wood[2]); p.rect(bn, Y(527), 18, 1, C.wood[2]); for (const lx of [bn, bn + 16]) p.rect(lx, Y(525), 2, 13, C.iron[1]); p.rect(bn - 2, Y(538), 24, 1, G[0]);
+      // 野餐布（红白格）+ 藤篮，铺在 652 那棵橡树下
+      const px0 = 546;
+      for (let x = 0; x < 50; x++) for (let y = 0; y < 4; y++) p.put(px0 + x + Math.round((3 - y) * 0.7), Y(535) + y, ((x >> 2) + (y >> 1)) % 2 ? C.cloth[0] : C.cloth[1]);
+      p.rect(px0 + 40, Y(530), 9, 6, '#5a4630'); p.rect(px0 + 40, Y(530), 9, 1, '#6e5a3e'); p.line(px0 + 41, Y(530), px0 + 44, Y(527), '#4a3a28'); p.line(px0 + 47, Y(530), px0 + 44, Y(527), '#4a3a28');
+      S.picnic = px0;
+      // 零星的野花
+      for (let i = 0; i < 160; i++) { const x = Math.floor(r() * MW), y = Y(530 + r() * 21); if (y > Y(519) && y < Y(529)) continue; p.put(x, y, r() < 0.6 ? '#7a7868' : '#7a6c3a'); }
+      S.mid = p.done(); S.midY = y0;
+    }
+    // 垂柳：三层往下垂的柳帘叠起来（后层最宽最长、快拖到地，前层短、受光），整体上窄下宽像喷泉；每层上沿一道受光边、下沿参差，
+    // 每 4 列一道暗缝像一束束柳条；后层中间短一截，露出树干。柳帘下半截随风摆（6 帧预先画好）
+    S.willowF = Array.from({ length: 6 }, (_, f) => {
+      const Wd = 160, Hd = 136, q = Pix(Wd, Hd), sway = (f / 5 * 2 - 1) * 3, base = Hd - 1, cx = 80, [w0, w1, w2, w3] = C.willow, HI = '#536b42';
+      q.line(cx + 2, base, cx - 4, base - 46, C.trunk[1], 8); q.line(cx - 1, base, cx - 7, base - 46, C.trunk[2], 2);
+      q.line(cx - 4, base - 44, cx - 26, base - 84, C.trunk[1], 5); q.line(cx - 3, base - 44, cx + 22, base - 88, C.trunk[1], 4); q.line(cx - 4, base - 46, cx - 2, base - 100, C.trunk[1], 4);
+      q.rect(cx - 6, base - 2, 16, 2, C.trunk[1]);
+      const tiers = [
+        { top: 22, hw: 62, curve: 34, len: 86, jit: 20, cols: [w2, w1, w0], gap: true },
+        { top: 12, hw: 50, curve: 28, len: 54, jit: 16, cols: [w3, w2, w1] },
+        { top: 4, hw: 34, curve: 20, len: 30, jit: 12, cols: [HI, w3, w2] },
+      ];
+      for (const T of tiers) for (let x = cx - T.hw; x <= cx + T.hw; x++) {
+        const a = (x - cx) / T.hw, top = Math.round(T.top + a * a * T.curve);
+        let len = T.len + Math.round(hash(x, T.top) * T.jit) - Math.round(a * a * 14);
+        if (T.gap && Math.abs(x - cx + 3) < 7) len = Math.round(len * 0.45);
+        len = Math.min(len, base - 4 - top);
+        const col = a < -0.45 ? T.cols[0] : a > 0.4 || (x + (T.top >> 2)) % 4 === 0 ? T.cols[2] : T.cols[1];
+        for (let k = 0; k < len; k++) {
+          if (k > len - 4 && (x & 1)) continue;
+          const ff = k / len;
+          q.put(Math.round(x + a * 6 * ff + sway * ff * ff * (0.6 + hash(x, 8) * 0.8)), top + k, k === 0 ? T.cols[0] : col);
+        }
+      }
+      return q.done();
+    });
+    S.willows = [[330, 516], [946, 514], [1800, 515]];   // [中景 x, 树根世界 y]
+    // 高轮自行车的轮子（大轮 8 帧转动）
+    S.wheel = Array.from({ length: 8 }, (_, f) => {
+      const q = Pix(25, 25), c = 12.5;
+      for (let k = 0; k < 72; k++) { const a = k / 72 * TAU; q.put(c + Math.cos(a) * 11.5 - 0.5, c + Math.sin(a) * 11.5 - 0.5, '#1a1c1e'); q.put(c + Math.cos(a) * 10.5 - 0.5, c + Math.sin(a) * 10.5 - 0.5, '#2a2c2e'); }
+      for (let s = 0; s < 6; s++) { const a = f / 8 * (TAU / 6) + s * TAU / 6; for (let d = 2; d < 10; d += 1) if ((d + s) % 2) q.put(c + Math.cos(a) * d - 0.5, c + Math.sin(a) * d - 0.5, '#4a4c4e'); }
+      q.rect(11, 11, 3, 3, '#6a6050');
+      return q.done();
+    });
+    // ---- 地面（世界 1:1）：远处是草地，近处一条碎石路（两道车辙、中间一溜草）；路面以下是碎石层 + 泥土截面 ----
+    const RT = GROUND - 30;   // 碎石路的上沿
+    S.floor = floorTex(C.soil, (p, x, y) => {
+      const d = y + F0, gr = C.gravel;
+      if (d < RT) {   // 草地：大块平涂的深浅草斑（被风吹倒的方向不同），斑块边上只留一圈抖动
+        if (d === RT - 1) return C.grass[0];
+        const v = Math.sin(x / 97 + d / 9) + Math.sin(x / 41 - d / 5) * 0.5 + Math.sin(x / 233) * 0.4;
+        return v > 0.75 + (bayer(x, y) - 0.5) * 0.12 ? '#39482c' : v < -1.15 + (bayer(x, y) - 0.5) * 0.12 ? C.grass[1] : C.grass[2];
+      }
+      if (d < GROUND) {
+        const e = d - RT, v = hash(x >> 1, d >> 1), rut = (e >= 7 && e <= 10) || (e >= 20 && e <= 23);
+        if (e === 0) return v < 0.5 ? gr[1] : C.grass[1];   // 草边压着路沿
+        if (e === 1) return gr[4];
+        if (rut) return v < 0.12 ? gr[1] : gr[2];
+        return v < 0.06 ? gr[5] : v < 0.16 ? gr[1] : gr[3];
+      }
+      const k = d - GROUND;
+      if (k >= 4 && k < 10) { const v = hash(x >> 1, k >> 1); return v < 0.3 ? C.soil[1] : v < 0.5 ? gr[1] : gr[2]; }   // 碎石层
+      return null;
+    }, [], (p, r, Yf) => {
+      for (let i = 0; i < 420; i++) { const x = Math.floor(r() * TW), y = Math.floor(Yf(556 + r() * (RT - 560))), tall = r() < 0.3; p.put(x, y, C.grass[3]); p.put(x - 1, y - 1, C.grass[3]); p.put(x + 1, y - 1, C.grass[3]); if (tall) { p.put(x - 1, y - 2, C.grass[4]); p.put(x + 1, y - 2, C.grass[3]); } else p.put(x, y - 1, C.grass[1]); }   // 草簇（三成高一点、尖上受光）
+      for (let i = 0; i < 26; i++) { const cx = r() * TW, cy = Yf(560 + r() * (RT - 568)), col = r() < 0.6 ? '#8a887a' : '#8a7a3e'; for (let k = 0; k < 6; k++) { const x = cx + (r() - 0.5) * 16, y = cy + (r() - 0.5) * 5; p.put(x, y, col); p.put(x, y + 1, C.grass[3]); } }   // 一小片一小片的雏菊、毛茛
+      for (let x = 0; x < TW; x++) if (hash(x >> 1, 51) < 0.35) p.rect(x, Yf(RT) - 1, 1, 1 + Math.floor(hash(x, 52) * 2), C.grass[3]);   // 路沿垂下来的草
+      for (let i = 0; i < 120; i++) { const x = Math.floor(r() * TW), y = Yf(RT + 12 + Math.floor(r() * 7)); p.put(x, y, C.grass[2]); if (r() < 0.5) p.put(x + 1, y - 1, C.grass[3]); }   // 两道车辙中间那溜草
+      for (let i = 0; i < 70; i++) { const x = Math.floor(r() * TW), y = Yf(RT + 3 + Math.floor(r() * 26)); p.rect(x, y, 2, 1, C.gravel[4]); p.put(x + 2, y, C.gravel[0]); p.rect(x, y + 1, 2, 1, C.gravel[1]); }   // 大一点的石子：亮面在左上
+    });
+    // ---- 近景：里程碑、栅栏残段、牛蒡叶的剪影 ----
+    S.near = nearTex(1600, 64, (p) => {
+      p.disc(300, 40, 10, C.near, 14); p.rect(290, 40, 21, 24, C.near);   // 里程碑
+      for (const fx of [820, 900]) p.rect(fx, 18, 6, 46, C.near); p.rect(816, 26, 90, 4, C.near); p.rect(816, 40, 90, 4, C.near);
+      for (const [cx, rr] of [[1260, 22], [1300, 16], [520, 18]]) p.disc(cx, 64, rr, C.near, rr * 0.7);
+    }, ['#3e4a34', '#1e2a1a']);
+    S.grass = []; { const r = rng(171); for (let i = 0; i < 80; i++) S.grass.push([r() * 1600, 12 + r() * 30, r() < 0.14 ? 'parsley' : 'blade', r() * TAU]); }
+    S.grassFrames = Array.from({ length: 12 }, (_, f) => {
+      const q = Pix(1600, 80, true), a = f / 12 * TAU, wind = Math.sin(a) * 0.5 + Math.sin(2 * a + 1) * 0.2, H0 = 79;
+      for (const [u, hh, kind, ph] of S.grass) {
+        const bend = (wind + Math.sin(a + ph) * 0.15) * hh * 0.35;
+        for (let k = 0; k < hh; k++) { const ff = k / hh, x = u + bend * ff * ff; q.put(Math.round(x), H0 - k, C.near); if (kind === 'blade' && k < hh * 0.6) q.put(Math.round(u + 3 + bend * 0.8 * ff * ff), H0 - k, C.near); }
+        if (kind === 'parsley') { const tx = Math.round(u + bend), ty = H0 - hh; for (let k = -6; k <= 6; k++) q.put(tx + k, ty - 2 + Math.round((k * k) / 18), C.near); for (let k = -6; k <= 6; k += 2) q.rect(tx + k - 1, ty - 4 + Math.round((k * k) / 18), 3, 2, C.near); }   // 峨参的平顶花伞
+      }
+      return q.done();
+    });
+    // ---- 人：野餐的一对、钓鱼的、划艇里的孩子、骑高轮车的绅士 ----
+    const P0 = { name: SA.Config.text("coal_50e716572f3a"), eyes: 2, iris: 'ink' };
+    S.folk = {
+      lady: { ...P0, id: 'sub-lady', tint: 'rose', iris: 'green', wig: ['bun', 'chestnut'], acc: [['blush']] },
+      gent: { ...P0, id: 'sub-gent', tint: 'navy', acc: [['handlebar', { color: '#3a2a20' }], ['bowler', { color: '#1a1a1e', band: '#5a3a2a' }]] },
+      angler: { ...P0, id: 'sub-angler', tint: 'moss', acc: [['pipe'], ['flatCap', { color: '#4a4a3a' }]] },
+      kid: { ...P0, id: 'sub-kid', tint: 'ochre', acc: [['beanie', { color: '#5a6a8a', shade: '#3a4a6a' }]] },
+      rider: { ...P0, id: 'sub-rider', tint: 'ash', acc: [['cravat', { color: '#e0d8c8' }], ['handlebar', { color: '#4a4a4a' }], ['topHat', { color: '#18181c', band: '#6a2a2a' }]] },
+    };
+    const folkCache = {};
+    const folk = (key, pose, expr, look) => { const k = `${key}|${pose}|${expr}|${look}`; return folkCache[k] || (SA.Coal ? (folkCache[k] = SA.Coal.draw(S.folk[key], { size: 'sprite', pose, expr, look })) : document.createElement('canvas')); };
+    // ---- 每帧 ----
+    S.back = (g, vw, vh, oy, camx, t) => {
+      paintSky(g, S, vw, vh, oy);
+      const sx = Math.round(vw * 0.16), sy = Math.round(110 - oy);   // 左上的太阳：暖白小圆 + 很淡的一圈光
+      g.globalAlpha = 0.07; blob(g, sx, sy, 56, '#d8cca0'); g.globalAlpha = 0.12; blob(g, sx, sy, 26, '#e0d4a8'); g.globalAlpha = 1; blob(g, sx, sy, 11, '#e4dab4'); blob(g, sx - 2, sy - 2, 6, '#ece4c4');
+      clouds(g, S, vw, oy, camx, t);
+      { const span = vw + 200, ax = ((vw * 0.7 + t * 5 - camx * 0.03) % span + span) % span - 100; g.drawImage(S.airship, Math.round(ax), Math.round(262 - oy + Math.sin(t * 0.3) * 2)); }
+      birds(g, vw, oy, t + 7, 240, 50, '#2c343a', 1);
+      const rF = camx * 0.04, FW = S.far.width, [cD, , , cL] = C.city;
+      strip(g, S.far, S.farY, rF, vw, oy);
+      for (const [u, y] of S.farChim) spots(u, rF, FW, vw, 40, (x) => smoke(g, x, y - oy, t, u, ['#5c666a', '#677074'], 0.45, 36, 30));
+      spots(S.clock[0], rF, FW, vw, 10, (x) => { const a = t * 0.2 - Math.PI / 2; R(g, x + Math.round(Math.cos(a) * 3), S.clock[1] - oy + Math.round(Math.sin(a) * 3), 1, 1, cD); });   // 钟楼的分针
+      spots(S.flag[0], rF, FW, vw, 10, (x) => { for (let k = 0; k < 6; k++) R(g, x + k, S.flag[1] - oy + Math.round(Math.sin(t * 5 - k * 0.8) * (k / 6) * 1.2), 1, 3, k % 3 ? '#5e4a4c' : '#4a5066'); });
+      // 水晶宫玻璃上慢慢滑过一道反光
+      { const [a, b, gy, gh] = S.glass, f = (t * 0.07) % 1; if (f < 0.6) spots(a + (b - a) * (f / 0.6), rF, FW, vw, 4, (x) => { g.globalAlpha = Math.sin(f / 0.6 * Math.PI) * 0.8; R(g, x, gy - oy, 2, gh, cL); R(g, x + 3, gy - oy, 1, gh, cL); g.globalAlpha = 1; }); }
+      const r2 = camx * 0.12, W2 = S.mid2.width, wl = S.WL - oy;
+      strip(g, S.mid2, S.mid2Y, r2, vw, oy);
+      for (const [u, y] of S.villaChim) spots(u, r2, W2, vw, 30, (x) => smoke(g, x, y - oy, t, u, ['#4a5452', '#56605e'], 0.35, 30, 24));
+      // 河面波光：一段段亮线，轮流闪
+      for (let i = 0; i < 70; i++) spots(Math.floor(hash(i, 61) * W2), r2, W2, vw, 8, (x) => { if (Math.sin(t * (1.2 + hash(i, 62)) + i * 2.3) > 0.55) R(g, x, wl + 16 + Math.floor(hash(i, 63) * 18), 2 + Math.floor(hash(i, 64) * 4), 1, i % 4 ? C.water[3] : C.water[4]); });
+      // 驳船往右慢慢漂，蒸汽艇往左开（后面拖两道尾浪、冒烟），两只天鹅
+      const boat = (u, img, dx, dy, fn) => spots(u, r2, W2, vw, img.width + 40, (x) => { const bob = Math.round(Math.sin(t * 1.3 + u) * 0.6); if (fn) fn(x, bob); g.drawImage(img, Math.round(x - dx), Math.round(wl + dy - img.height + bob)); g.globalAlpha = 0.35; R(g, x - dx + 4, wl + dy + 1 + bob, img.width - 10, 1, '#1a2024'); R(g, x - dx + 8, wl + dy + 3 + bob, img.width - 18, 1, '#1a2024'); g.globalAlpha = 1; });
+      for (const k of [0, 0.5]) boat(((t * 3.5 + k * (W2 + 300)) % (W2 + 300)) - 150, S.barge, 36, 14, (x, bob) => { g.globalAlpha = 0.3; for (let i = 0; i < 4; i++) R(g, x - 6 + (i % 2) * 2, wl + 16 + i * 2 + bob, 20 - i * 3, 1, C.sail[2]); g.globalAlpha = 1; });   // 帆的倒影
+      boat(W2 + 150 - ((t * 11) % (W2 + 300)), S.launch, 17, 19, (x, bob) => {
+        g.globalAlpha = 0.5; for (let i = 1; i < 6; i++) { R(g, x + 14 + i * 7, wl + 18 + i + bob, 5, 1, C.water[4]); R(g, x + 14 + i * 7, wl + 20 - Math.floor(i / 2) + bob, 4, 1, C.water[3]); } g.globalAlpha = 1;
+        smoke(g, x - 7, wl + 19 - 15 + bob, t, 4, ['#5a6266', '#6a7276'], 0.4, 24, 30);
+      });
+      for (const [k, ph] of [[0, 0], [1, 2.1]]) spots(((t * 1.6 + 400 + k * 14) % W2), r2, W2, vw, 12, (x) => {
+        const y = wl + 24 + k * 2, nod = Math.sin(t * 0.8 + ph) > 0.7 ? 1 : 0;
+        R(g, x, y - 2, 6, 2, '#8c8c84'); R(g, x + 1, y - 3, 4, 1, '#a2a29a'); R(g, x + 5, y - 6 + nod, 1, 4, '#9a9a92'); R(g, x + 5, y - 7 + nod, 2, 1, '#9a9a92'); R(g, x + 7, y - 7 + nod, 1, 1, '#6a4a2a');
+        g.globalAlpha = 0.3; R(g, x, y + 1, 6, 1, '#a2a29a'); g.globalAlpha = 1;
+      });
+      strip(g, S.mid, S.midY, camx * 0.45, vw, oy);
+      const rM = camx * 0.45, MW = S.mid.width, wf = S.willowF[Math.floor((Math.sin(t * 0.7) + 1) / 2 * 5.99)];
+      for (const [u, by] of S.willows) spots(u, rM, MW, vw, 160, (x) => { g.fillStyle = C.grass[0]; g.fillRect(Math.round(x - 30), by - oy - 1, 90, 2); g.drawImage(wf, Math.round(x - 80), Math.round(by - oy - wf.height + 1)); });
+      // 船屋屋脊上的小旗
+      spots(S.boatFlag[0], rM, MW, vw, 12, (x) => { for (let k = 0; k < 9; k++) R(g, x + k, S.boatFlag[1] - oy + Math.round(Math.sin(t * 4 - k * 0.7) * (k / 9) * 1.5), 1, Math.max(1, 5 - Math.floor(k / 2)), '#6a3a32'); });
+      const look = (x) => (x < vw / 2 ? 1 : -1);   // 背景里的人都朝画面中间（打架的地方）看
+      // 野餐的一对：女士撑着阳伞，先生时不时指着这边
+      spots(S.picnic, rM, MW, vw, 80, (x) => {
+        const beat = Math.floor(t / 2.2) % 5, foot = GE - 2 - oy;
+        g.drawImage(folk('lady', beat === 3 ? 'cheer' : 'hold', beat === 3 ? 'happy' : 'normal', look(x)), Math.round(x - 6), Math.round(foot - 33));
+        const px2 = x + 21, py2 = foot - 38 + (beat === 3 ? -2 : 0);   // 阳伞：女士右手撑着，伞面粉白相间、下沿一道暗边
+        R(g, px2, py2, 1, 32, '#3a2e26');
+        for (let k = -12; k <= 12; k++) { const hh = Math.round(Math.sqrt(144 - k * k) * 0.55); R(g, px2 + k, py2 - hh, 1, hh + 1, Math.floor((k + 12) / 4) % 2 ? '#94867a' : '#8a6460'); }
+        R(g, px2 - 12, py2 + 1, 25, 1, '#5a4440'); R(g, px2, py2 - 9, 1, 2, '#3a2e26');
+        g.drawImage(folk('gent', beat === 1 || beat === 2 ? 'point' : 'idle', 'normal', look(x)), Math.round(x + 18), Math.round(foot - 33));
+      });
+      // 钓鱼的：坐在栈桥头，竿子伸向河面，浮漂一上一下；偶尔回头看一眼
+      spots(S.jetty[0] + 56, rM, MW, vw, 80, (x) => {
+        const foot = S.jetty[1] - oy, turn = Math.sin(t * 0.25) > 0.75, bob = Math.round(Math.max(0, Math.sin(t * 2.6)) * 1.5);
+        g.drawImage(folk('angler', 'hold', 'normal', turn ? look(x) : -1), Math.round(x - 20), Math.round(foot - 33));
+        g.fillStyle = C.wood[2]; for (let k = 0; k <= 26; k++) g.fillRect(Math.round(x - 10 - k), Math.round(foot - 14 - k * 0.9), 1, 1);
+        g.fillStyle = '#8a9090'; for (let y = Math.round(foot - 38); y < wl + 14 + bob; y += 2) g.fillRect(Math.round(x - 37), y, 1, 1);
+        R(g, x - 38, wl + 13 + bob, 3, 2, '#8a3a2a'); R(g, x - 38, wl + 13 + bob, 3, 1, '#c8c0b0');
+      });
+      // 拴在栈桥边的小划艇，里面的孩子跟着水一起一伏，看到精彩处站起来欢呼
+      spots(S.jetty[0] - 34, rM, MW, vw, 60, (x) => {
+        const bob = Math.round(Math.sin(t * 1.4) * 1), y = wl + 26 + bob, cheer = Math.sin(t * 0.6 + 1) > 0.6;
+        g.drawImage(folk('kid', cheer ? 'cheer' : 'idle', cheer ? 'happy' : 'normal', look(x)), Math.round(x - 6), Math.round(y - 30 - (cheer ? 2 : 0)));
+        R(g, x - 12, y - 4, 30, 4, C.wood[2]); R(g, x - 12, y - 4, 30, 1, C.wood[3]); R(g, x - 10, y, 26, 2, C.wood[1]); R(g, x - 14, y - 5, 3, 3, C.wood[2]); R(g, x + 17, y - 5, 2, 2, C.wood[2]);
+        g.fillStyle = '#4a4034'; for (let k = 0; k < 14; k++) g.fillRect(Math.round(x + 18 + k), Math.round(y - 5 - Math.sin(k / 14 * Math.PI) * -2 - k * 0.3), 1, 1);   // 缆绳
+        g.globalAlpha = 0.3; R(g, x - 10, y + 2, 26, 1, '#1a2024'); g.globalAlpha = 1;
+      });
+      // 骑高轮自行车的绅士：沿纤道来回溜达，路过时抬帽致意
+      {
+        const L = 1000, s = (t * 15) % (2 * L), dir = s < L ? 1 : -1, u = 170 + (s < L ? s : 2 * L - s);
+        spots(u, rM, MW, vw, 60, (x) => {
+          const yb = 527 - oy, wf2 = S.wheel[Math.floor(((s / 11) % (TAU / 6)) / (TAU / 6) * 8) % 8];
+          g.drawImage(wf2, Math.round(x - 12), Math.round(yb - 24));
+          g.fillStyle = '#1a1c1e'; for (let k = -3; k <= 3; k++) for (let j = -3; j <= 3; j++) if (Math.abs(Math.hypot(k, j) - 2.6) < 0.7) g.fillRect(Math.round(x - dir * 17 + k), Math.round(yb - 3 + j), 1, 1);   // 小轮
+          for (let k = 0; k <= 16; k++) { const tt = k / 16; g.fillRect(Math.round(x - dir * 2 - dir * 15 * tt), Math.round(yb - 22 + 19 * tt * tt), 1, 1); }   // 车架
+          g.fillRect(Math.round(x + dir * 2 - 2), Math.round(yb - 25), 5, 1);
+          const doff = Math.sin(t * 0.9) > 0.8 && Math.abs(x - vw / 2) < vw * 0.4;
+          g.drawImage(folk('rider', doff ? 'salute' : 'hold', 'normal', dir), Math.round(x - 20 - dir * 2), Math.round(yb - 24 - 31));
+        });
+      }
+    };
+    S.front = (g, vw, vh, oy, camx, t) => {
+      nearLayer(g, S.near, vw, vh, camx);
+      nearLayer(g, S.grassFrames[Math.floor(t * 3) % 12], vw, vh + 1, camx);
+      // 飘着的蒲公英绒毛
+      for (let i = 0; i < 10; i++) {
+        const span = vw + 100, x = ((i * 191 + t * (10 + i * 2) - camx * 1.1) % span + span) % span - 50, y = vh * (0.55 + (i % 5) * 0.07) + Math.sin(t * 0.9 + i) * 10;
+        g.globalAlpha = 0.7; R(g, x, y, 1, 1, '#c8c4b4'); R(g, x - 1, y - 1, 3, 1, '#8a887c'); R(g, x, y + 1, 1, 2, '#6a685e'); g.globalAlpha = 1;
+      }
+    };
+    return S;
+  }
+
   // ---------- 场地两头的路障（有边界的场次才画）----------
-  // 车开不过去的地方摆一堆东西：后巷是木桶、板条箱、翻倒的手推车和沙袋，上面站着两个看热闹的；铁匠铺是废锅炉和车轮；
+  // 车开不过去的地方摆一堆东西：后巷是木桶、板条箱、翻倒的手推车和沙袋，上面站着两个看热闹的；铁匠铺是废锅炉和车轮；伦敦郊区是关上的收费栅门 + 树篱 + 草捆，栅门上坐着孩子；
   // 预选赛是草垛 + 红白栏杆；野地是倒下的树干和石头。画在世界坐标里（像素画），左边的贴在 bounds.left 外侧，右边的镜像
   const barrierCache = {};
   function barricade(style) {
@@ -961,6 +1380,26 @@ SA.Scenes = (() => {
       p.rect(60, G - 54, 120, 50, iron[1]); p.rect(60, G - 54, 120, 5, iron[2]); p.rect(60, G - 9, 120, 5, iron[0]);   // 废锅炉壳横躺着
       for (let k = 66; k < 178; k += 9) { p.put(k, G - 50, '#6a5a52'); p.put(k, G - 12, iron[2]); }
       p.disc(60, G - 29, 6, iron[2], 25); wheel(36, G - 30, 28, iron[2]); crate(150, G - 96, 40, 42); barrel(186, 22, 38);
+    } else if (style === 'suburb') {   // 伦敦郊区：一道修剪过的山楂树篱，前面是关上的收费栅门（五道横杠、白漆压暗），门轴在石门墩上（墩顶一盏马灯、墩上钉着收费牌），门外两个草捆、一只奶桶
+      const hedge = ['#1c2719', '#253322', '#30402a', '#3e5034'], paint = ['#6a695e', '#828074', '#979487'], stone = ['#3c3c36', '#4e4d45', '#605e54', '#706d61'];
+      p.rect(0, G - 80, 186, 80, hedge[1]);
+      for (let x = 0; x < 180; x += 9) p.disc(x + 5, G - 80 - Math.floor(hash(x, 2) * 6), 11, (xx, yy, a, b) => (b < -0.35 && a < 0.3 ? hedge[3] : a > 0.5 ? hedge[1] : hedge[2]), 8);
+      for (let i = 0; i < 26; i++) { const hx = hash(i, 3) * 190, hy = G - 70 + hash(i, 4) * 60; p.disc(hx, hy, 7, (xx, yy, a, b) => (b < -0.3 && a < 0.2 ? hedge[2] : b > 0.4 ? hedge[0] : null), 5); }   // 篱面上一团团的枝叶（上沿亮、下沿暗）
+      p.rect(0, G - 3, 186, 3, hedge[0]);
+      const gx0 = 32, gx1 = 166, gt = G - 58;
+      p.rect(24, G - 66, 8, 66, wood[1]); p.rect(24, G - 66, 2, 66, wood[2]); p.rect(23, G - 68, 10, 3, wood[2]);   // 门闩那头的木柱
+      for (let k = 0; k < 5; k++) { const y = gt + k * 13, th = k ? 3 : 4; p.rect(gx0, y, gx1 - gx0, th, paint[1]); p.rect(gx0, y, gx1 - gx0, 1, paint[2]); p.rect(gx0, y + th, gx1 - gx0, 1, paint[0]); }
+      p.rect(gx0, gt, 6, 58, paint[1]); p.rect(gx0, gt, 2, 58, paint[2]); p.rect(gx1 - 6, gt, 6, 58, paint[1]); p.rect(gx1 - 6, gt, 2, 58, paint[2]);
+      p.line(gx1 - 8, G - 6, gx0 + 7, gt + 6, paint[1], 3); p.line(gx1 - 9, G - 7, gx0 + 6, gt + 5, paint[2]);   // 斜撑：门轴下角撑到门闩上角
+      for (const y of [gt + 6, G - 12]) { p.rect(gx1 - 18, y, 18, 2, iron[0]); p.put(gx1 - 17, y, iron[2]); }   // 门轴铁铰链
+      p.rect(gx0 - 1, gt + 16, 6, 4, iron[1]);   // 门闩
+      p.rect(166, G - 84, 22, 84, stone[1]); p.rect(166, G - 84, 2, 84, stone[2]); p.rect(186, G - 84, 2, 84, stone[0]);
+      for (let y = G - 76; y < G; y += 9) p.rect(166, y, 22, 1, stone[0]);
+      p.rect(163, G - 88, 28, 4, stone[2]); p.rect(163, G - 88, 28, 1, stone[3]);
+      p.rect(171, G - 102, 12, 13, iron[1]); p.rect(173, G - 100, 8, 9, '#5a5848'); p.rect(173, G - 100, 3, 9, '#6a6650'); p.rect(170, G - 104, 14, 2, iron[2]); p.rect(176, G - 107, 2, 3, iron[1]);   // 马灯（白天没点）
+      p.rect(169, G - 64, 16, 12, '#1e2220'); for (let k = 0; k < 3; k++) p.rect(171, G - 61 + k * 3, 6 + (k * 5) % 7, 1, '#8a887c');   // 收费牌（只是笔画，不写字）
+      for (const [bx, by, bw] of [[0, G, 30], [4, G - 22, 24]]) { p.rect(bx, by - 22, bw, 22, '#7a6a40'); for (let k = 0; k < bw; k += 3) p.rect(bx + k, by - 22, 1, 22, k % 6 ? '#86764a' : '#62542e'); p.rect(bx, by - 22, bw, 1, '#96864f'); p.rect(bx, by - 15, bw, 1, '#3a2e1a'); p.rect(bx, by - 7, bw, 1, '#3a2e1a'); }
+      p.rect(190, G - 24, 14, 24, '#5e605c'); p.rect(190, G - 24, 3, 24, '#72746e'); p.rect(192, G - 28, 10, 4, '#5e605c'); p.rect(194, G - 31, 6, 3, '#4a4c48'); p.rect(190, G - 14, 14, 2, '#4a4c48');
     } else if (style === 'wild') {
       p.disc(110, G - 22, 100, (x, y, a, b) => (b < -0.4 ? '#4a3a28' : '#33281c'), 20); for (let k = 20; k < 200; k += 16) p.rect(k, G - 34 + (k % 3), 4, 2, '#5a4632');   // 倒下的树干
       p.disc(190, G - 26, 22, (x, y, a) => (a < -0.3 ? '#5a5a52' : '#45453e'), 26); p.disc(40, G - 16, 18, '#45453e', 16);
@@ -979,7 +1418,17 @@ SA.Scenes = (() => {
     const b = barricade(id), gl = Math.round(groundAt(Math.max(0, bounds.left))), gr = Math.round(groundAt(Math.min(1280, bounds.right)));
     g.drawImage(b.left, Math.round(bounds.left - b.w + 6), gl - b.h + 2);
     g.drawImage(b.right, Math.round(bounds.right - 6), gr - b.h + 2);
-    if (id !== 'alley' || !SA.Coal) return;
+    if (!SA.Coal) return;
+    if (id === 'suburb') {
+      // 伦敦郊区：两个孩子各坐在一头的栅门顶杠上，一个挥帽子，一个时不时站起来欢呼（顶杠在路障图里 y 92，图贴在 gl − 148）
+      const S = get('suburb');
+      S.onGate = S.onGate || [0, 1, 2, 3].map(i => SA.Coal.draw(SA.Coal.crew(`gate${i >> 1}`), { size: 'sprite', pose: i % 2 ? 'cheer' : (i < 2 ? 'wave' : 'idle'), expr: i % 2 ? 'happy' : 'normal', look: i < 2 ? 1 : -1 }));
+      const beat = Math.floor(t * 1.2) % 2, hop = Math.sin(t * 0.8) > 0.6 ? Math.round(Math.abs(Math.sin(t * 6)) * 2) : 0;
+      g.drawImage(S.onGate[beat], Math.round(bounds.left - 125), gl - 56 - 31);
+      g.drawImage(S.onGate[hop ? 3 : 2], Math.round(bounds.right + 85), gr - 56 - 31 - hop);
+      return;
+    }
+    if (id !== 'alley') return;
     // 后巷：路障上站着两个看热闹的，一个挥手一个跳
     const S = get('alley');
     S.onBar = S.onBar || [0, 1, 2, 3].map(i => SA.Coal.draw(SA.Coal.crew(`barricade${i >> 1}`), { size: 'sprite', pose: i % 2 ? 'cheer' : 'wave', expr: i % 2 ? 'happy' : 'normal', look: i < 2 ? 1 : -1 }));
@@ -1176,6 +1625,24 @@ SA.Scenes = (() => {
     x.beginPath(); for (let k = 0; k <= 1; k += 0.02) x.lineTo(k * 1000, y(k)); x.stroke();
     for (let k = 0.06; k < 0.95; k += 0.11 + r() * 0.05) { const px = k * 1000, py = y(k), w = 50 + r() * 60, h = 70 + r() * 110; x.beginPath(); x.moveTo(px - w / 2, py); x.lineTo(px + w / 2, py); x.lineTo(px + w / 2 - 6, py + h); x.lineTo(px - w / 2 + 8, py + h * 0.92); x.fill(); }
   }];
+  NEAR.willow = [900, 360, (x, col, r) => {   // 头顶垂下来的柳枝：一根粗枝横过画面上沿，挂下几十条柳丝
+    x.strokeStyle = x.fillStyle = col; x.lineCap = 'round';
+    x.lineWidth = 26; x.beginPath(); x.moveTo(-20, 8); x.quadraticCurveTo(420, 44, 920, 0); x.stroke();
+    for (let i = 0; i < 56; i++) {
+      const sx = r() * 900, sy = 22 + r() * 18, len = 110 + r() * 220, bend = (r() - 0.5) * 40;
+      x.lineWidth = 3 + r() * 3; x.beginPath(); x.moveTo(sx, sy); x.quadraticCurveTo(sx + bend * 0.3, sy + len * 0.5, sx + bend, sy + len); x.stroke();
+      for (let k = 0; k < 6; k++) { const f = 0.3 + k * 0.12, px = sx + bend * f * f, py = sy + len * f; x.beginPath(); x.ellipse(px + 4, py, 3, 9, 0.3, 0, TAU); x.fill(); }
+    }
+  }];
+  NEAR.parsley = [420, 360, (x, col, r) => {   // 峨参：细高的茎，顶上一朵朵平顶的小花伞，底下几片叶子
+    x.strokeStyle = x.fillStyle = col; x.lineCap = 'round';
+    for (let i = 0; i < 8; i++) {
+      const bx = 30 + r() * 360, hh = 180 + r() * 150, lean = (r() - 0.5) * 60, tx = bx + lean, ty = 360 - hh;
+      x.lineWidth = 6; x.beginPath(); x.moveTo(bx, 360); x.quadraticCurveTo(bx + lean * 0.3, 360 - hh * 0.6, tx, ty); x.stroke();
+      x.lineWidth = 2.5; for (let k = 0; k < 9; k++) { const a = -Math.PI / 2 + (k - 4) * 0.28, ex = tx + Math.cos(a) * 34, ey = ty + Math.sin(a) * 18 - 8; x.beginPath(); x.moveTo(tx, ty); x.lineTo(ex, ey); x.stroke(); x.beginPath(); x.ellipse(ex, ey - 3, 8, 5, 0, 0, TAU); x.fill(); }
+      for (let k = 0; k < 3; k++) { x.beginPath(); x.ellipse(bx + (r() - 0.5) * 50, 320 - r() * 60, 30, 12, r() - 0.5, 0, TAU); x.fill(); }
+    }
+  }];
   function nearImg(S, i, s) {
     S.fxNear = S.fxNear || [];
     const o = S.fx.near[i], [w, h, paint] = NEAR[o.kind], q = Math.round(s * 20) / 20, m = S.fxNear[i] || (S.fxNear[i] = {});
@@ -1364,6 +1831,13 @@ SA.Scenes = (() => {
         for (const w of S.wins) if (w.lit) spots(w.x, rot, MW, c.vw, 60, (x) => out.push({ x: x + w.w / 2, y: w.y + w.h / 2 - c.oy, r: w.shop ? 60 : 30, col: '#e8a04a', a: w.shop ? 0.45 : 0.3 }));
         return out;
       } };
+    if (id === 'suburb') return {   // 伦敦郊区：夏日午后的暖光、远处城市的蓝灰空气透视、河面一层薄雾、树影、飘着的绒毛；超近景是头顶垂下的柳枝、草和峨参
+      grade: ['#ffd8a0', 0.14, 'soft-light'], haze: ['#b0b6b0', 0.2], banks: [{ y: 494, h: 40, a: 0.12, col: '#c8d0cc', par: 0.15, v: 3, seed: 51 }],
+      mist: { y: GROUND - 6, h: 46, a: 0.1, col: '#dcdcc8', par: 1.3, v: 5, seed: 53 }, dapple: 0.22,
+      motes: { kind: 'dust', col: '#f0ecdc', n: 24, bokeh: 4, drift: 14, size: 2, a: 0.55 }, vig: 0.4, grain: 0.05, shadow: 0.42, nearCol: '#0a0d09',
+      near: [{ kind: 'willow', u: 500, top: 1, dy: 10, sway: 0.015, a: 0.92 }, { kind: 'grass', u: 1300, dy: 30, sway: 0.06 }, { kind: 'parsley', u: 2100, dy: 30, sway: 0.05 }, { kind: 'bush', u: 2900, dy: 90, s: 0.9, sway: 0.03 }],
+      lights: (c) => [{ x: c.vw * 0.16, y: 110 - c.oy, r: 260, col: '#fff0c8', a: 0.42 }],
+    };
     if (id === 'wild') return {
       grade: ['#ffc070', 0.16, 'soft-light'], haze: ['#c8b890', 0.34], banks: [{ y: 470, h: 120, a: 0.3, col: '#d0ccb4', par: 0.2, v: 3, seed: 21 }],
       mist: { y: GROUND - 8, h: 60, a: 0.14, col: '#d8d4c0', par: 1.3, v: 6, seed: 23 }, dapple: 0.2,
@@ -1385,7 +1859,7 @@ SA.Scenes = (() => {
   const built = {};
   function get(id) {
     const key = id === 'forge' && SA.HomeScene ? `forge:${SA.HomeScene.weather()}` : id;   // 铁匠铺后院跟着院子的天气，每种天气各建一次
-    if (!built[key]) built[key] = id === 'forge' ? buildForge() : id === 'alley' ? buildAlley() : id === 'wild' ? buildWild() : buildQual();
+    if (!built[key]) built[key] = id === 'forge' ? buildForge() : id === 'alley' ? buildAlley() : id === 'suburb' ? buildSuburb() : id === 'wild' ? buildWild() : buildQual();
     if (!built[key].fx) built[key].fx = fxConfig(id, built[key]);
     return built[key];
   }

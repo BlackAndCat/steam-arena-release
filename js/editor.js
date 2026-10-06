@@ -17,7 +17,9 @@ SA.Editor = (() => {
   // sel：准备连续放置的库存 / 商店键（id 或 id@材料，见 SA.invKey）；pick：车上选中的格子 { layer, r, c }
   // dock：底部操作栏显示「模块」还是「蓝图库」；bp：蓝图库里选中的蓝图 key；bpFilter：蓝图来源筛选
   const st = { layer: 'body', sel: null, pick: null, hover: null, stats: null, tab: 'all', plateOpen: null, press: null, drag: null, msg: null, noClick: false,
-    dock: 'mods', bp: null, bpFilter: 'all', shop: false, cat: loadCat(), zoom: 1, panX: 0 };
+    dock: 'mods', bp: null, bpFilter: 'all', shop: false, cat: loadCat(), zoom: 1, panX: 0,
+    // up：升级材质模式（点模块逐件升级）；shift：Shift 是否按着（模式里预览全部升级）；flash：刚升级的模块闪一下金光
+    up: false, shift: false, flash: null };
   // 商店分组的折叠状态记在本机
   // 模块清单的纸页签：一次只看一类（界面重建 v3，替换原来的折叠条）；记住上次看的是哪一类
   function loadCat() { try { return localStorage.getItem('steam_arena_cat_v1') || null; } catch (e) { return null; } }
@@ -25,6 +27,8 @@ SA.Editor = (() => {
   const stageWorkbench = () => !!document.querySelector('#assembly-screen > #screen');
   function saveCat() { if (stageWorkbench()) return; try { localStorage.setItem('steam_arena_cat_v1', st.cat || ''); } catch (e) { /* ignore */ } }
   let cv, g, stage, tipEl, viewEl, ctxEl, toolsEl, invEl, dockEl, tabsEl, plateEl, ghost, ro, frame = null, sheetEl = null, leverEl = null;
+  // 工具页工单共用本轮性能单诊断，避免重复计算；普通车间始终为 null。
+  let sheetDiagnosis = null;
 
   const d = () => SA.S.d;
   const veh = () => d().vehicle;
@@ -50,7 +54,7 @@ SA.Editor = (() => {
     SA.go('garage');
     const screen = document.querySelector('#screen');
     screen.innerHTML = '';
-    Object.assign(st, { sel: null, pick: null, hover: null, press: null, drag: null, msg: null, zoom: 1, panX: 0, wheelAcc: 0 });
+    Object.assign(st, { sel: null, pick: null, hover: null, press: null, drag: null, msg: null, zoom: 1, panX: 0, wheelAcc: 0, up: false, shift: false, flash: null });
     if (st.plateOpen == null) st.plateOpen = window.innerWidth >= 1700;   // 展开的铭牌会盖住格子，默认收成一行
     st.stats = SA.V.stats(veh());
     centerView();
@@ -81,11 +85,26 @@ SA.Editor = (() => {
     document.addEventListener('pointerup', onUp);
     document.addEventListener('contextmenu', onContextMenu);
     document.addEventListener('keydown', onKey);
+    document.addEventListener('keydown', onShift);
+    document.addEventListener('keyup', onShift);
+    window.addEventListener('blur', onShift);
     if (ro) ro.disconnect();
     ro = new ResizeObserver(fit);
     ro.observe(stage);
     renderAll();
     frame = requestAnimationFrame(() => { fit(); loop(); });
+    // 页面教程（js/tutorial.js）：第一次进车间讲装水罐和性能单，商店第一次开张时指一下开关；后台拼装台不讲
+    if (SA.Guide && !stageWorkbench() && !SA.Camp.isDesignMode()) SA.Guide.garage();
+  }
+  // 教程用：把清单翻到这个模块所在的那一类（shop 决定是否打开商店），返回清单里那一行
+  function focusInv(id, shop) {
+    if (!invEl || !invEl.isConnected || !M[id]) return null;
+    if (shop != null) st.shop = !!shop && has('shop');
+    st.cat = M[id].cat;
+    renderTools(); renderInv();
+    const row = invEl.querySelector(`.mrow[data-page-key^="inventory:${id}"]`);
+    if (row) row.scrollIntoView({ block: 'nearest' });
+    return row;
   }
 
   // 弹窗关闭后由 SA.UI.refresh 调用：钱、库存可能变了
@@ -100,6 +119,11 @@ SA.Editor = (() => {
     if (e.target.matches && e.target.matches('input, textarea, select')) return;
     if (e.key === 'Escape') cancelSelection();
     else if ((e.key === 'Delete' || e.key === 'Backspace') && st.pick) { e.preventDefault(); removeAt(st.pick); }
+  }
+  // Shift 按下 / 松开（弹窗开着也记，免得关窗后状态卡住）；切走窗口一律当松开
+  function onShift(e) {
+    if (e.type === 'blur') st.shift = false;
+    else if (e.key === 'Shift') st.shift = e.type === 'keydown';
   }
 
   function fit() {
@@ -157,13 +181,14 @@ SA.Editor = (() => {
   function cancelSelection() {
     if (st.press) st.noClick = true;
     st.sel = null; st.pick = null; st.bp = null;
+    if (st.up) { st.up = false; renderView(); }
     cancelPress();
     renderDock();
   }
 
   function onContextMenu(e) {
     if (SA.current !== 'garage' || !document.querySelector('#modal').hidden) return;
-    if (st.sel || st.pick || st.press || st.drag) {
+    if (st.sel || st.pick || st.press || st.drag || st.up) {
       e.preventDefault();
       cancelSelection();
       return;
@@ -183,6 +208,12 @@ SA.Editor = (() => {
     e.preventDefault();
     const cell = cellAtXY(e.clientX, e.clientY);
     st.hover = cell;
+    // 升级材质模式：Shift + 点击 = 全部升级；单点在松手时升级指针下的模块，按住拖动仍然平移蓝图（模块不能拖）
+    if (st.up) {
+      if (e.shiftKey) { upAll(); return; }
+      beginPress(e, { kind: 'pan', cell, panX: st.panX, up: true });
+      return;
+    }
     if (!cell) { if (st.sel) { emptyTap(null); return; } beginPress(e, { kind: 'pan', cell: null, panX: st.panX }); return; }
     const v = veh();
     // Shift 在按下时锁定整车模式；侧挂层也允许从可见的主体模块抓起。
@@ -207,6 +238,7 @@ SA.Editor = (() => {
   }
 
   function onMove(e) {
+    st.shift = e.shiftKey;
     const p = st.press;
     if (!p || p.pid !== e.pointerId) {
       if (e.currentTarget === cv) st.hover = cellAtXY(e.clientX, e.clientY);
@@ -242,6 +274,7 @@ SA.Editor = (() => {
     if (src.kind === 'pan') {
       st.hover = target;
       if (drag) { st.noClick = true; setTimeout(() => { st.noClick = false; }, 0); }
+      else if (src.up) { const o = upTarget(src.cell); if (o) upOne(o); }
       else emptyTap(src.cell);
       return;
     }
@@ -291,20 +324,77 @@ SA.Editor = (() => {
   }
 
   // 拆下来的模块：完好的连同材料回库存，报废的按总价值 10% 回收；改装件拆掉按一半折价回收
-  function matUpgrade(cell) {
+
+  // ---------- 升级材质：熟铁解锁后画布上方出现「升级材质」按钮 ----------
+  // 按下进入升级模式：点车上的模块逐件升一级（钱够直接升，不弹窗；要消耗锭的仍确认）；悬停的模块金色闪烁。
+  // Shift + 点击（画布或按钮）= 全部升级：只把材料最低的那一档各升一级，中高档的不跟着升，弹窗确认。
+  const upOpen = () => SA.Camp.maxMat() > 1;
+  function setUp(on) {
+    st.up = !!on && upOpen();
+    if (st.up) { st.sel = null; st.pick = null; }
+    renderView(); renderDock();
+  }
+  // 指针下的模块：侧挂层优先看侧挂，其余先主体（和底部纸条同一规则）
+  function upTarget(hv) {
+    if (!hv) return null;
+    const v = veh(), so = SA.V.at(v, 'side', hv.r, hv.c), bo = SA.V.at(v, 'body', hv.r, hv.c);
+    const o = (st.layer === 'side' && so) || bo || so;
+    return o && { layer: o === so ? 'side' : 'body', r: o.r, c: o.c, cell: o.cell };
+  }
+  function upCheck(cell) {
+    if (cell.hp <= 0) return { ok: false, why: SA.Config.text('editor_up_wreck') };
     const u = SA.S.matUpInfo(cell);
-    if (!u.ok) { say(u.why, true); return; }
+    return u.ok || u.why ? u : { ...u, why: SA.Config.text('editor_up_max') };
+  }
+  // 全部升级的名单：能直接花钱升的模块里（乌兹钢 / 以太合金要消耗锭，只能逐件升），材料最低的那一档
+  function upPlan() {
+    const all = [];
+    SA.V.each(veh(), (cell, r, c, layer) => {
+      if (cell.hp <= 0) return;
+      const u = SA.S.matUpInfo(cell);
+      if (u.ok && !u.mat.ingot) all.push({ cell, r, c, layer, u });
+    });
+    if (!all.length) return null;
+    const low = Math.min(...all.map(x => x.cell.mt || 1));
+    const list = all.filter(x => (x.cell.mt || 1) === low);
+    return { from: SA.MATS[low].name, to: SA.MATS[low + 1].name, list, cost: list.reduce((a, x) => a + x.u.cost, 0) };
+  }
+  function upFlash(list) { st.flash = { list: list.map(x => ({ layer: x.layer, r: x.r, c: x.c })), at: performance.now() / 1000 }; }
+  // 单件升级的弹窗内容（只在要消耗锭、或钱不够要贷款时出现）：新材料的样子和属性变化
+  function upLines(cell, u) {
     const m0 = SA.mod(cell), m1 = SA.mod(cell.id, u.to);
     const diff = [[SA.Config.text("editor_5ad0c596f2dc"), 'hp'], [SA.Config.text("editor_30e1196888bd"), 'dmg'], [SA.Config.text("editor_c9f16bb1e9d3"), 'supply'], [SA.Config.text("battle_327b54d04f71"), 'water'], [SA.Config.text("editor_6cac16b39789"), 'cool'], [SA.Config.text("editor_2a28bc59be31"), 'ram'], [SA.Config.text("editor_d1cffb2453cb"), 'punch'], [SA.Config.text("editor_6fd9e54a0016"), 'load'], [SA.Config.text("editor_c18d8f09cb26"), 'armor']]
       .filter(([, k]) => m0[k]).map(([n, k]) => `${n} ${k === 'load' ? SA.tons(m0[k]) : m0[k]} → ${k === 'load' ? SA.tons(m1[k]) : m1[k]}`);
+    return [h('div', { class: 'dlg-item' }, SA.SPR.moduleCanvas(cell.id, 1, u.to), h('div', {}, h('b', {}, fullName(cell.id, u.to)), ' ', SA.Camp.matChip(u.to),
+      h('div', { class: 'muted' }, diff.join(' · ')))),
+      u.mat.ingot ? h('p', { class: 'muted' }, SA.Config.text("editor_285778663729", `${SA.INGOTS[u.mat.ingot].name}`, `${(d().ingots[u.mat.ingot] || 0) - 1}`)) : null,
+      h('p', { class: 'muted' }, SA.Config.text("editor_c71321d5beac"))];
+  }
+  function upOne(o) {
+    const cell = o.cell, u = upCheck(cell);
+    if (!u.ok) { say(`${fullName(cell.id, cell.mt || 1)}：${u.why}`, true); return; }
     SA.UI.pay({ title: SA.Config.text("editor_7e10b9ed146f", `${u.mat.name}`), amount: u.cost, okLabel: SA.Config.text("editor_1adfa1565dd1", `${u.mat.name}`),
-      lines: [h('div', { class: 'dlg-item' }, SA.SPR.moduleCanvas(cell.id, 1, u.to), h('div', {}, h('b', {}, fullName(cell.id, u.to)), ' ', SA.Camp.matChip(u.to),
-        h('div', { class: 'muted' }, diff.join(' · ')))),
-        u.mat.ingot ? h('p', { class: 'muted' }, SA.Config.text("editor_285778663729", `${SA.INGOTS[u.mat.ingot].name}`, `${(d().ingots[u.mat.ingot] || 0) - 1}`)) : null,
-        h('p', { class: 'muted' }, SA.Config.text("editor_c71321d5beac"))],
+      confirm: !!u.mat.ingot, lines: upLines(cell, u),
       onPaid: () => {
-        SA.S.upgradeMaterial(cell, u);
+        if (!SA.S.upgradeMaterial(cell, u)) return;
+        upFlash([o]);
         say(SA.Config.text("editor_8e4ff009357b", `${M[cell.id].name}`, `${u.mat.name}`));
+        changed();
+      } });
+  }
+  function upAll() {
+    const p = upPlan();
+    if (!p) { say(SA.Config.text('editor_up_none'), true); return; }
+    const count = new Map();
+    for (const x of p.list) count.set(x.cell.id, (count.get(x.cell.id) || 0) + 1);
+    SA.UI.pay({ title: SA.Config.text('editor_up_all_title'), amount: p.cost, okLabel: SA.Config.text('editor_up_all_ok', p.to),
+      lines: [h('p', { style: 'margin-top:0' }, SA.Config.text('editor_up_all_body', `${p.list.length}`, p.from, p.to)),
+        h('p', {}, [...count].map(([id, n]) => `${M[id].name}${n > 1 ? ` ×${n}` : ''}`).join('、')),
+        h('p', { class: 'muted' }, SA.Config.text('editor_up_all_note'))],
+      onPaid: () => {
+        const done = p.list.filter(x => SA.S.upgradeMaterial(x.cell, x.u));
+        upFlash(done);
+        say(SA.Config.text('editor_up_all_done', `${done.length}`, p.to));
         changed();
       } });
   }
@@ -322,6 +412,24 @@ SA.Editor = (() => {
         changed();
       } });
   }
+
+  // 专项改造与原附加装甲共用现有菜单和支付入口；说明同时展示能力增益与腿部降速代价。
+  function refit(cell) {
+    const level = SA.refitLevel(cell) + 1;
+    if (!SA.refitKind(cell.id) || cell.hp <= 0 || level > K.UP_MAX) return;
+    if (!SA.V.bipedOf(veh())) { say('专项改造仅限双足，请先移到双足底盘上。', true); return; }
+    const info = SA.refitInfo(cell, level);
+    SA.UI.pay({ title: info.name, amount: info.cost, okLabel: `${info.name} ${level} 级`,
+      lines: [h('p', { style: 'margin-top:0' }, `${M[cell.id].name} · ${info.name} ${level} 级：${info.text}`),
+        h('p', { class: 'muted' }, '专项改造不增加重量；拆回仓库仍保留改造等级。')],
+      onPaid: () => {
+        if (!SA.S.refitCell(cell, level)) return;
+        say(`${M[cell.id].name} · ${info.name} ${level} 级`);
+        changed();
+      } });
+  }
+  // 合并库存行默认使用第一个实例，校验必须与后台实际取件保持一致。
+  const stockCell = (id, mt) => SA.S.stockOptions(id, mt)[0] || null;
 
   // 库存不够就自动购买，只有钱不够才提示贷款；仍按商店解锁和可售材料检查。
   function withStock(key, then) {
@@ -355,7 +463,7 @@ SA.Editor = (() => {
     const test = SA.V.clone(v);
     if (cur) test[layer][cur.r][cur.c] = null;
     for (const o of clash) test.body[o.r][o.c] = null;
-    const chk = SA.V.canPut(test, id, r, c);
+    const chk = SA.V.canPut(test, id, r, c, stockCell(id, mt));
     if (!chk.ok) { say(chk.reason, true); return; }
     withStock(key, () => {
       const old = cur && cur.cell;
@@ -421,7 +529,7 @@ SA.Editor = (() => {
   function selectInv(key) {
     if (st.noClick) return;
     st.sel = st.sel === key ? null : key;
-    st.pick = null;
+    st.pick = null; st.up = false;
     if (st.sel) st.layer = SA.V.layerOf(kid(key));
     renderAll();
   }
@@ -433,7 +541,10 @@ SA.Editor = (() => {
     return out;
   }
   function renderPlate() {
-    const s = st.stats, UI = SA.PX.ui;
+    // 关卡工具页可提供只读进化范围诊断；画布、摆放与普通玩家性能单仍使用原车。
+    const diagnosis = SA.WorkbenchDiagnostics?.(veh());
+    sheetDiagnosis = diagnosis || null;
+    const s = diagnosis?.stats || st.stats, sheetVehicle = diagnosis?.vehicle || veh(), UI = SA.PX.ui;
     plateEl.innerHTML = '';
     const nameIn = h('input', { type: 'text', class: 'plate-name px-sk px-sk-brass', value: veh().name, maxLength: 20, 'aria-label': SA.Config.text("editor_9f9462db7694"),
       onchange: () => { SA.S.renameVehicle(nameIn.value); } });
@@ -441,13 +552,14 @@ SA.Editor = (() => {
     const cost = hurtList.reduce((a, x) => a + SA.S.repairCost(x), 0);
     // 拿着库存里的零件：算一遍装上以后的数，性能单上用棋盘点标出变化
     let preview = null;
-    if (st.sel) { try { preview = SA.V.statsWith(veh(), kid(st.sel), kmt(st.sel)); } catch (e) { preview = null; } }
+    if (st.sel) { try { preview = SA.V.statsWith(sheetVehicle, kid(st.sel), kmt(st.sel)); } catch (e) { preview = null; } }
     plateEl.append(...[
       h('div', { class: 'ed-sheet-t px-h2' }, SA.Config.text("editor_2ae16e5d3bc6")),
       nameIn,
+      diagnosis?.summary,
       h('div', { class: 'ed-sheet-row' }, h('span', {}, SA.Config.text("editor_9566c6f70a0d"), UI.num(s.rating)), s.problems.length ? UI.hand(SA.Config.text("editor_1e9ad60f3353", `${s.problems.length}`), 15) : h('span', { class: 'px-small' }, SA.Config.text("editor_4163fd6a7d4d"))),
       hurtList.length ? UI.btn(SA.Config.text("editor_fc849e6f69c5", `${hurtList.length}`, `${money(cost)}`), { sm: true, title: SA.UI.repairBrief(hurtList), onclick: () => repair(hurtList) }) : null,
-      SA.UI.pxStats(s, veh(), preview)].filter(Boolean));
+      SA.UI.pxStats(diagnosis?.displayStats || s, sheetVehicle, preview)].filter(Boolean));
     // 车间的出口（拉闸只留给黑板上真正开打那一下）：放在改装台下面那条工单的右端——回院子 / 出战（也是回院子，再把出战黑板拉下来）
     leverEl.innerHTML = '';
     leverEl.append(UI.btn(SA.Config.text("arena_702c1bd28416"), { sm: true, onclick: () => SA.nav('home') }),
@@ -456,14 +568,16 @@ SA.Editor = (() => {
   }
 
   // 画布右上角：看哪一层 + 蓝图库开关（右侧面板在模块清单和蓝图库之间切换）
-  function setDock(k) { st.dock = k; st.sel = null; st.pick = null; st.bp = null; renderAll(); }
+  function setDock(k) { st.dock = k; st.sel = null; st.pick = null; st.bp = null; st.up = false; renderAll(); }
   function renderView() {
     viewEl.innerHTML = '';
     const setLayer = (k) => { st.layer = k; st.pick = null; if (st.sel && SA.V.layerOf(kid(st.sel)) !== k) st.sel = null; renderAll(); };
     viewEl.append(...[
       has('side') ? SA.PX.ui.toggle(SA.Config.text("editor_9155623ce3b0"), SA.Config.text("editor_edc7ed624d70"), st.layer === 'side', () => setLayer(st.layer === 'side' ? 'body' : 'side')) : null,
       bpOpen() ? h('button', { class: `btn small bp-btn ${st.dock === 'bps' ? 'on' : ''}`, title: SA.Config.text("editor_3dff92be0c24"),
-        onclick: () => setDock(st.dock === 'bps' ? 'mods' : 'bps') }, SA.SPR.iconCanvas('scroll', st.dock === 'bps' ? '#e4e0d6' : '#f5d77a', 2), SA.Config.text("editor_3b2ceb32df23")) : null].filter(Boolean));
+        onclick: () => setDock(st.dock === 'bps' ? 'mods' : 'bps') }, SA.SPR.iconCanvas('scroll', st.dock === 'bps' ? '#e4e0d6' : '#f5d77a', 2), SA.Config.text("editor_3b2ceb32df23")) : null,
+      upOpen() ? h('button', { class: `btn small bp-btn ${st.up ? 'on' : ''}`, title: SA.Config.text('editor_up_btn_title'),
+        onclick: (e) => (e.shiftKey ? upAll() : setUp(!st.up)) }, SA.SPR.iconCanvas('upmat', st.up ? '#e4e0d6' : '#f5d77a', 2), SA.Config.text('editor_up_btn')) : null].filter(Boolean));
   }
 
   // ---------- 底部操作栏 ----------
@@ -485,29 +599,38 @@ SA.Editor = (() => {
           h('button', { class: 'btn small', title: SA.Config.text("editor_a7ef6e62ce6f"), onclick: cancelSelection }, SA.Config.text("editor_2cd0f3be8738"))));
       return;
     }
+    if (st.up) {
+      const p = upPlan();
+      // data-page-key：页面改字按 DOM 路径记，不加就会和空闲时的提示行同路径、被那条改字盖掉
+      ctxEl.append(h('div', { class: 'info', 'data-page-key': 'upgrade-mode' },
+        h('div', {}, h('b', {}, SA.Config.text('editor_up_btn')), ' ', h('span', { class: 'muted' }, SA.Config.text('editor_up_hint'))),
+        h('div', { class: 'sub' }, p ? SA.Config.text('editor_up_all_sub', `${p.list.length}`, p.from, p.to) : SA.Config.text('editor_up_none'))),
+      h('div', { class: 'acts' },
+        h('button', { class: `btn small ${p ? 'primary' : ''}`, disabled: !p, title: SA.Config.text('editor_up_all_key'), onclick: upAll }, p ? SA.Config.text('editor_up_all_btn', money(p.cost)) : SA.Config.text('editor_up_all_btn0'))));
+      return;
+    }
     const pk = st.pick && v[st.pick.layer][st.pick.r][st.pick.c];
     if (pk) {
       const { layer, r, c } = st.pick, m = M[pk.id], max = SA.V.maxHp(pk);
       const iss = issueAt(layer, r, c);
       const fix = [pk, layer === 'body' && v.side[r][c]].filter(x => x && x.hp < SA.V.maxHp(x));
       const cost = fix.reduce((a, x) => a + SA.S.repairCost(x), 0);
-      const lv = pk.lv || 0, upName = SA.upName(pk.id);
-      const mu = SA.S.matUpInfo(pk);
-      // 下一级材料：已解锁或有锭才显示按钮；没解锁的只在提示里说一句
-      const matBtn = pk.hp > 0 && !mu.max && (mu.ok || mu.mat.ingot || mu.to <= SA.Camp.maxMat() + 1) && SA.Camp.maxMat() > 1
-        ? h('button', { class: `btn small ${mu.ok ? 'primary' : ''}`, disabled: !mu.ok, title: mu.why || SA.Config.text("editor_4672903a73b3", `${mu.mat.mul}`), onclick: () => matUpgrade(pk) },
-          SA.Config.text("editor_6057f104ce12", `${mu.mat.name}`, `${money(mu.cost)}`, `${mu.mat.ingot ? ` + ${SA.INGOTS[mu.mat.ingot].name}` : ''}`)) : null;
+      const lv = pk.lv || 0, upName = SA.upName(pk.id), refitInfo = SA.refitKind(pk.id) ? SA.refitInfo(pk) : null;
+      // 升级材料不在这里：改成画布上方单独的「升级材质」按钮（见 setUp）
       ctxEl.append(thumb(pk.id, pk.mt),
         h('div', { class: 'info' },
           h('div', {}, h('b', {}, m.name), ' ', SA.UI.uniqueBadge(pk.id), ' ', SA.Camp.matChip(pk.mt || 1), ' ', h('span', { class: 'chip' }, pk.hp <= 0 ? SA.Config.text("editor_226b03150244") : SA.Config.text("editor_16f931d2b61c", `${pk.hp}`, `${max}`)), ' ', SA.UI.repairChip(pk), ' ',
             has('upgrade') ? h('span', { class: `chip rank ${lv ? 'on' : ''}`, title: SA.Config.text("editor_7c2e257c34bf", `${upName}`, `${lv}`, `${SA.K.UP_MAX}`) }, `${upName} ${'▲'.repeat(lv)}${'△'.repeat(SA.K.UP_MAX - lv)}`) : null, ' ',
             h('span', { class: 'muted' }, `${SA.tons(SA.weightOf(pk))} · ${where(r, c)}`)),
-          iss ? h('div', { class: 'sub err' }, iss.reason) : h('div', { class: 'sub' }, matBtn && !mu.ok ? mu.why : SA.Config.text("editor_49c3123bf418")),
+          // 改造等级和代价在低高度窗口也必须可见，不能被通用 sub 样式隐藏。
+          refitInfo ? h('div', { 'data-page-key': 'knight-refit-state' }, `${refitInfo.name} ${refitInfo.level}/${K.UP_MAX} · ${refitInfo.text}`) : SA.isBipedOnly(pk) ? h('div', {}, '双足专属') : null,
+          iss ? h('div', { class: 'sub err' }, iss.reason) : h('div', { class: 'sub' }, SA.Config.text("editor_49c3123bf418")),
           ''),
         h('div', { class: 'acts' },
-          matBtn,
           has('upgrade') && pk.hp > 0 && lv < SA.K.UP_MAX ? h('button', { class: 'btn small', title: SA.Config.text("editor_d4928db19a49", `${Math.round(SA.upHp(pk.id) * 100)}`, `${SA.K.UP_KG}`), onclick: () => upgrade(pk) },
             SA.Config.text("editor_3159ee17bc6b", `${upName}`, `${lv + 1}`, `${money(SA.upCost(pk.id, lv + 1))}`)) : null,
+          has('upgrade') && pk.hp > 0 && refitInfo && refitInfo.level < K.UP_MAX ? h('button', { class: 'btn small', disabled: !SA.V.bipedOf(v), title: SA.V.bipedOf(v) ? SA.refitInfo(pk, refitInfo.level + 1).text : '专项改造仅限双足，请先移到双足底盘上。', onclick: () => refit(pk) },
+            `${refitInfo.name} ${refitInfo.level + 1} · ${money(SA.upCost(pk.id, refitInfo.level + 1))}`) : null,
           fix.length ? h('button', { class: 'btn small', title: SA.UI.repairBrief(fix), onclick: () => repair(fix) }, SA.Config.text("editor_229d6a641972", `${money(cost)}`)) : null,
           h('button', { class: 'btn small', title: 'Delete', onclick: () => (pk.hp <= 0 && SA.isUnique(pk.id)
             ? uniqueConfirm(SA.Config.text("editor_40e1a6f0b50f", `${m.name}`), SA.Config.text("editor_fcdf6aa92335"), SA.Config.text("editor_71d597d4119c"), () => removeAt(st.pick))
@@ -520,7 +643,9 @@ SA.Editor = (() => {
     // 什么都没选：告诉玩家现在该做什么
     const s = st.stats;
     ctxEl.append(h('div', { class: 'info' },
-      s.problems.length ? h('div', { class: 'err' }, s.problems[0]) : h('div', {}, h('b', {}, SA.Config.text("editor_4a8a8b3676e1")), s.warnings.length ? h('span', { class: 'muted' }, ` · ${s.warnings[0]}`) : null),
+      s.problems.length ? h('div', { class: 'err' }, s.problems[0]) : h('div', {}, h('b', {}, sheetDiagnosis ? '编辑范围内车已就绪；进化资格见性能单' : SA.Config.text("editor_4a8a8b3676e1")), s.warnings.length ? h('span', { class: 'muted' }, ` · ${s.warnings[0]}`) : null),
+      // 资格摘要是关键状态，不能使用横屏低高度时会被全局样式隐藏的 sub 类。
+      sheetDiagnosis ? h('div', { class: `garage-deploy-summary ${sheetDiagnosis.grid && sheetDiagnosis.stats.canDeploy ? '' : 'err'}`, 'data-page-key': 'evolution-deploy-summary' }, sheetDiagnosis.compactText) : null,
       h('div', { class: 'sub' }, SA.Config.text("editor_4b7b7942d0e0"))),
     '');
   }
@@ -649,7 +774,7 @@ SA.Editor = (() => {
   }
 
   function renderDock() { renderPlate(); renderCtx(); renderInv(); }
-  function renderAll() { renderPlate(); renderView(); renderCtx(); renderTools(); renderInv(); }
+  function renderAll() { if (st.up && !upOpen()) st.up = false; renderPlate(); renderView(); renderCtx(); renderTools(); renderInv(); }
 
   // ---------- 蓝图库 · 分享码示例（底部操作栏的第二个页签）----------
   const KIND = { mine: SA.Config.text("editor_7f1d9dd04cd1"), official: SA.Config.text("editor_e73e38c1f65d"), cloud: SA.Config.text("camp_ui_564d439aeaf1") };
@@ -786,7 +911,7 @@ SA.Editor = (() => {
 
   // ---------- 绘制 ----------
   // 状态提示：整格缓慢闪烁的颜色（红 = 不可用/悬空，绿 = 选中/可放置），不再描边
-  const RED = '#ff3b2f', GREEN = '#6fcf6a', WHITE = '#ffffff';
+  const RED = '#ff3b2f', GREEN = '#6fcf6a', WHITE = '#ffffff', GOLD = '#ffc93a';   // 金 = 升级材质
   const pulse = (t, lo, hi, per = 1.6) => lo + (hi - lo) * (0.5 + 0.5 * Math.sin(t * Math.PI * 2 / per));
   const tmp = document.createElement('canvas');
   const tg = tmp.getContext('2d');
@@ -855,7 +980,18 @@ SA.Editor = (() => {
     if (st.drag && st.drag.kind === 'cell' && !hv) return { text: SA.Config.text("editor_41244e613de2", `${M[st.drag.id].name}`) };
     if (hv && !SA.V.inRegion(v, hv.r, hv.c)) return { text: SA.Config.text("vehicle_bd09be8e512a"), err: true };
     if (st.msg && now - st.msg.at < 2600) return st.msg;
+    if (st.up && st.shift && hv) {
+      const p = upPlan();
+      return p ? { text: SA.Config.text('editor_up_all_tip', `${p.list.length}`, p.from, p.to, money(p.cost)) } : { text: SA.Config.text('editor_up_none'), err: true };
+    }
     if (!hv) return st.msg && now - st.msg.at < 5000 ? st.msg : null;
+    if (st.up) {
+      const o = upTarget(hv);
+      if (!o) return { text: SA.Config.text('editor_up_hint') };
+      const u = upCheck(o.cell), nm = fullName(o.cell.id, o.cell.mt || 1);
+      if (!u.ok) return { text: `${nm}：${u.why}`, err: true };
+      return { text: SA.Config.text('editor_up_one_tip', nm, u.mat.name, money(u.cost), u.mat.ingot ? ` + ${SA.INGOTS[u.mat.ingot].name}` : '') };
+    }
     const key = st.drag ? st.drag.key : st.sel;
     if (key) {
       const id = kid(key), mt = kmt(key);
@@ -871,7 +1007,7 @@ SA.Editor = (() => {
       if (cur && cur.id === id && (cur.mt || 1) === mt) return { text: SA.Config.text("editor_57e9347b20fa", `${M[id].name}`) };
       if (cur && hurt(cur)) return { text: SA.Config.text("editor_3d2872b94543", `${M[cur.id].name}`), err: true };
       if (cur) return { text: SA.Config.text("editor_43c7ad13af38", `${buy}`, `${M[cur.id].name}`, `${M[id].name}`) };
-      const chk = SA.V.placeCheck(v, id, sp.r, sp.c), clash = M[id].layer === 'chassis' ? SA.V.chassisClash(v, id, null) : [];
+      const chk = SA.V.placeCheck(v, id, sp.r, sp.c, stockCell(id, mt)), clash = M[id].layer === 'chassis' ? SA.V.chassisClash(v, id, null) : [];
       if (chk.ok && clash.length) return { text: SA.Config.text("editor_a5d71e9795eb", `${buy}`, `${M[clash[0].cell.id].name}`, `${M[id].name}`) };
       return chk.ok ? { text: SA.Config.text("editor_ce8ff20e77b5", `${buy}`, `${M[id].name}`, `${where(sp.r, sp.c)}`) } : { text: SA.Config.text("editor_13e430cf8e22", `${buy}`, `${M[id].name}`, `${chk.reason}`), err: true };
     }
@@ -1056,7 +1192,7 @@ SA.Editor = (() => {
         const f = SA.fp(id), cover = new Set();
         for (let r = 0; r <= K.ROWS - f.h; r++)
           for (let c = 0; c <= K.COLS - f.w; c++)
-            if (SA.V.placeCheck(v, id, r, c).ok) for (let i = 0; i < f.h; i++) for (let j = 0; j < f.w; j++) cover.add((r + i) * K.COLS + c + j);
+            if (SA.V.placeCheck(v, id, r, c, stockCell(id, selMt)).ok) for (let i = 0; i < f.h; i++) for (let j = 0; j < f.w; j++) cover.add((r + i) * K.COLS + c + j);
         for (const k of cover) fillCell(...cellXY(Math.floor(k / K.COLS), k % K.COLS), GREEN, pulse(t, 0.06, 0.2, 2));
       }
       if (hv) {
@@ -1070,7 +1206,7 @@ SA.Editor = (() => {
           cross(bx, by, bw, bh);
         } else if (!home) {
           const bad = !SA.V.boxInRegion(v, sp.r, sp.c, sp.w, sp.h) || sp.hits.length > 1
-            || (drag ? dropBad(drag, sp) : (cur ? hurt(cur.cell) : !SA.V.placeCheck(v, id, sp.r, sp.c).ok));
+            || (drag ? dropBad(drag, sp) : (cur ? hurt(cur.cell) : !SA.V.placeCheck(v, id, sp.r, sp.c, stockCell(id, selMt)).ok));
           for (const o of sp.hits) { const [bx, by, bw, bh] = boxOf(v, SA.V.layerOf(id), o.r, o.c); g.fillStyle = 'rgba(7,8,12,0.6)'; g.fillRect(bx, by, bw, bh); }
           g.globalAlpha = 0.8;
           SA.SPR.drawModule(g, id, x, y, { t, heat: 0.3, water: 1, mt: selMt });
@@ -1080,9 +1216,28 @@ SA.Editor = (() => {
           tint(fromModule(id, t, selMt), x, y, w, h, bad ? RED : GREEN, pulse(t, 0.3, 0.6, 1), tintPad(id));
         }
       }
+    } else if (st.up) {
+      // 升级材质：悬停的模块金色闪烁（升不了的只淡淡提亮）；按着 Shift 时，全部升级会升的那一批一起闪
+      const blink = pulse(t, 0.12, 0.72, 0.7);
+      const plan = st.shift && hv ? upPlan() : null;
+      if (plan) for (const x of plan.list) { const [bx, by, bw, bh] = boxOf(v, x.layer, x.r, x.c); tint(fromVeh(vc, bx, by, bw, bh), bx, by, bw, bh, GOLD, blink); }
+      else if (hv && !st.shift) {
+        const o = upTarget(hv);
+        if (o) { const [x, y, w, h] = boxOf(v, o.layer, o.r, o.c), ok = upCheck(o.cell).ok; tint(fromVeh(vc, x, y, w, h), x, y, w, h, ok ? GOLD : WHITE, ok ? blink : 0.18); }
+      }
     } else if (hv) {
       const o = SA.V.at(v, st.layer, hv.r, hv.c);
       if (o) { const [x, y, w, h] = boxOf(v, st.layer, o.r, o.c); tint(fromVeh(vc, x, y, w, h), x, y, w, h, WHITE, 0.18); }
+    }
+    // 刚升级完：新材料上闪一道金光，0.6 秒淡掉
+    if (st.flash) {
+      const k = (t - st.flash.at) / 0.6;
+      if (k >= 1) st.flash = null;
+      else for (const x of st.flash.list) {
+        if (!v[x.layer][x.r][x.c]) continue;
+        const [bx, by, bw, bh] = boxOf(v, x.layer, x.r, x.c);
+        tint(fromVeh(vc, bx, by, bw, bh), bx, by, bw, bh, '#fff4c2', 0.85 * (1 - k));
+      }
     }
     // 选中：整个模块绿色闪烁
     if (st.pick && !st.drag && v[st.pick.layer][st.pick.r][st.pick.c]) {
@@ -1104,5 +1259,5 @@ SA.Editor = (() => {
     frame = requestAnimationFrame(loop);
   }
 
-  return { open, refresh };
+  return { open, refresh, focusInv };
 })();

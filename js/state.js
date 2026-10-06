@@ -21,7 +21,7 @@ SA.S = (() => {
       uniqueClaims: {}, stockCells: [],
       bet: null,
       // 战役进度：ch 章、st 关；feat 已开放的功能、mods 商店里能买的模块、mat 能升级到的材料、grid 改装台大小
-      camp: { ch: 0, st: 0, intro: -1, done: false, sideWins: {}, ...JSON.parse(JSON.stringify(SA.CAMP_START)) },
+      camp: { ch: 0, st: 0, intro: -1, done: false, sideWins: {}, ...JSON.parse(JSON.stringify(SA.CAMP_START)), grid: SA.V.fullGrid() },
       orders: [], ordersDone: [],
       wins: 0, losses: 0, battles: 0, champion: 0,
       news: SA.RULES.initial.news,
@@ -35,7 +35,8 @@ SA.S = (() => {
     d.uniqueClaims = d.uniqueClaims || {};
     d.stockCells = d.stockCells || [];
     const oldArmor = !d.vehicle.av;         // 铁装甲 2×2 → 1×2 之前的存档：车上的由 migrate 拆成两块，库存里的数量翻倍
-    d.vehicle = SA.V.migrate(d.vehicle);   // 旧存档是 6 × 8 大格，换算成子格
+    d.vehicle = SA.V.migrate(d.vehicle);   // 旧格式换算成子格，同时解除旧车的小网格限位
+    d.camp.grid = SA.V.fullGrid();         // 新旧存档均开放完整车间，旧扩建进度不限制可用空间
     if (oldArmor) for (const k in d.inv || {}) if (SA.parseKey(k).id === 'armor') d.inv[k] *= 2;
     fixModules(d);
     // 放不下的旧加压舱保留材料、耐久和改装后入库；清空待退清单，刷新不重复补偿。
@@ -86,8 +87,12 @@ SA.S = (() => {
   }
   function save() {
     try {
-      const key = SA.Camp && SA.Camp.isDesignMode && SA.Camp.isDesignMode() ? DESIGN_KEY : KEY;
+      const design = !!(SA.Camp && SA.Camp.isDesignMode && SA.Camp.isDesignMode());
+      const key = design ? DESIGN_KEY : KEY;
       localStorage.setItem(key, JSON.stringify(d));
+      // 设计车间只在一次实际写入成功后通知宿主；正式游戏的存档流程不变。
+      if (design && typeof window.dispatchEvent === 'function' && typeof Event === 'function')
+        window.dispatchEvent(new Event('sa-design-save'));
       return true;
     } catch (e) { /* 隐私模式 */ return false; }
   }
@@ -265,7 +270,7 @@ SA.S = (() => {
       for (let mt = SA.MAT_MAX; mt >= 1; mt--) stock[key].push(...stockOptions(id, mt).filter(x => identity(x) === key));
       const miss = Math.max(0, need[key] - (pool[key] || []).length - stock[key].length);
       if (miss && SA.isUnique(cell)) blocked.push(SA.Config.text("state_d1bd62c1d982", `${SA.uniqueRule(cell).name || M[id].name}`));
-      else if (miss && ['steamjet', 'flamer'].includes(id) && !SA.S.buyable(id)) blocked.push(SA.Config.text("state_6514d6c49044", `${M[id].name}`));
+      else if (miss && (SA.isCockpit(id) || ['steamjet', 'flamer'].includes(id)) && !SA.S.buyable(id)) blocked.push(SA.Config.text("state_6514d6c49044", `${M[id].name}`));
       else if (miss) { buy[id] = (buy[id] || 0) + miss; buyCost += miss * SA.buyPrice(id); }
     }
     // 用不上的受损模块要修好才能放回库存
@@ -275,7 +280,7 @@ SA.S = (() => {
 
   // 付款确认后按原计划组装，库存、回收款与车辆变更统一在逻辑层处理。
   function applyPlan(p) {
-      if (p.blocked.length || Object.keys(p.buy).some(id => ['steamjet', 'flamer'].includes(id) && !SA.S.buyable(id))) return false;
+      if (p.blocked.length || Object.keys(p.buy).some(id => (SA.isCockpit(id) || ['steamjet', 'flamer'].includes(id)) && !SA.S.buyable(id))) return false;
       for (const id in p.buy) SA.S.addInv(id, p.buy[id], SA.buyMt(id));
       for (const { cell, r, c, layer, stock } of p.requests) {
         const key = p.identity(cell), reuse = p.pool[key] && p.pool[key].shift();
@@ -290,7 +295,8 @@ SA.S = (() => {
         const restored = SA.newCell(cell.id, cell.mt || 1);
         if (cell.unique) restored.unique = cell.unique;
         if (cell.look) restored.look = cell.look;
-        SA.S.addInv(cell.id, 1, cell.mt || 1, SA.isUnique(cell) ? restored : null);
+        if (cell.refit) { restored.refit = cell.refit; restored.hp = SA.V.maxHp(restored); }
+        SA.S.addInv(cell.id, 1, cell.mt || 1, SA.isUnique(cell) || cell.refit ? restored : null);
         for (let k = 1; k <= (cell.lv || 0); k++) d().money += Math.round(SA.upCost(cell.id, k) * ECON.upgradeRefundRate);
       }
       d().money += p.scrap;
@@ -336,6 +342,7 @@ SA.S = (() => {
     if (mode === 'camp') {
       const C = D.camp, over = SA.Camp.done();
       return SA.CAMPAIGN.slice(0, SA.Camp.chapterCount()).flatMap((chapter, chapterIndex) => chapter.stages.flatMap((o, i) => {
+        if (o.unfinished) return [];
         const beaten = over || chapterIndex < C.ch || (chapterIndex === C.ch && i < C.st);
         const next = !over && chapterIndex === C.ch && i === C.st;
         if (!beaten && !next) return [];
@@ -348,10 +355,11 @@ SA.S = (() => {
           start: () => {
             const latest = SA.Camp.stage(chapterIndex, i);
             // 本场经济规则随战斗选项固定，结算时不再读取可能已被工作台修改的关卡。
-            SA.Battle.start({ mode: 'campaign', storyKey: `${chapterIndex},${i}`, replay, enemyVehicle: latest.vehicle, enemyName: latest.vehicle?.name || latest.name, aim: latest.aim, style: latest.style, terrain: latest.terrain, bounds: latest.chapter.bounds, boss: latest.boss, hpMul: 1, prize: replay || !latest.rewardMoney ? 0 : latest.prize, rewardMoney: latest.rewardMoney, victoryRepairFree: latest.victoryRepairFree, repairFree: latest.repairFree === true, uniqueLoot: latest.uniqueLoot || [] });
+            SA.Battle.start({ mode: 'campaign', storyKey: `${chapterIndex},${i}`, replay, enemyVehicle: latest.vehicle, enemyName: latest.vehicle?.name || latest.name, aim: latest.aim, style: latest.style, terrain: latest.terrain, bounds: latest.chapter.bounds, boss: latest.boss, statMultipliers: latest.statMultipliers, hpMul: 1, prize: replay || !latest.rewardMoney ? 0 : latest.prize, rewardMoney: latest.rewardMoney, victoryRepairFree: latest.victoryRepairFree, repairFree: latest.repairFree === true, uniqueLoot: latest.uniqueLoot || [] });
           } }];
       }));
     }
+    if (mode === 'side') return SA.Side ? SA.Side.entries() : [];
     if (mode === 'tour') return SA.OPPONENTS.map((o, i) => {
       const op = SA.S.opponent(i);
       const bv = SA.V.battleCopy(op.vehicle, op.hpMul, true);
@@ -379,6 +387,16 @@ SA.S = (() => {
   function placeBet(amount, odds) { d.money -= amount; d.bet = { amount, odds }; save(); }
   function cancelBet() { d.money += d.bet.amount; d.bet = null; save(); }
 
+  // 盾的双足耐久加成只存在参战副本；按剩余比例折回基础耐久，防止每场结算后再次加成回血。
+  // 普通模块继续原样回写，不改变其赛季强化和既有结算行为。
+  function storedBattleHp(cell, battleCell) {
+    if (!battleCell) return 0;
+    const baseMax = SA.V.maxHp(cell);
+    if (SA.MODULES[cell.id].knight === 'shield' && battleCell.max > 0 && SA.V.maxHp(cell, d.vehicle) !== baseMax)
+      return Math.max(0, Math.min(baseMax, battleCell.hp / battleCell.max * baseMax));
+    return Math.max(0, battleCell.hp);
+  }
+
   // 战斗结算只更新存档并返回原提示；缴获与解锁弹窗由视觉层按顺序呈现。
   const drawFee = (prize) => Math.max(ECON.drawFeeMinimum, Math.round(prize * ECON.drawFeeRate / ECON.drawFeeStep) * ECON.drawFeeStep);
   function settleBattle(res) {
@@ -390,8 +408,8 @@ SA.S = (() => {
       SA.V.each(d.vehicle, cell => { if (cell.hp < SA.V.maxHp(cell)) { cell.hp = SA.V.maxHp(cell); count++; } });
       return count;
     };
-    // 旧链接或脚本传入已取消的遭遇战时，不结算战损、奖励或旧档进度。
-    if (res.mode === 'side') return { lines, pre, money0 };
+    // 支线（SA.Side）单独结算；旧链接或脚本传入已取消的遭遇战（没有支线编号）时，不结算战损、奖励或旧档进度。
+    if (res.mode === 'side') return settleSide(res, { lines, pre, money0 });
     // 发行版拒绝越过开放章节的伪造结算，避免修改战损、经济与进度。
     if (SA.RELEASE && res.mode === 'campaign') {
       const key = /^(\d+),(\d+)$/.exec(String(res.opts?.storyKey || ''));
@@ -410,7 +428,7 @@ SA.S = (() => {
       SA.V.each(d.vehicle, (cell, r, c, layer) => {
         if (cell.hp <= 0) return;
         const b = res.playerVehicle[layer][r][c];
-        cell.hp = b ? Math.max(0, b.hp) : 0;
+        cell.hp = storedBattleHp(cell, b);
       });
     }
     const repaired = repairFree ? repairCurrentVehicle() : 0;
@@ -445,6 +463,7 @@ SA.S = (() => {
         if (d.bet) { d.money += d.bet.amount; lines.push(SA.Config.text("state_eff3661cdc95", `${formatMoney(d.bet.amount)}`)); }
         d.news = SA.Config.text("state_dbdf2560827e", `${d.vehicle.name}`, `${res.enemyName}`);
       } else if (res.win) {
+        const sideBefore = camp && SA.Side ? SA.Side.openIds() : null;
         if (rewardMoney) d.money += res.prize;
         d.wins++;
         const rep = (res.flawless ? TOUR.flawlessReputation : TOUR.winReputation) + (res.surrendered ? TOUR.surrenderReputation : 0);
@@ -460,8 +479,11 @@ SA.S = (() => {
           const r = SA.Camp.win();
           lines.push(...r.lines);
           for (const u of r.unlocks) pre.push({ kind: 'unlock', unlock: u });
+          // 主线推进后新开放的支线关
+          if (sideBefore) for (const f of SA.Side.newlyOpen(sideBefore)) pre.push({ kind: 'unlock', unlock: { title: SA.Config.text('state_side_open_title'), u: { lines: [SA.Config.text('state_side_episode_open', f.line.name, f.i + 1)] } } });
           const st = SA.Camp.current();
           d.news = SA.Camp.done() ? (SA.RELEASE ? SA.Config.text("state_09092100c0bb", `${d.vehicle.name}`) : SA.Config.text("state_dacfe49efade", `${d.vehicle.name}`))
+            : !st ? SA.Config.text("state_campaign_pending", `${d.vehicle.name}`, `${res.enemyName}`)
             : SA.Config.text("state_affd2276d447", `${d.vehicle.name}`, `${res.enemyName}`, `${SA.CAMPAIGN[st.ci].name}`, `${st.name}`);
         } else {
           d.round++;
@@ -487,6 +509,50 @@ SA.S = (() => {
     return { lines, pre, money0, repairFree, repaired };
   }
 
+  // 支线（竞技场外）：没有观众，不计声望、不下注、不计利息；战损照常带回车间。
+  // 首胜发关卡写好的固定奖励（奖金只在 rewardMoney 时发），并照常从对手车上缴获一件；赢过以后再打按重打（不奖不罚）。
+  // 拦路那一场不论输赢都算「拦过了」：这条支线从此开放，主线那一关照旧没过。
+  function settleSide(res, out) {
+    const { lines, pre } = out;
+    const found = SA.Side && SA.Side.find(res.opts?.sideId);
+    if (!found) return out;
+    const { line, ep } = found, firstMeet = !!res.opts.ambush && !SA.Side.met(ep.id) && !SA.Side.won(ep.id);
+    if (res.opts.ambush) SA.Side.markMet(ep.id);
+    const me = d.vehicle.name, foe = res.enemyName;
+    if (res.replay) {
+      d.news = res.win ? SA.Config.text('state_418ea32bb605', me, foe) : SA.Config.text('state_fff0caf5f77d', me, foe);
+      save();
+      return out;
+    }
+    d.battles++;
+    SA.V.each(d.vehicle, (cell, r, c, layer) => {
+      if (cell.hp <= 0) return;
+      const b = res.playerVehicle[layer][r][c];
+      cell.hp = storedBattleHp(cell, b);
+    });
+    if (res.draw) d.news = SA.Config.text('state_side_draw', me, foe);
+    else if (res.win) {
+      d.wins++;
+      if (ep.rewardMoney && res.prize) { d.money += res.prize; lines.push(SA.Config.text('state_290a6c1d1bac', formatMoney(res.prize))); }
+      for (const item of ep.rewardItems || []) {
+        addInv(item.id, item.count || 1, item.mt);
+        lines.push(SA.Config.text('camp_reward_item', SA.MODULES[item.id].name, item.count || 1));
+      }
+      const loot = SA.Camp.salvageOptions(res.survivors || []);
+      if (loot.length) pre.push({ kind: 'salvage', survivors: res.survivors || [] });
+      else lines.push(SA.Config.text('state_af3d68d7645f'));
+      SA.Side.markWon(ep.id);
+      d.news = SA.Config.text('state_side_win', me, foe);
+    } else {
+      d.losses++;
+      d.news = SA.Config.text('state_side_lose', me, foe);
+    }
+    // 单独弹一张「支线开放」（和新功能开放同一种弹窗），排在缴获之后
+    if (firstMeet) pre.push({ kind: 'unlock', unlock: { title: SA.Config.text('state_side_open_title'), u: { lines: [SA.Config.text('state_side_open', line.name)] } } });
+    save();
+    return out;
+  }
+
   function stashCell(cell) {
     let back = 0;
     for (let k = 1; k <= (cell.lv || 0); k++) back += Math.round(SA.upCost(cell.id, k) * ECON.upgradeRefundRate);
@@ -495,7 +561,9 @@ SA.S = (() => {
       const stock = SA.newCell(cell.id, cell.mt || 1);
       if (cell.unique) stock.unique = cell.unique;
       if (cell.look) stock.look = cell.look;
-      SA.S.addInv(cell.id, 1, cell.mt || 1, SA.isUnique(cell) ? stock : null);
+      // 专项改造随实例入库；普通耐久改装仍按原规则拆除并返款。
+      if (cell.refit) { stock.refit = cell.refit; stock.hp = SA.V.maxHp(stock); }
+      SA.S.addInv(cell.id, 1, cell.mt || 1, SA.isUnique(cell) || cell.refit ? stock : null);
     }
     d.money += back;
     return back;
@@ -520,7 +588,8 @@ SA.S = (() => {
     const check = SA.V.clone(v);
     if (cur) check[layer][cur.r][cur.c] = null;
     for (const o of clash) check.body[o.r][o.c] = null;
-    if (!SA.V.canPut(check, id, r, c).ok) return 0;
+    const candidate = stockOptions(id, mt).find(x => uniqueKey === undefined || (SA.uniqueRule(x)?.key || null) === uniqueKey);
+    if (!candidate || !SA.V.canPut(check, id, r, c, candidate).ok) return 0;
     const item = takeStock(id, mt, uniqueKey);
     if (!item) return 0;
     const old = cur && cur.cell;
@@ -532,9 +601,9 @@ SA.S = (() => {
   }
 
   // 编辑器操作：付款在原确认入口扣除，其余模块变更在此执行。
-  // 商店只卖有效的非退役模块；额外名单仅替代模块解锁，不放宽其他交易门槛。
+  // 商店只卖本进度已解锁或当前章节作者指定的有效模块；所有驾驶舱只靠初始装备和缴获获得。
   const buyable = (id) => typeof id === 'string' && Object.hasOwn(SA.MODULES, id) && !Object.hasOwn(SA.RETIRED, id)
-    && SA.Camp.has('shop') && (SA.Camp.hasMod(id) || SA.SHOP_EXTRAS.includes(id))
+    && !SA.isCockpit(id) && SA.Camp.has('shop') && SA.Camp.shopMods().has(id)
     && !SA.isUnique(id) && SA.minMt(id) <= SA.Camp.maxMat();
   function payAmount(amount) { d.money -= amount; save(); }
   function repay(n) { const x = Math.min(n, d.debt); d.debt -= x; d.money -= x; }
@@ -554,6 +623,17 @@ SA.S = (() => {
     cell.lv = lv;
     if (cell.hp > 0) cell.hp += SA.V.maxHp(cell) - before;
   }
+  // 专项改造沿用菜单付款职责；只允许适用实例逐级提升，耐久补差与普通改装一致。
+  function refitCell(cell, level) {
+    if (!cell || !SA.refitKind(cell.id) || !Number.isInteger(level) || level !== SA.refitLevel(cell) + 1 || level > SA.K.UP_MAX) return false;
+    let installed = false;
+    SA.V.each(d.vehicle, x => { if (x === cell) installed = true; });
+    if (installed && !SA.V.bipedOf(d.vehicle)) return false;
+    const before = SA.V.maxHp(cell);
+    cell.refit = level;
+    if (cell.hp > 0) cell.hp += SA.V.maxHp(cell) - before;
+    return true;
+  }
   function renameVehicle(name) { d.vehicle.name = name.trim() || SA.Config.text("state_3a7baff38a97"); save(); }
   function sellStock(id, mt, uniqueKey) {
     // 旧库存行未展示唯一身份；未明确指定 key 时只出售普通件，避免合并行误卖不可再次领取的奖励。
@@ -570,5 +650,5 @@ SA.S = (() => {
     for (const cell of res.removed) scrap += stashCell(cell);
     return { ...res, scrap };
   }
-  return { load, save, restartGame, ...(!SA.RELEASE ? { reset, replaceWithStarter } : {}), starterVehicle, get d() { return d; }, addInv, invCount, takeBest, stockOptions, takeStock, addIngots, hasUnique, claimUnique, LOAN_CAP, loanRoom, borrow, buy, repairCost, opponent, odds, Cloud, Blueprints, arenaEntries, placeBet, cancelBet, settleBattle, stashCell, matUpInfo, buyable, payAmount, repay, repairCells, upgradeMaterial, upgradeCell, renameVehicle, sellStock, installStock, removeVehicleCell };
+  return { load, save, restartGame, ...(!SA.RELEASE ? { reset, replaceWithStarter } : {}), starterVehicle, get d() { return d; }, addInv, invCount, takeBest, stockOptions, takeStock, addIngots, hasUnique, claimUnique, LOAN_CAP, loanRoom, borrow, buy, repairCost, opponent, odds, Cloud, Blueprints, arenaEntries, placeBet, cancelBet, settleBattle, stashCell, matUpInfo, buyable, payAmount, repay, repairCells, upgradeMaterial, upgradeCell, refitCell, renameVehicle, sellStock, installStock, removeVehicleCell };
 })();

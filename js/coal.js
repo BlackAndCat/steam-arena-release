@@ -550,7 +550,8 @@ SA.Coal = (() => {
   function pilotOf(veh) {
     const name = veh && veh.name;
     if (SA.S && SA.S.d && SA.S.d.vehicle && (veh === SA.S.d.vehicle || name === SA.S.d.vehicle.name)) return byName[SA.Config.text("arena_a0c7716669b5")];
-    const pools = [...(SA.CAMPAIGN || []).flatMap(ch => ch.stages), ...(SA.OPPONENTS || []), ...(SA.SIDE_ENCOUNTERS || [])];
+    const pools = [...(SA.CAMPAIGN || []).flatMap(ch => ch.stages), ...(SA.OPPONENTS || []), ...(SA.SIDE_ENCOUNTERS || []),
+      ...(SA.SIDE_LINES || []).flatMap(line => line.episodes.map(ep => ({ name: ep.vehicleName || ep.name, pilot: ep.pilot })))];
     const hit = pools.find(x => x && x.name === name);
     return (hit && byName[hit.pilot]) || crew(name || 'x');
   }

@@ -5,14 +5,39 @@ SA.StageCars = (() => {
   const data = SA.STAGE_CARS;
   // 每关只有一条最终记录；手工作者字段与原始关卡字段已在迁移时合并。
   const keyOf = (chapter, stage) => `${chapter}:${stage}`;
+  // 历史布局的关卡索引换算是纯规则，候选库在不加载玩家存档的后台页也要使用。
+  function migrateStageIndex(chapter, stage, layout) {
+    const from = layout || 1;
+    if (from < 2 && chapter === 0 && stage === 1) stage = 2;
+    if (from < 3 && chapter >= 3 && chapter <= 5 && stage === 2) stage = 3;
+    return stage;
+  }
   const targetKeys = () => [...(data.targets || [])];
   const get = (chapter, stage) => data.records && data.records[keyOf(chapter, stage)] || null;
   const isLocked = (chapter, stage) => !!get(chapter, stage)?.locked;
   // 规则指纹只来自后台版本，不把用户的手工数据算进去。
   const ruleFingerprint = () => String(SA.RULES_VERSION || SA.BUILD_SYS || 'rules-unknown');
+  // 关卡整车倍率只保存四项独立规则；缺省为原始数值，非法倍率拒绝进入战斗或落盘。
+  function statMultipliers(value = {}) {
+    value = value ?? {};
+    const out = {};
+    for (const key of ['hp', 'damage', 'speed', 'brake']) {
+      const n = value[key] === undefined ? 1 : Number(value[key]);
+      if (!Number.isFinite(n) || n < 0.0001 || n > 100) throw new Error('关卡整车增减范围为 -99.99%～+9900%：' + key);
+      out[key] = n;
+    }
+    return out;
+  }
   function cellsOf(vehicle) {
     const cells = [];
-    SA.V.each(vehicle, (cell, row, col, layer) => cells.push([layer === 'side' ? 1 : 0, row, col, cell.id, cell.mt || 1, cell.lv || 0]));
+    // 与工作台完整种子保持同一语义：普通车仍输出六项，外观／唯一身份和专项改造保留第七项。
+    // 草稿、makeRecord 和用户手动保存共用此出口，避免保存后丢失身份或改造等级。
+    SA.V.each(vehicle, (cell, row, col, layer) => {
+      const item = [layer === 'side' ? 1 : 0, row, col, cell.id, cell.mt || 1, cell.lv || 0];
+      if (cell.look || cell.unique || cell.refit) item.push({ look: cell.look, unique: cell.unique,
+        ...(cell.refit ? { refit: cell.refit } : {}) });
+      cells.push(item);
+    });
     return cells;
   }
   function vehicle(record, name) {
@@ -56,6 +81,7 @@ SA.StageCars = (() => {
     return {
       ...preserved,
       version: 1, id: keyOf(chapter, stage), cells: cellsOf(vehicleValue), code: SA.V.encode(vehicleValue),
+      statMultipliers: statMultipliers(meta.statMultipliers ?? base.statMultipliers),
       style: meta.style ?? base.style ?? 'wander', aim: Number.isFinite(+meta.aim) ? +meta.aim : (base.aim ?? 0.8), terrain: meta.terrain || base.terrain || 'flat', boss: meta.boss === undefined ? !!base.boss : !!meta.boss,
       prize: Number.isFinite(+meta.prize) ? +meta.prize : (base.prize || 0), unlock: meta.unlock === undefined ? (base.unlock || null) : meta.unlock, uniqueLoot: meta.uniqueLoot === undefined ? (base.uniqueLoot || []) : meta.uniqueLoot,
       rewardItems: meta.rewardItems === undefined ? (base.rewardItems || []) : meta.rewardItems,
@@ -82,7 +108,7 @@ SA.StageCars = (() => {
     allowed.add('cockpit');
     for (let ci = 0; ci <= chapter; ci++) {
       const ch = SA.CAMPAIGN[ci], stop = ci === chapter ? stage : ch.stages.length;
-      for (let si = 0; si < stop; si++) for (const id of ch.stages[si].unlock?.mods || []) allowed.add(id);
+      for (let si = 0; si < stop; si++) for (const id of ch.stages[si]?.unlock?.mods || []) allowed.add(id);
       if (ci < chapter) for (const id of ch.unlock?.mods || []) allowed.add(id);
     }
     for (const id of record?.unlock?.mods || []) allowed.add(id);
@@ -94,5 +120,5 @@ SA.StageCars = (() => {
     return out;
   }
   applyToCampaign();
-  return { data, keyOf, targetKeys, get, isLocked, merge, applyToCampaign, vehicle, cellsOf, makeRecord, validate, ruleFingerprint };
+  return { data, keyOf, migrateStageIndex, targetKeys, get, isLocked, merge, applyToCampaign, vehicle, cellsOf, makeRecord, validate, ruleFingerprint, statMultipliers };
 })();

@@ -22,6 +22,7 @@ SA.go = (name) => {
 SA.nav = (name, arg, quiet) => {
   document.querySelector('#modal').hidden = true;
   if ((name === 'garage' || name === 'home') && !SA.Camp.has('garage')) name = 'arena';
+  if (SA.Story.enterPipStory(name)) return;
   if (name === 'arena') SA.Arena.open(arg, quiet);
   else if (name === 'home') SA.Home.open();
   else SA.Editor.open(arg);
@@ -31,7 +32,6 @@ window.addEventListener('DOMContentLoaded', () => {
   SA.PX.init();   // 像素界面件的九宫格 / 齿轮 / 桌面纹理挂到 CSS 变量上
   SA.S.load();
   SA.Camp.backfill();
-  SA.nav(SA.Camp.has('garage') ? 'home' : 'arena');
   document.querySelector('#modal').addEventListener('pointerdown', (e) => {
     if (e.target.id === 'modal') SA.UI.closeModal();
   });
@@ -41,7 +41,7 @@ window.addEventListener('DOMContentLoaded', () => {
   // 从进化报告页（tools/evolve.html）跳过来：直接打开试驾场，对手来源选"进化报告"
   if (!SA.RELEASE && location.hash === '#sandbox=evolve') { history.replaceState(null, '', location.pathname); SA.Camp.dev.sandbox('evolve'); return; }
   // 开始界面：点「开始游戏」后，全新存档先演开场、直接进第一场；老存档回到原来的页面
-  SA.Story.title(SA.Story.begin);
+  SA.Story.title(() => { SA.nav(SA.Camp.has('garage') ? 'home' : 'arena'); SA.Story.begin(); });
 });
 
 // 调试用：控制台输入 SA.reset() 重开存档

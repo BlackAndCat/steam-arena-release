@@ -8,7 +8,8 @@
   const cache = Object.create(null);
   const renderedKeys = new Map();
   const migrationKey = 'sa-config-migrate=';
-  const legacyKeys = ['steam_arena_stage_cars_local_v1', 'sa-text-steam-arena-zh-CN'];
+  // 旧浏览器关卡车快照不再自动回灌；原 localStorage 内容保留供手工恢复。
+  const legacyKeys = ['sa-text-steam-arena-zh-CN'];
 
   function legacy() {
     const data = {};

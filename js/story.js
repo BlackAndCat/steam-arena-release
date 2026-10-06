@@ -9,7 +9,14 @@ SA.STORY = (() => {
   const rows = key => JSON.parse(doc.values[`story:${key}`] || '[]');
   const data = { cast: doc.storyMeta.cast, opening: rows('opening'),
     tutorial: { intro: rows('tutorial.intro'), parts: doc.storyMeta.tutorialParts.map((part, i) =>
-      ({ ...part, lines: rows(`tutorial.parts.${i}`) })) }, stage: {}, before: {}, after: {}, feat: {} };
+      ({ ...part, lines: rows(`tutorial.parts.${i}`) })),
+      // 讲完部件后的操作教学：电脑和触屏各一套旁白（desktop / touch）
+      controls: (doc.storyMeta.tutorialControls || []).map(c =>
+        ({ ...c, lines: { desktop: rows(`tutorial.controls.${c.part}.desktop`), touch: rows(`tutorial.controls.${c.part}.touch`) } })) },
+    // 页面教程（js/tutorial.js）：出战黑板、车间、商店第一次出现时的旁白
+    guides: Object.fromEntries((doc.storyMeta.guides || []).map(g => [g.id, rows(`guide.${g.id}`)])),
+    guideList: doc.storyMeta.guides || [],
+    stage: {}, before: {}, after: {}, feat: {} };
   for (const key of Object.keys(doc.values)) {
     let match = /^story:stage\.(\d+,\d+)\.(win|lose)$/.exec(key);
     if (match) { (data.stage[match[1]] ||= {})[match[2]] = rows(key.slice(6)); continue; }
@@ -30,7 +37,10 @@ SA.Story = (() => {
   try { flags = JSON.parse(localStorage.getItem(KEY)) || {}; } catch (e) { flags = {}; }
   const seen = (k) => !!flags[k];
   function mark(k) { flags[k] = 1; try { localStorage.setItem(KEY, JSON.stringify(flags)); } catch (e) { /* 隐私模式：只在本页记住 */ } }
-  function reset() { flags = {}; try { localStorage.removeItem(KEY); } catch (e) { /* ignore */ } }
+  function reset() { flags = {}; pipStoryActive = false; try { localStorage.removeItem(KEY); } catch (e) { /* ignore */ } }
+  // 皮普是否在车上只看当前实际装配；库存中的双人舱不改变院子人物。
+  const pipInVehicle = () => !!SA.S?.d?.vehicle && !!SA.V.countIds(SA.S.d.vehicle).cockpit_pair;
+  let pipStoryActive = false;
   // 全新存档：还在序章第一场、车间没开
   const isFresh = () => { const C = SA.S.d.camp; return C.ch === 0 && C.st === 0 && !C.done && !SA.Camp.has('garage'); };
 
@@ -85,10 +95,11 @@ SA.Story = (() => {
   // 老汤姆（和亲戚同框时）在右边，眼睛朝左。expr = 这一句的表情（台词的 expr 字段，缺省 normal）
   // 笑眯眼和瞪眼本身就是一种眼形，不再眨眼
   const NO_BLINK = { happy: 1, shock: 1, blink: 1 };
-  function portrait(talk, blink, who = 'uncle', expr = 'normal') {
+  // look：1 = 朝右（左边的头像），-1 = 朝左（右边的头像）；不给就按老规矩，老汤姆朝左、其余朝右
+  function portrait(talk, blink, who = 'uncle', expr = 'normal', look = who === 'smith' ? -1 : 1) {
     const c = SA.STORY.cast[who] || SA.STORY.cast.uncle;
     const e = SA.Coal.EXPR[expr] ? expr : 'normal';
-    return coal(c.coal || '远房亲戚', { size: 'bust', expr: blink && !NO_BLINK[e] ? 'blink' : e, cy: talk ? 60 : 62, look: who === 'smith' ? -1 : 1 });
+    return coal(c.coal || '远房亲戚', { size: 'bust', expr: blink && !NO_BLINK[e] ? 'blink' : e, cy: talk ? 60 : 62, look });
   }
   // 编辑器可选的表情：[id, 名字]（括号里的画法备注不要）；blink 是眨眼动画用的，不给选
   const exprs = () => Object.entries(SA.Coal.EXPR).filter(([k]) => k !== 'blink').map(([k, n]) => [k, String(n).split(/[（(]/)[0].trim() || k]);
@@ -367,8 +378,12 @@ SA.Story = (() => {
   function talk(lines, { host = document.body, scene = null, onDone = null, onEdit = null, cls = '', start = 0 } = {}) {
     const page = host === document.body;
     const face = h('canvas', { class: 'px vn-face', width: 96, height: 96 });
-    // 老汤姆一出场就和远房亲戚同框：左边亲戚、右边老汤姆，谁说话谁亮
-    const duo = lines.some(L => L.who === 'smith');
+    // 两人同框：老汤姆一出场就和远房亲戚同框；其他人（玛莎……）只要这一段有两个以上的人说话也同框。
+    // 左边固定一人（有亲戚或老汤姆时是亲戚），右边是最近一位别的说话人，谁说话谁亮
+    const speakers = [...new Set(lines.map(L => L.who).filter(w => w && SA.STORY.cast[w]))];
+    const duo = speakers.length > 1 || speakers.includes('smith');
+    const leftWho = duo ? (speakers.includes('uncle') || speakers.includes('smith') ? 'uncle' : speakers[0]) : null;
+    let rightWho = duo ? (speakers.find(w => w !== leftWho) || 'smith') : null;
     const face2 = duo ? h('canvas', { class: 'px vn-face', width: 96, height: 96 }) : null;
     const name = h('div', { class: 'vn-name' });
     const txt = h('div', { class: 'vn-text' });
@@ -390,6 +405,8 @@ SA.Story = (() => {
       full = L.text; shown = 0; lt = 0;
       const who = speaker(L);
       root.dataset.who = who || 'narr';
+      if (duo && who && who !== leftWho) rightWho = who;
+      root.dataset.side = !who ? 'narr' : !duo || who === leftWho ? 'l' : 'r';
       if (who) { mood[who] = L.expr || 'normal'; root.classList.add('vn-cast'); }
       name.textContent = who ? SA.STORY.cast[who].name : '';
       if (L.scene && scene) scene.set(L.scene);
@@ -409,9 +426,9 @@ SA.Story = (() => {
     let solo = null;
     function faces() {
       const who = root.dataset.who, talking = who !== 'narr' && shown < full.length && Math.floor(gt * 9) % 2 === 0;
-      const left = duo ? 'uncle' : who !== 'narr' ? (solo = who) : solo;
-      if (left) { fg.clearRect(0, 0, 96, 96); fg.drawImage(portrait(talking && who === left, gt % 3.2 < 0.12, left, mood[left]), 0, 0); }
-      if (fg2) { fg2.clearRect(0, 0, 96, 96); fg2.drawImage(portrait(talking && who === 'smith', (gt + 1.3) % 3.7 < 0.12, 'smith', mood.smith), 0, 0); }
+      const left = duo ? leftWho : who !== 'narr' ? (solo = who) : solo;
+      if (left) { fg.clearRect(0, 0, 96, 96); fg.drawImage(portrait(talking && who === left, gt % 3.2 < 0.12, left, mood[left], duo ? 1 : undefined), 0, 0); }
+      if (fg2) { fg2.clearRect(0, 0, 96, 96); fg2.drawImage(portrait(talking && who === rightWho, (gt + 1.3) % 3.7 < 0.12, rightWho, mood[rightWho], -1), 0, 0); }
     }
     function frame(now) {
       if (done) return;
@@ -445,14 +462,14 @@ SA.Story = (() => {
     let sc = null;
     for (let k = 0; k < from; k++) {
       const who = speaker(lines[k]);
-      if (who) { mood[who] = lines[k].expr || 'normal'; solo = who; root.classList.add('vn-cast'); }
+      if (who) { mood[who] = lines[k].expr || 'normal'; solo = who; root.classList.add('vn-cast'); if (duo && who !== leftWho) rightWho = who; }
       if (lines[k].scene) sc = lines[k].scene;
     }
     if (sc && scene && !lines[from].scene) scene.set(sc);
     show(from);
     if (edit) edit.hidden = !canEditOpening();
     raf = requestAnimationFrame(frame);
-    return { close: () => finish(), cancel: () => finish(false), get index() { return i; } };
+    return { close: () => finish(), cancel: () => finish(false), advance, get index() { return i; } };
   }
 
   // 开场画面：480×270 画布，分镜随台词切换
@@ -531,6 +548,18 @@ SA.Story = (() => {
   // ---------- 流程 ----------
   // 台词一律经 SA.StoryData.get 读；SA.STORY 只是同一配置的结构化运行时视图。
   const lines = (id, fb) => { try { return SA.StoryData ? SA.StoryData.get(id) : fb; } catch (e) { return fb; } };
+  // 首次装上双人舱后，从车间去出战或回院子都先留在院子听完这段；在播时重复导航不能绕开。
+  function enterPipStory(name) {
+    if (name !== 'home' && name !== 'arena') return false;
+    if (pipStoryActive) { if (SA.current !== 'home') SA.Home.open(); return true; }
+    if (!pipInVehicle() || seen('pip_pair')) return false;
+    pipStoryActive = true;
+    SA.Home.open();
+    SA.Story.talk(lines('feat.pip_pair', SA.STORY.feat.pip_pair), { cls: 'vn-hint', onDone: () => {
+      mark('pip_pair'); pipStoryActive = false;
+    } });
+    return true;
+  }
   // 开场试播使用正式分镜，但结束后只执行编辑器回调，不写进度或进入战斗。
   function previewOpening(rows, next, o = {}) {
     if (!rows.length) { next(); return; }
@@ -551,14 +580,15 @@ SA.Story = (() => {
     const go = () => e.start();
     if (SA.StoryDev) SA.StoryDev.before({ key: e.key, replay: e.replay }, go); else go();
   }
-  // 战斗教程台词：只在第一关第一次开打时有；返回 null 就不演
-  function tutorial(opts) {
+  // 战斗教程台词：只在第一关第一次开打时有；返回 null 就不演。dev = 'desktop' | 'touch'，决定操作教学用哪一套
+  function tutorial(opts, dev = 'desktop') {
     if (seen('tutorial') || opts.mode !== 'campaign' || opts.replay) return null;
     const st = SA.Camp.current();
     if (!st || st.ci !== 0 || st.si !== 0) return null;
     // 每句还原成 { who, text }：老格式的纯字符串是远房亲戚说的；对象里没写 who 的就是旁白（编辑器里选的「旁白」）
     const T0 = SA.STORY.tutorial, rows = (id, fb) => lines(id, fb).map(l => (typeof l === 'string' ? { who: 'uncle', text: l } : { ...l }));
-    return { intro: rows('tutorial.intro', [].concat(T0.intro)), parts: T0.parts.map((p, i) => ({ ...p, lines: rows(`tutorial.parts.${i}`, p.lines) })) };
+    return { intro: rows('tutorial.intro', [].concat(T0.intro)), parts: T0.parts.map((p, i) => ({ ...p, lines: rows(`tutorial.parts.${i}`, p.lines) })),
+      controls: (T0.controls || []).map(c => ({ ...c, lines: rows(`tutorial.controls.${c.part}.${dev}`, c.lines[dev]) })) };
   }
   // 过关提示：at = 打的是哪一场（战役），newFeat = 这一场新开放的功能。每条只说一次
   function afterBattle({ key, win, newFeat = [] }, next) {
@@ -574,5 +604,5 @@ SA.Story = (() => {
     talk(out, { onDone: next, cls: 'vn-hint' });
   }
 
-  return { title, begin, talk, previewOpening, tutorial, afterBattle, emblem, portrait, exprs, seen, mark, reset, isFresh };
+  return { title, begin, talk, previewOpening, tutorial, afterBattle, emblem, portrait, exprs, seen, mark, reset, isFresh, pipInVehicle, enterPipStory };
 })();

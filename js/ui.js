@@ -123,7 +123,7 @@ SA.UI = (() => {
     const cur = SA.current, has = SA.Camp.has;
     const fix = SA.V.stats(d.vehicle).problems.length;
     const st = SA.Camp.current(), ch = SA.CAMPAIGN[SA.Camp.chIndex()];
-    const where = st ? ch.name : SA.Config.text("ui_977e74339430", `${d.round + 1}`);
+    const where = st || SA.Camp.pending() ? ch.name : SA.Config.text("ui_977e74339430", `${d.round + 1}`);
     const nav = (key, label, extra) => UI.btn(label, { kind: cur === key ? 'pri' : 'sec', gear: cur === key, onclick: () => SA.nav(key), title: extra || null });
     const ingots = Object.entries(d.ingots || {}).filter(([, n]) => n > 0).map(([k, n]) => [k === 'aether' ? 'aether' : 'wootz', n]);
     const counter = UI.counter({ money: d.money, rep: d.rep, ingotList: ingots, onclick: has('bank') });
@@ -191,6 +191,7 @@ SA.UI = (() => {
       now.map((g, i) => {
         const d2 = nxt ? nxt[i].pct - g.pct : 0;
         const el = UI.meter({ ...g, pct: Math.min(1, g.pct), delta: Math.abs(d2) > 0.004 ? d2 : 0 }, { w: 50, lim: lim[g.k] });
+        if (el.dataset) el.dataset.stat = g.k;   // 车间教程按这个指着讲（js/tutorial.js）
         return UI.tip(el, () => [h('div', { class: 'tp-nm' }, g.name, ' ', h('span', { class: 'tp-val' }, g.val)),
           h('div', { class: 'tp-ks' }, g.note.split(' · ').map(t => h('div', {}, t))),
           h('div', { class: 'tp-note' }, ABOUT[g.k])]);
@@ -357,7 +358,8 @@ SA.UI = (() => {
       const freeRepair = !repairFree && res.mode === 'campaign' && res.win && !res.draw && res.opts?.victoryRepairFree === true;
       const cost = freeRepair ? 0 : hurt.reduce((a, c) => a + SA.S.repairCost(c), 0);
       const fixAll = () => { SA.S.repairCells(hurt); toast(freeRepair ? SA.Config.text("ui_54a224778a07", `${hurt.length}`) : SA.Config.text("ui_6da34172caea", `${hurt.length}`, `${money(cost)}`)); };
-      const after = () => { refresh(); story(() => SA.Camp.introIfNew()); };
+      // 第一场赢下、车间刚开：弹窗和剧情演完直接带去车间（js/tutorial.js）
+      const after = () => { refresh(); story(() => { SA.Camp.introIfNew(); if (SA.Guide) SA.Guide.afterBattle(); }); };
       const gain = d.money - money0, net = gain - cost;
       dialog(res.draw ? SA.Config.text("ui_53829b1ffb0b") : res.win ? SA.Config.text("ui_c328cf26a3fd") : SA.Config.text("ui_bd5cdcb6f4f6"), [
         h('p', { style: 'font-size:16px;margin-top:0' }, h('b', {}, res.reason)),

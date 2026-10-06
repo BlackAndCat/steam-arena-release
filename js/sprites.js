@@ -192,6 +192,252 @@ SA.SPR = (() => {
     if (!p) { p = SA.LEGLAB.Pen(cv.width, cv.height); pens.set(k, p); }
     return p.at(1, 0, 0);
   }
+  // ---------- 真双足的机甲外观（机甲套件 v4，用户 2026-10-05 全部通过；docs/biped-plan.md §6）----------
+  // 现有模块装在双足躯干上的特定位置时换成机甲外观，只换画面、数值不变：
+  //   甲片在躯干顶角 = 肩甲；竖式锅炉 / 小水罐 / 加压舱在躯干最后一列 = 背负锅炉 / 背水罐 / 喷汽背包。
+  // 位置由 renderVehicle 的 mechRoles 判断。画法照 tools/archive/mech-kit-v4.js 原样搬来（加压舱从 1×1 拉成 1×2）；
+  // 铁制 / 钢制两种外观：T1～T3 用铁制，T4～T6 用钢制；材料色仍由 decorate 统一上。
+  const MECH_SOOT = ['#141824', '#2f3850', '#6a7a9c'];
+  function mechMat() {
+    const N = SA.LEGLAB.U.NEAR;
+    return { ...N, glass: [...P.glass], water: [P.water[0], P.water[1], P.water[2], P.water[3]] };
+  }
+  const MECH_ART = {
+    pauldron(pn, x, y, s, M, o) {
+      const rivet = SA.LEGLAB.U.rivet, sw = o.sw || 0;
+      if (s === 'L') {
+        for (let k = 2; k >= 0; k--) {
+          const v = y + 3 + k * 6, dx = k === 0 ? 0 : sw * (k === 2 ? 1 : 0.5), pts = [];
+          for (let i = 0; i <= 10; i++) { const a = Math.PI * (1 + i / 10); pts.push([x + 12 + dx + Math.cos(a) * 11, v + 9 + Math.sin(a) * 7]); }
+          pts.push([x + 23 + dx, v + 11], [x + 1 + dx, v + 11]);
+          pn.poly(pts).paint(M.iron);
+          rivet(pn, x + 3 + dx, v + 5); rivet(pn, x + 19 + dx, v + 5);
+        }
+      } else {
+        pn.poly([[x + 1, y + 9], [x + 3, y + 1], [x + 8, y + 1], [x + 9, y + 8]]).paint(M.steel);
+        const pts = [];
+        for (let i = 0; i <= 12; i++) { const a = Math.PI * (1 + i / 12); pts.push([x + 12 + Math.cos(a) * 11.5, y + 16 + Math.sin(a) * 10]); }
+        pts.push([x + 23.5, y + 21], [x + 0.5, y + 21]);
+        pn.poly(pts).paint(M.steel);
+        pn.rect(x + 1, y + 18, 22, 3).paint(M.brass, { outline: false });
+        pn.ln(x + 4, y + 11, x + 11, y + 7, M.steel[3]); pn.fill(x + 4, y + 2, 3, 1, P.brass[2]);
+        rivet(pn, x + 17, y + 11);
+      }
+    },
+    backboiler(pn, x, y, s, M, o) {
+      const rivet = SA.LEGLAB.U.rivet, shell = s === 'L' ? M.iron : M.steel, t = o.t || 0, fl = o.fl || 0;
+      pn.rect(x + 5, y - 17, 6, 22).paint(M.dark);
+      if (s === 'K') pn.rect(x + 3, y - 20, 10, 4).paint(M.brass); else pn.rect(x + 4, y - 19, 8, 3).paint(M.dark);
+      for (let k = 0; k < 3; k++) { const p = (t * 0.9 + k / 3) % 1; pn.disc(x + 8 - p * 5 + Math.sin(k * 2 + p * 6), y - 22 - p * 14, 1.3 + p * 2.6).paint(p < 0.5 ? [P.steam[1], P.steam[2], P.steam[2], P.white] : M.steam, { outline: false }); }
+      pn.cap(x + 12, y + 10, x + 12, y + 38, 9.5).paint(shell);
+      for (const yy of (s === 'K' ? [8, 22, 37] : [9, 35])) pn.rect(x + 3, y + yy, 18, 2).paint(M.brass, { outline: false });
+      if (s === 'K') { pn.disc(x + 15, y + 16, 3.2).paint(M.brass); pn.disc(x + 15, y + 16, 2.2).paint([M.gauge[1], M.gauge[1], P.steam[2], P.steam[2]], { outline: false, bevel: '' }); pn.ln(x + 15, y + 16, x + 16, y + 14, P.dark[0]); }
+      else { rivet(pn, x + 5, y + 14); rivet(pn, x + 5, y + 26); }
+      pn.rect(x + 6, y + 27, 11, 8).paint(M.dark);
+      for (let k = 0; k < 6; k++) pn.dot(x + 8 + (k * 3) % 8, y + 29 + (k % 3) * 2, (k + fl) % 3 ? M.fire[2] : M.fire[3]);
+      for (const yy of [12, 30]) pn.rect(x + 19, y + yy, 6, 3).paint(M.leather, { bevel: 'l' });
+    },
+    backjar(pn, x, y, s, M) {
+      const shell = s === 'L' ? M.iron : M.steel;
+      for (const cx of [7, 17]) {
+        pn.cap(x + cx, y + 6, x + cx, y + 17, 5).paint(shell);
+        pn.rect(x + cx - 2, y + 6, 4, 10).paint([M.iron[0], M.iron[0], M.glass[0], M.glass[0]], { bevel: '' });
+        pn.fill(x + cx - 1, y + 10, 2, 5, M.water[2]); pn.fill(x + cx - 1, y + 10, 2, 1, M.water[3]);
+        pn.rect(x + cx - 2, y, 4, 3).paint(M.brass, { bevel: 'l' });
+      }
+      pn.rect(x + 1, y + 12, 22, 3).paint(s === 'K' ? M.brass : M.leather, { bevel: 'l' });
+      pn.cap(x + 7, y + 2, x + 17, y + 2, 0.9).paint(M.brass, { outline: false });
+    },
+    // 加压舱是 1×2：箱子拉高到两格，喷口在下面一格的底边；走起来喷口一直往下冒汽，站定时只剩一丝
+    jetpack(pn, x, y, s, M, o) {
+      const rivet = SA.LEGLAB.U.rivet, shell = s === 'L' ? M.iron : M.steel, t = o.t || 0;
+      pn.rect(x + 3, y + 2, 18, 36).paint(shell);
+      for (const yy of [9, 28]) pn.rect(x + 3, y + yy, 18, 2).paint(M.brass, { outline: false });
+      if (s === 'K') { pn.disc(x + 12, y + 18, 3).paint(M.brass); pn.disc(x + 12, y + 18, 1.8).paint([M.gauge[1], M.gauge[1], P.steam[2], P.steam[2]], { outline: false, bevel: '' }); }
+      else { rivet(pn, x + 5, y + 14); rivet(pn, x + 17, y + 14); rivet(pn, x + 5, y + 22); rivet(pn, x + 17, y + 22); }
+      for (const cx of [7, 17]) pn.poly([[x + cx - 2, y + 38], [x + cx + 2, y + 38], [x + cx + 4, y + 46], [x + cx - 4, y + 46]]).paint(M.brass);
+      const n = o.mv ? 4 : 1;
+      for (const cx of [7, 17]) for (let k = 0; k < n; k++) { const p = (t * 1.6 + k / n + cx * 0.07) % 1; pn.disc(x + cx + Math.sin(k * 3 + p * 5), y + 48 + p * (o.mv ? 10 : 4), 1 + p * (o.mv ? 2.6 : 1.2)).paint(p < 0.4 ? [P.steam[1], P.steam[2], P.white, P.white] : M.steam, { outline: false }); }
+    },
+  };
+  // 在精灵里画机甲外观：q.mech = 外观名，q.mt = 材料，q.fr / q.sw / q.mv = 动画档
+  function mechArt(x, y, q) {
+    const pn = penFor(ctx.canvas), s = (q.mt || 1) <= 3 ? 'L' : 'K';
+    const t = q.mech === 'backboiler' ? (q.fr || 0) / 6 : q.mech === 'jetpack' ? (q.fr || 0) / 8 : 0;
+    MECH_ART[q.mech](pn, x, y, s, mechMat(), { t, fl: (q.fr || 0) % 4, sw: q.sw || 0, mv: !!q.mv });
+    pn.flush(ctx);
+  }
+  // ---------- 机甲头盔（新模块 mech_helm，2×1 = 48×24；用户 2026-10-05 定）----------
+  // 两格横躺，但头盔本身只占中间一格（24px）；两侧各空出半格，做成肩甲 / 护颈这类有防御感的饰件。耐久很高（数值见 config/modules.json）。
+  // 用户 2026-10-05 从 5 种方案里选定 D「指挥塔 · 斜装甲」（其余四种在 git 历史和 tools/archive/biped-v8 里）。只用冷铁 / 黄铜 / 玻璃，材料色由 decorate 统一上。
+  const MECH_HELM_STYLE = 'D';
+  const HELM_GLASS = [P.glass[0], P.glass[0], P.glass[0], P.glass[1]], HELM_SOOT = [MECH_SOOT[0], MECH_SOOT[1], MECH_SOOT[1], MECH_SOOT[2]];
+  const helmEyes = (pn, xs, y) => { for (const ex of xs) { pn.fill(ex, y, 2, 2, P.white); pn.fill(ex + 1, y + 1, 1, 1, P.black); } };
+  const MECH_HELMS = {
+    D: {
+      name: '指挥塔 · 斜装甲', idea: '像坦克的指挥塔：梯形塔身、顶上舱盖、黄铜眉檐下一条观察缝；两边是往外斜下去的两层楔形装甲板，一排铆钉，最有「挡炮弹」的感觉。',
+      draw(pn, x, y, M) {
+        const cx = x + 24, rivet = SA.LEGLAB.U.rivet;
+        for (const sd of [-1, 1]) {
+          pn.poly([[cx + sd * 9, y + 8], [cx + sd * 23, y + 16], [cx + sd * 23, y + 24], [cx + sd * 9, y + 24]]).paint(M.steel);
+          pn.poly([[cx + sd * 9, y + 14], [cx + sd * 20, y + 20], [cx + sd * 20, y + 24], [cx + sd * 9, y + 24]]).paint(M.iron);
+          rivet(pn, cx + sd * 13 - 1, y + 11); rivet(pn, cx + sd * 18 - 1, y + 14);
+        }
+        pn.poly([[cx - 10, y + 24], [cx - 8, y + 5], [cx + 8, y + 5], [cx + 10, y + 24]]).paint(M.iron);
+        pn.rect(cx - 6, y + 2, 12, 4).paint(M.dark);
+        pn.rect(cx - 2, y, 4, 2).paint(M.brass);
+        pn.rect(cx - 8, y + 8, 17, 2).paint(M.brass, { outline: false });
+        pn.fill(cx - 6, y + 11, 13, 2, P.black);
+        pn.dot(cx - 2, y + 11, P.white); pn.dot(cx + 3, y + 11, P.white);
+        rivet(pn, cx - 8, y + 18); rivet(pn, cx + 6, y + 18);
+      },
+    },
+  };
+  function mechHelmArt(x, y, q) {
+    const pn = penFor(ctx.canvas);
+    (MECH_HELMS[q.hs] || MECH_HELMS[MECH_HELM_STYLE]).draw(pn, x, y, mechMat(), q);
+    pn.flush(ctx);
+  }
+  // ---------- 骑士手臂（knight_*，2×3 侧挂；机甲套件 v4 的机械臂，用户 2026-10-05 全部通过）----------
+  // 肩膀属于手臂：肩关节 (x+14, y+12) → 大臂 → 肘 (x+16, y+38) → 小臂 → 手 / 武器。T1～T3 铁制、T4～T6 钢制外观，材料色由 decorate 统一上。
+  // 炮臂 / 腕枪臂的武器绕肘转，炮管正好在肘的轴线上：piv = [16, 38]，blen 见 config/modules.json（战斗的炮口和画面对得上）。
+  // q.sw 步伐摆动（-1 / 0 / 1）；q.pu 近战出手（0～4 档，4 = 刚打出）；q.a 仰角（度）；q.k 后坐（0～4 档）
+  const ARM_END = { knight_shield: 'shield', knight_fist: 'fist', knight_hammer: 'hammer', knight_sword: 'sword', knight_cannon: 'cannon', knight_gun: 'mg' };
+  const ARM_PIV = [16, 38];
+  function armHand(pn, FA, s, M, end) {
+    const rivet = SA.LEGLAB.U.rivet, shell = s === 'L' ? M.iron : M.steel;
+    if (end === 'fist' && s === 'L') {   // 三指液压爪
+      for (const [f, bend] of [[4, 3], [0, 4], [-4, 2]]) { const b = FA.p(FA.len + 5, f), t = FA.p(FA.len + 8, f + bend); pn.cap(...FA.p(FA.len, f * 0.8), ...b, 1.4).cap(...b, ...t, 1.1); }
+      pn.paint(M.brass, { bevel: 'l' });
+      pn.poly(FA.pts([[FA.len - 2, -6], [FA.len - 2, 6], [FA.len + 3, 6], [FA.len + 3, -6]])).paint(M.iron);
+      return;
+    }
+    const big = end === 'fist' ? 1 : 0.8;   // 护手拳：握着武器时小一点
+    pn.poly(FA.pts([[FA.len - 2, -6 * big], [FA.len - 2, 6.5 * big], [FA.len + 8 * big, 6 * big], [FA.len + 9 * big, -5 * big]])).paint(shell);
+    pn.ln(...FA.p(FA.len + 5 * big, -5 * big), ...FA.p(FA.len + 5 * big, 6 * big), (s === 'L' ? M.iron : M.steel)[1]);
+    if (s === 'K') pn.ln(...FA.p(FA.len - 1, -5), ...FA.p(FA.len - 1, 6), P.brass[2]);
+    void rivet;
+  }
+  function armSword(pn, wx, wy, a, M) {
+    const B = SA.LEGLAB.U.bone(wx, wy, wx + Math.cos(a) * 50, wy + Math.sin(a) * 50);
+    pn.poly(B.pts([[-7, -1.6], [-7, 1.6], [0, 1.6], [0, -1.6]])).paint(M.leather);
+    pn.disc(...B.p(-8, 0), 2).paint(M.brass);
+    pn.poly(B.pts([[5, -3], [5, 3], [48, 0.8], [52, 0], [48, -0.8]])).paint([P.iron[0], P.iron[3], P.iron[4], P.white]);
+    pn.ln(...B.p(7, 0), ...B.p(44, 0), P.iron[2]);
+    pn.poly(B.pts([[2, -8], [5, -8], [5, 8], [2, 8]])).paint(M.brass);
+  }
+  function armHammer(pn, wx, wy, a, s, M) {   // 蒸汽锤：长柄 + 锤头，锤头背后一根活塞
+    const B = SA.LEGLAB.U.bone(wx, wy, wx + Math.cos(a) * 34, wy + Math.sin(a) * 34);
+    pn.poly(B.pts([[-8, -1.8], [-8, 1.8], [30, 1.8], [30, -1.8]])).paint(M.leather);
+    pn.poly(B.pts([[33, 12], [42, 13.5], [42, 18], [33, 17]])).paint(M.steam, { bevel: 'l' });
+    pn.poly(B.pts([[26, -13], [26, 13], [44, 15], [44, -15]])).paint(s === 'L' ? M.iron : M.steel);
+    for (const aa of [29, 38]) pn.poly(B.pts([[aa, -13.5], [aa + 2, -13.5], [aa + 2, 13.5], [aa, 13.5]])).paint(M.brass, { outline: false });
+    pn.poly(B.pts([[34, -20], [38, -20], [38, -14], [34, -14]])).paint(M.dark);
+  }
+  function armShield(pn, cx, cy, s, M) {
+    if (s === 'L') {
+      const rivet = SA.LEGLAB.U.rivet;
+      pn.poly([[cx - 11, cy - 20], [cx + 11, cy - 20], [cx + 11, cy + 14], [cx, cy + 22], [cx - 11, cy + 14]]).paint(M.iron);
+      pn.ln(cx, cy - 17, cx, cy + 18, M.iron[3]);
+      pn.fill(cx - 7, cy - 14, 14, 2, P.black);
+      pn.disc(cx, cy + 1, 4).paint(M.brass); pn.dot(cx - 1, cy, P.brass[3]);
+      for (const yy of [-17, -6, 9]) { rivet(pn, cx - 10, cy + yy); rivet(pn, cx + 7, cy + yy); }
+    } else {
+      pn.poly([[cx - 13, cy - 21], [cx + 13, cy - 21], [cx + 13, cy + 3], [cx, cy + 24], [cx - 13, cy + 3]]).paint(M.brass);
+      pn.poly([[cx - 11, cy - 19], [cx + 11, cy - 19], [cx + 11, cy + 2], [cx, cy + 21], [cx - 11, cy + 2]]).paint(M.steel, { outline: false });
+      pn.ln(cx - 10, cy - 18, cx - 10, cy + 1, M.steel[3]);
+      SA.LEGLAB.U.gear(pn, cx, cy - 5, 6, 10, 0.2, M.brass, M.steel);
+      pn.fill(cx - 1, cy + 4, 2, 12, P.brass[2]);
+    }
+  }
+  // 巨炮臂：整条小臂就是一门炮，绕肘转（a = 仰角弧度）；炮管在肘的轴线上，炮口离肘 56px
+  function armCannon(pn, ex, ey, a, k, s, M) {
+    const R = s === 'L' ? M.iron : M.steel, B = SA.LEGLAB.U.bone(ex, ey, ex + Math.cos(a) * 60, ey - Math.sin(a) * 60);
+    pn.disc(...B.p(2 - k, -11), 6.5).paint(M.brass); pn.disc(...B.p(2 - k, -11), 3).paint(M.dark, { outline: false });   // 炮尾下的弹鼓
+    pn.poly(B.pts([[-8 - k, 7], [12 - k, 7], [12 - k, -8], [-8 - k, -8]])).paint(R);
+    pn.poly(B.pts([[10 - k, 5], [50 - k, 4], [50 - k, -4], [10 - k, -5]])).paint(R);
+    pn.poly(B.pts([[48 - k, 6], [56 - k, 6], [56 - k, -6], [48 - k, -6]])).paint(M.brass);
+    for (const u of [16, 28, 40]) pn.poly(B.pts([[u - k, 5], [u + 2 - k, 5], [u + 2 - k, -5], [u - k, -5]])).paint(M.brass, { outline: false });
+    pn.ln(...B.p(12 - k, 3), ...B.p(46 - k, 2), R[3]);
+  }
+  // 腕枪臂：小臂指向瞄准方向，护手拳前面伸出一根短枪管（在肘的轴线上，枪口离肘 38px），小臂上面压一只黄铜弹鼓
+  function armWristGun(pn, ex, ey, a, k, s, M) {
+    const shell = s === 'L' ? M.iron : M.steel, L = 18, FA = SA.LEGLAB.U.bone(ex, ey, ex + Math.cos(a) * L, ey - Math.sin(a) * L);
+    pn.poly(FA.pts([[0, 5], [0, -5], [L, -6], [L, 6.4]])).paint(shell);
+    pn.poly(FA.pts([[L + 6 - k, 1.4], [L + 20 - k, 1.4], [L + 20 - k, -1.4], [L + 6 - k, -1.4]])).paint(M.steel);
+    pn.poly(FA.pts([[L + 17 - k, 2.6], [L + 21 - k, 2.6], [L + 21 - k, -2.6], [L + 17 - k, -2.6]])).paint(M.brass);
+    armHand(pn, FA, s, M, 'fist');
+    pn.poly(FA.pts([[3, 5], [13, 5], [13, 9], [3, 9]])).paint(M.dark);
+    pn.disc(...FA.p(8, 11), 3.4).paint(M.brass); pn.disc(...FA.p(8, 11), 1.3).paint(M.dark, { outline: false });
+    for (const u of [4, L - 4]) pn.poly(FA.pts([[u, 9.5], [u + 2, 9.5], [u + 2, -5.5], [u, -5.5]])).paint(s === 'K' ? M.brass : M.leather, { outline: false });
+  }
+  function knightArmArt(x, y, q, id) {
+    const pn = penFor(ctx.canvas), M = mechMat(), s = (q.mt || 1) <= 3 ? 'L' : 'K', end = ARM_END[id], R = s === 'L' ? M.iron : M.steel;
+    const gun = end === 'cannon' || end === 'mg', sw = gun ? 0 : (q.sw || 0), pu = (q.pu || 0) / 4, k = (q.k || 0) / 4 * (end === 'cannon' ? 4 : 2);
+    const sx = x + 14, sy = y + 12, ex = x + ARM_PIV[0] + sw * 4, ey = y + ARM_PIV[1], aim = (q.a || 0) * Math.PI / 180;
+    const bone = SA.LEGLAB.U.bone, rivet = SA.LEGLAB.U.rivet;
+    // 手腕：拳往前上捣；剑、锤按出手进度从举起挥到打下
+    const W = { fist: [ex + 13 + 10 * pu, ey + 16 - 12 * pu], sword: [ex + 13, ey + 10], hammer: [ex + 12, ey + 12], shield: [ex + 14, ey + 4] }[end];
+    if (end === 'sword') armSword(pn, W[0], W[1], -0.62 + sw * 0.08 + 1.0 * pu, M);
+    if (end === 'hammer') armHammer(pn, W[0], W[1], 0.55 + sw * 0.1 + 0.75 * pu, s, M);
+    const UA = bone(sx, sy, ex, ey);   // 大臂
+    pn.poly(UA.pts([[0, -6], [0, 6], [UA.len, 5], [UA.len, -5]])).paint(R);
+    if (s === 'L') pn.ln(...UA.p(3, -6.2), ...UA.p(UA.len - 3, -5), M.steam[3]); else pn.ln(...UA.p(2, 2.4), ...UA.p(UA.len - 2, 2), M.steel[3]);
+    if (end === 'cannon') armCannon(pn, ex, ey, aim, k, s, M);
+    else if (end === 'mg') armWristGun(pn, ex, ey, aim, k, s, M);
+    else {
+      const FA = bone(ex, ey, W[0], W[1]);
+      pn.poly(FA.pts([[0, -5], [0, 5], [FA.len, 6.4], [FA.len, -6]])).paint(R);
+      if (s === 'K') { pn.ln(...FA.p(2, 2.4), ...FA.p(FA.len - 1, 3), M.steel[3]); pn.fill(...FA.p(FA.len - 3, -5), 1, 1, P.brass[2]); }
+      else pn.ln(...FA.p(2, -5), ...FA.p(FA.len - 2, -6), M.steam[3]);
+      if (end === 'shield') armShield(pn, W[0] + 4, W[1] - 4, s, M);
+      else armHand(pn, FA, s, M, end);
+    }
+    // 肘
+    if (s === 'L') { pn.disc(ex, ey, 4.4).paint(M.brass); pn.dot(ex, ey, P.brass[0]); }
+    else {
+      pn.disc(ex - 2.5, ey + 0.5, 5.2).paint(M.brass);
+      for (let i = 0; i < 5; i++) { const a = Math.PI * (0.55 + i / 4 * 0.9); pn.ln(ex - 2.5 + Math.cos(a) * 1.4, ey + 0.5 + Math.sin(a) * 1.4, ex - 2.5 + Math.cos(a) * 4.5, ey + 0.5 + Math.sin(a) * 4.5, M.brass[1]); }
+      pn.disc(ex + 0.5, ey, 3).paint(M.steel);
+    }
+    // 肩：关节轴套 + 肩甲（不大于大臂的两倍宽）
+    pn.disc(sx, sy, 6.5).paint(M.dark);
+    if (s === 'L') {
+      pn.poly([[sx - 9, sy - 1], [sx - 6, sy - 8], [sx + 5, sy - 9], [sx + 10, sy - 3], [sx + 8, sy + 3], [sx - 8, sy + 3]]).paint(M.iron);
+      pn.disc(sx, sy - 2, 2.6).paint(M.brass);
+      rivet(pn, sx - 6, sy - 4); rivet(pn, sx + 5, sy - 5);
+    } else {
+      pn.poly([[sx - 10, sy + 1], [sx - 8, sy - 7], [sx - 1, sy - 11], [sx + 8, sy - 9], [sx + 12, sy - 2], [sx + 11, sy + 4], [sx - 9, sy + 5]]).paint(M.steel);
+      pn.poly([[sx - 9, sy + 4], [sx + 11, sy + 3], [sx + 10, sy + 8], [sx - 8, sy + 9]]).paint(M.steel);
+      pn.ln(sx - 9, sy + 3, sx + 11, sy + 2, P.brass[2]); pn.ln(sx - 8, sy + 8, sx + 10, sy + 7, P.brass[2]);
+      pn.ln(sx - 7, sy - 6, sx - 1, sy - 10, M.steel[3]);
+      rivet(pn, sx + 5, sy - 6);
+    }
+    pn.flush(ctx);
+  }
+
+  // ---------- 腿部件的独立图标（改装台卡片、拖着摆放时用；装在双足上时改画在腿骨上，见 renderVehicle）----------
+  function legSpringIcon(x, y) {
+    const pn = penFor(ctx.canvas), M = mechMat(), B = SA.LEGLAB.U.bone(x + 12, y + 2, x + 12, y + 22);
+    pn.cap(x + 12, y + 11, x + 12, y + 22, 0.9).paint(M.steel, { bevel: 'l' });
+    for (let i = 0; i < 8; i++) pn.cap(...B.p(9 + i * 1.5, i % 2 ? 4 : -4), ...B.p(10.5 + i * 1.5, i % 2 ? -4 : 4), 0.7);
+    pn.paint(M.brass, { bevel: 'l' });
+    pn.cap(x + 12, y + 3, x + 12, y + 11, 3).paint(M.dark);
+    pn.rect(x + 8, y + 9, 8, 2).paint(M.brass, { outline: false });
+    pn.disc(x + 12, y + 3, 2.2).paint(M.brass); pn.disc(x + 12, y + 21, 2.2).paint(M.brass);
+    pn.flush(ctx);
+  }
+  function legBoosterIcon(x, y) {
+    const pn = penFor(ctx.canvas), M = mechMat();
+    for (const yy of [y + 9, y + 18]) {
+      pn.cap(x + 1, yy, x + 8, yy, 0.8).paint(M.steel, { bevel: 'l' });
+      pn.cap(x + 7, yy, x + 20, yy, 3.4).paint(M.iron);
+      pn.rect(x + 7, yy - 3.8, 2, 7.6).paint(M.brass, { outline: false });
+      pn.rect(x + 18, yy - 3.8, 2, 7.6).paint(M.brass, { outline: false });
+    }
+    pn.rect(x + 3, y + 1, 3, 6).paint(M.dark); pn.rect(x + 2, y, 5, 2).paint(M.brass);
+    pn.flush(ctx);
+  }
   // 腿式底盘（有腿、要画远侧腿的底盘）；amp 是旧逐格画法留下的起伏幅度，整件四足 / 真双足改用 quadBob / bipedBob
   const BOB = { biped: 3, quad: 1 };
   const gfOf = (a) => ((Math.round(a / (Math.PI * 2 / 12)) % 12) + 12) % 12;   // 腿的步态帧：战斗给的是步态角（每走 4 × 步幅一圈），12 帧一循环
@@ -2190,7 +2436,7 @@ SA.SPR = (() => {
   })();
 
   const OVER = {
-    boiler_s(x, y, q) { boilerSOver(x, y, q); },
+    boiler_s(x, y, q) { if (!q.mech) boilerSOver(x, y, q); },
     tank_tall(x, y, q) { tankTallOver(x, y, q); },
     mg_heavy(x, y, q) { mgHOver(x, y, q); },
     mg(x, y, q) { acOver(x, y, q, AC_TOP.mg); },
@@ -2231,8 +2477,7 @@ SA.SPR = (() => {
   // ---------- 履带六档的零件（DRAW.track 用；样机 tools/archive/track-tiers.html）----------
   const TAUT = Math.PI * 2, rdT = Math.round;
   const BRASST = [P.brass[0], P.brass[1], P.brass[2], P.brass[3]];   // T1 黄铜：轮辋、车台
-  const WROUGHT = [P.iron[0], P.iron[1], P.iron[2], P.iron[3]];      // T2 熟铁：锻铁板条
-  function tSeg(cx, cy, a, len, w, col) {
+    function tSeg(cx, cy, a, len, w, col) {
     const dx = Math.cos(a) * len / 2, dy = Math.sin(a) * len / 2;
     line(rdT(cx - dx), rdT(cy - dy), rdT(cx + dx), rdT(cy + dy), w, col);
   }
@@ -2241,28 +2486,16 @@ SA.SPR = (() => {
   // 铁链节（弧形段用）：黑描边 + 交替明暗 + 外侧高光 + 黄铜链销 + 抓地齿 / 导向齿
   function tLink(T, X, Y, a, i, pin) {
     const nx = -Math.sin(a), ny = Math.cos(a);
-    if (T === 2) {   // 锻铁板条：垂直于行进方向摆，一块块铆在链上，每三块加一条抓地条
-      tSeg(X, Y, a + Math.PI / 2, 4.2, 3, P.iron[0]); tSeg(X, Y, a + Math.PI / 2, 3.2, 2, i % 2 ? P.iron[2] : P.iron[3]);
-      px(rdT(X - nx * 1.2 - 0.5), rdT(Y - ny * 1.2 - 0.5), P.iron[4]);
-      if (i % 3 === 0) tSeg(X - nx * 2.6, Y - ny * 2.6, a + Math.PI / 2, 3, 1, P.iron[4]);
-      return;
-    }
     tSeg(X, Y, a, 5.8, 3, P.iron[0]); tSeg(X, Y, a, 4.6, 2, i % 2 ? P.iron[3] : P.iron[2]);
     px(rdT(X - nx * 1.2 - 0.5), rdT(Y - ny * 1.2 - 0.5), P.iron[4]);
     px(rdT(X - Math.cos(a) * 2.6 - 0.5), rdT(Y - Math.sin(a) * 2.6 - 0.5), pin);
     if (i % 2 === 0) { tSeg(X - nx * 2.6, Y - ny * 2.6, a + Math.PI / 2, 2, 1, P.iron[0]); px(rdT(X - nx * 3.6 - 0.5), rdT(Y - ny * 3.6 - 0.5), P.iron[4]); }
     if (T >= 4 && i % 2 === 1) R(rdT(X + nx * 2.6 - 1), rdT(Y + ny * 2.6 - 1), 2, 2, P.iron[4]);
   }
-  // 直段链带（逐列画）：t = 带顶 y；dir = 1 下段（向左滚，+ph）/ -1 上段（向右滚，-ph）；节距 6（木板 4），格宽 48 是节距的整数倍，跨格不错位
+  // 直段链带（逐列画，T3～T6）：t = 带顶 y；dir = 1 下段（向左滚，+ph）/ -1 上段（向右滚，-ph）；节距 6，格宽 48 是节距的整数倍，跨格不错位
   function trackCol(T, cx, t, ph, dir) {
-    const slat = T === 2, pitch = slat ? 4 : 6, u = cx + ph * dir, p = ((u % pitch) + pitch) % pitch, idx = Math.floor(u / pitch);
+    const pitch = 6, u = cx + ph * dir, p = ((u % pitch) + pitch) % pitch, idx = Math.floor(u / pitch);
     const out = dir > 0 ? 1 : -1;   // 外侧（抓地）朝下 / 朝上
-    if (slat) {
-      R(cx, t, 1, 4, P.iron[0]);
-      if (p !== 3) { R(cx, t + 1, 1, 2, idx % 2 ? P.iron[2] : P.iron[3]); if (p === 0) px(cx, t + 1, P.iron[4]); if (p === 2 && idx % 2 === 0) px(cx, t + 1, P.iron[4]); }   // 板面 + 一颗铆钉
-      if (idx % 3 === 0 && p >= 1 && p <= 2) R(cx, out > 0 ? t + 4 : t - 2, 1, 2, P.iron[4]);
-      return;
-    }
     R(cx, t, 1, 4, P.iron[0]);
     if (p === 5) R(cx, t + 1, 1, 2, T >= 4 ? P.brass[3] : P.brass[2]);
     else { R(cx, t + 1, 1, 2, idx % 2 ? P.iron[3] : P.iron[2]); if (p === 0) px(cx, out > 0 ? t + 1 : t + 2, P.iron[4]); }
@@ -2271,7 +2504,7 @@ SA.SPR = (() => {
   }
   // 端头圆弧：side = -1 左端（驱动轮，从下段绕过左边到上段）/ 1 右端（诱导轮，从上段绕过右边到下段）；半径 12，链节沿弧长等距、随 ph 转
   function trackArc(T, cx, cy, side, ph) {
-    const r = 12, pitch = T === 2 ? 4 : 6, n = Math.round(Math.PI * r / pitch), step = Math.PI * r / n, pin = T >= 4 ? P.brass[3] : P.brass[2];
+    const r = 12, pitch = 6, n = Math.round(Math.PI * r / pitch), step = Math.PI * r / n, pin = T >= 4 ? P.brass[3] : P.brass[2];
     for (let k = 0; k < n; k++) {
       const s = (((k + ph / pitch) % n) + 0.5) * step, ang = side < 0 ? Math.PI / 2 + s / r : -Math.PI / 2 + s / r;
       tLink(T, cx + r * Math.cos(ang), cy + r * Math.sin(ang), ang + Math.PI / 2, k, pin);
@@ -2345,18 +2578,79 @@ SA.SPR = (() => {
       for (let k = x + 3; k < x + C - 5; k += 8) { R(k, y + 44, 7, 3, P.iron[0]); R(k + 1, y + 45, 5, 1, k % 16 ? P.iron[2] : P.iron[3]); px(k + 3, y + 45, P.brass[3]); }
     }
   }
+  // T2 铸铁负重轮：9×9 的圆（cx, cy = 中心像素，所以每只形状完全一样）：黑外沿、亮轮缘（右下压暗一阶）、暗轮面、十字轮毂，
+  // 轮面上一对螺栓跟着 a 转（a 每 24 帧转一圈）。熟铁材质整体偏暗，轮缘用最亮一阶，战斗缩小后也认得出是轮子
+  function tCast(cx, cy, a) {
+    const bx = rdT(Math.cos(a) * 2), by = rdT(Math.sin(a) * 2);
+    for (let dy = -4; dy <= 4; dy++) for (let dx = -4; dx <= 4; dx++) {
+      const d2 = dx * dx + dy * dy;
+      if (d2 > 21) continue;
+      const c = d2 > 14 ? P.dark[0]
+        : d2 > 6 ? (dx + dy > 1 ? P.iron[3] : P.iron[4])
+        : d2 > 1 ? ((dx === bx && dy === by) || (dx === -bx && dy === -by) ? P.iron[3] : P.iron[1])
+        : d2 ? P.iron[2] : P.iron[4];
+      px(cx + dx, cy + dy, c);
+    }
+  }
+  // T2 熟铁板条链带（隆巴德 1901 / 霍恩斯比 1904）。链带的路径照搬定稿样机 tools/archive/track-tiers.js：
+  // 整条履带（ri / rn = 本格在连续段里的序号 / 段长）按一条「体育场形」路径摆板条，左右半圆绕驱动轮和诱导轮；
+  // 每一格把整条画一遍、只裁出自己那一段，所以几节拼起来是一整条。板条是熟铁（2026-09-29 用户定：T2 熟铁板条，不用木板）。
+  // 中间的负重轮（2026-10-02 用户：熟铁中间要有负重轮）：样机里只有几颗悬空的小深色托轮（中间那根吊杆也吊空），读不出是轮子。
+  // 改成和钢及以上同一种读法：驱动轮轴到诱导轮轴一根熟铁下梁，铸铁负重轮挂在下梁下面、压住下段链带，上梁的吊杆吊住下梁；
+  // 负重轮按整条均分（单节就是正中一只），跟着悬挂和下段链带一起上下，被拉下去时露出吊臂。
+  // gAt(X) = 画布绝对 x 处下段链带的悬挂起伏（跨接缝的板条 / 负重轮，两格算出来一样）
+  function trackT2(x, y, L, Rr, ph, th, sn, ri, rn, gAt) {
+    const X0 = x - ri * C, W = rn * C, rb = 12, cy = y + 33, cxL = X0 + rb + 2, cxR = X0 + W - rb - 2;
+    const off = (X) => (th ? 0 : Math.round(gAt(X)));
+    const c0 = L ? x : x - LEFT, c1 = Rr ? x + C : x + C + 32;
+    ctx.save(); ctx.beginPath(); ctx.rect(c0, y - TOP, c1 - c0, C + TOP + BOT); ctx.clip();
+    // 下梁以下、下段链带以上：负重轮后面的暗处（底板只铺到 y+35），别让中间透出背景
+    for (let cx = Math.max(x, cxL); cx < Math.min(x + C, cxR); cx++) R(cx, y + 34, 1, 9 + Math.max(0, off(cx)), P.dark[1]);
+    if (!th) {
+      // 链带：按弧长等距摆熟铁板条（节距约 4px），行驶时每走 4px 平移一块，24 帧无缝；每三块铆一条抓地铁条
+      const fl = cxR - cxL, P2 = 2 * fl + 2 * Math.PI * rb, n = Math.round(P2 / 4), step = P2 / n, sh = (ph % 4) / 4 * step;
+      for (let i = 0; i < n; i++) {
+        const sp = (i * step + sh) % P2;
+        let X, Y, a, bot = false;
+        if (sp < fl) { X = cxL + sp; Y = cy - rb; a = 0; }
+        else if (sp < fl + Math.PI * rb) { const t = -Math.PI / 2 + (sp - fl) / rb; X = cxR + rb * Math.cos(t); Y = cy + rb * Math.sin(t); a = t + Math.PI / 2; }
+        else if (sp < 2 * fl + Math.PI * rb) { X = cxR - (sp - fl - Math.PI * rb); Y = cy + rb + off(rdT(X)); a = Math.PI; bot = true; }
+        else { const t = Math.PI / 2 + (sp - 2 * fl - Math.PI * rb) / rb; X = cxL + rb * Math.cos(t); Y = cy + rb * Math.sin(t); a = t + Math.PI / 2; }
+        tSeg(X, Y, a + Math.PI / 2, 4.2, 3, P.iron[0]);
+        tSeg(X, Y, a + Math.PI / 2, 3.2, 2, i % 2 ? P.iron[2] : P.iron[3]);
+        if (i % 3 === 0) tSeg(X, Y, a + Math.PI / 2, 4.2, 1, P.iron[4]);
+        if (bot && i % 2) px(rdT(X), rdT(Y + 2), P.iron[0]);
+      }
+    } else trackGround(2, x, y, L, Rr, sn);
+    // 下梁：驱动轮轴到诱导轮轴，两头压在大轮后面
+    R(cxL, y + 30, cxR - cxL, 4, P.iron[0]); R(cxL, y + 31, cxR - cxL, 1, P.iron[4]); R(cxL, y + 32, cxR - cxL, 1, P.iron[3]);
+    for (let k = cxL + 12; k < cxR - 11; k += 9) px(k, y + 32, P.iron[1]);
+    // 驱动轮 / 诱导轮（垫一圈暗底）
+    if (!L) disc(cxL, cy, rb - 3, P.dark[1]);
+    if (!Rr) disc(cxR, cy, rb - 3, P.dark[1]);
+    trackSprockets(2, x, y, L, Rr, th ? 0 : ph);
+    // 负重轮：首尾两只离大轮 13px、按整条均分（左右镜像对称），单节只在正中放一只；吊臂从下梁伸到轮心
+    const w0 = cxL + 13, w1 = cxR - 14, nw = w1 > w0 ? Math.round((w1 - w0) / 14) + 1 : 1;
+    for (let i = 0; i < nw; i++) {
+      const wx = nw > 1 ? rdT(w0 + i * (w1 - w0) / (nw - 1)) : rdT((cxL + cxR) / 2), wy = y + 38 + off(wx);
+      if (wx + 5 < c0 || wx - 5 >= c1) continue;
+      if (wy > y + 34) { R(wx - 1, y + 33, 3, wy - y - 33, P.iron[0]); R(wx, y + 33, 1, wy - y - 33, P.iron[2]); }
+      tCast(wx, wy, ph / 24 * TAUT + i * 1.7);
+    }
+    // 上梁 + 吊杆（吊住下梁）：两头的吊杆让开大轮，中间按每格一根补齐；单节只有正中一根
+    R(cxL, y + 11, cxR - cxL, 4, P.iron[0]); R(cxL, y + 12, cxR - cxL, 2, P.iron[3]); R(cxL, y + 12, cxR - cxL, 1, P.iron[4]);
+    const b0 = cxL + 10, b1 = cxR - 11, nb = b1 > b0 ? Math.max(3, Math.round((b1 - b0) / 48) + 1) : 1;
+    for (let i = 0; i < nb; i++) {
+      const bx = nb > 1 ? rdT(b0 + i * (b1 - b0) / (nb - 1)) : rdT((cxL + cxR) / 2);
+      R(bx - 1, y + 15, 3, 15, P.iron[0]); R(bx, y + 15, 1, 15, P.iron[3]);
+    }
+    for (let k = cxL + 3; k < cxR - 2; k += 9) tBolt(rdT(k), y + 12);
+    ctx.restore();
+  }
   // 侧框 + 负重轮（T2～T6），fx0 / fx1 = 本格里侧框的左右端；图案按格内绝对 x 排，跨格不错位
   function trackFrame(T, x, y, L, Rr, fx0, fx1, ph, g0, g1, gof) {
     const each = (step, off, lo, hi, fn) => { for (let k = x; k < x + C; k++) if (((k - x) % step) === off && k >= lo && k <= hi) fn(k); };
-    const spin = (i) => ph / 24 * TAUT + i;
-    if (T === 2) {   // 上梁 + 吊杆 + 铸铁小托轮
-      const a = L ? x : x + 14, b = Rr ? x + C : x + 34;
-      R(a, y + 11, b - a, 4, P.iron[0]); R(a, y + 12, b - a, 2, P.iron[3]); R(a, y + 12, b - a, 1, P.iron[4]);
-      each(8, 3, a + 2, b - 4, (k) => tBolt(k, y + 12));
-      for (const lx of [8, 24, 40]) if (x + lx >= a + 3 && x + lx <= b - 3) { R(x + lx - 1, y + 15, 3, 12, P.iron[0]); R(x + lx, y + 15, 1, 12, P.iron[3]); }
-      for (const lx of [8, 24, 40]) if (x + lx >= a + 4 && x + lx <= b - 4) { const wy = y + 40 + gof(lx), cx = x + lx; disc(cx, wy, 3.4, P.dark[0]); disc(cx, wy, 2.6, P.iron[2]); px(cx - 1, wy - 1, P.iron[4]); }
-      return;
-    }
+    const spin = (i) => ph / 24 * TAUT + i, solo = !L && !Rr;   // solo：单节履带，下段链带是平的
     if (T === 3) {   // 铆接铁板侧框（竖肋）+ 成对负重轮
       tPlate(fx0, y + 22, fx1 - fx0, 12, [P.iron[0], P.iron[1], P.iron[2], P.iron[3]]);
       each(8, 5, fx0 + 2, fx1 - 3, (k) => { R(k, y + 24, 1, 8, P.iron[1]); R(k + 1, y + 24, 1, 8, P.iron[4]); });
@@ -2367,6 +2661,7 @@ SA.SPR = (() => {
         R(x + gc - 6, y + 34 + d, 12, 2, P.dark[0]);
         for (const dx of [-4, 4]) tRoad(x + gc + dx, y + 39.5 + d, 4.3, spin(dx), 'dark');
       });
+      if (solo) { R(x + 21, y + 34, 6, 2, P.dark[0]); tRoad(x + 24, y + 39.5, 4.3, spin(24), 'dark'); }   // 单节：中间一只负重轮
       return;
     }
     if (T === 4) {   // 冲孔减重钢框 + 单排钢盘负重轮
@@ -2374,7 +2669,9 @@ SA.SPR = (() => {
       each(8, 2, fx0 + 3, fx1 - 5, (k) => { disc(k + 1.5, y + 28, 3.2, P.iron[1]); disc(k + 1.5, y + 28, 2.6, P.dark[1]); px(k - 1, y + 26, P.iron[0]); px(k + 1, y + 30, P.iron[3]); });
       R(fx0 + 1, y + 22, fx1 - fx0 - 2, 1, P.iron[4]);
       each(8, 2, fx0 + 2, fx1 - 2, (k) => tBolt(k, y + 33));
-      for (const lx of [5, 13, 21, 29, 37, 45]) if (x + lx - 4.6 >= fx0 && x + lx + 4.6 <= fx1) tRoad(x + lx, y + 39.5 + gof(lx), 3.8, spin(lx), 'steel');
+      // 跨到右邻格的那只（lx 45）由本格画，不然两节接缝处缺一只轮
+      for (const lx of [5, 13, 21, 29, 37, 45]) if (x + lx - 4.6 >= fx0 && (x + lx + 4.6 <= fx1 || Rr)) tRoad(x + lx, y + 39.5 + gof(lx), 3.8, spin(lx), 'steel');
+      if (solo) tRoad(x + 24, y + 39.5, 3.8, spin(24), 'steel');   // 单节：中间一只钢盘轮
       return;
     }
     if (T === 5) {   // X 形桁架 + 板簧转向架
@@ -2395,6 +2692,12 @@ SA.SPR = (() => {
         line(bx - 5, y + 39 + d + rock, bx + 5, y + 39 + d - rock, 2, P.dark[0]);
         for (const dx of [-5, 5]) tRoad(bx + dx, y + 39.5 + d + (dx > 0 ? -rock : rock) * 0.5, 4.4, spin(dx), 'brass');
       });
+      if (solo) {   // 单节：板簧吊一只轮
+        const bx = x + 24;
+        R(bx - 1, y + 34, 3, 3, P.dark[0]);
+        for (let k = -4; k <= 4; k++) px(bx + k, y + 35 - (Math.abs(k) < 3 ? 1 : 0), P.iron[k % 2 ? 2 : 3]);
+        tRoad(bx, y + 39.5, 4.4, spin(24), 'brass');
+      }
       return;
     }
     // T6 全包裙板：整块铆接裙板盖住上段和侧框，只露出下面一排负重轮；前后两端斜切露出大轮
@@ -2407,7 +2710,7 @@ SA.SPR = (() => {
       if (yy - top > 12 && !Rr && xx >= sx1 - (yy - top - 12) * 1.1) return false;
       return true;
     };
-    for (const lx of [8, 24, 40]) if (x + lx >= fx0 + 6 && x + lx <= fx1 - 4 || (L && Rr)) tRoad(x + lx, y + 40 + gof(lx), 4.4, spin(lx), 'brass');
+    for (const lx of [8, 24, 40]) if (x + lx >= fx0 + 4 && x + lx <= fx1 - 4 || (L && Rr)) tRoad(x + lx, y + 40 + (solo ? 0 : gof(lx)), 4.4, spin(lx), 'brass');   // 前后对称；单节留中间一只
     for (let yy = top; yy < top + hh; yy++) for (let xx = x; xx < x + C; xx++) {
       if (!ins(xx, yy)) continue;
       const edge = !ins(xx - 1, yy) || !ins(xx + 1, yy) || !ins(xx, yy - 1) || !ins(xx, yy + 1);
@@ -2631,21 +2934,31 @@ SA.SPR = (() => {
     // 1×1 驾驶舱（2026-09-29 重做：方窗驾驶箱，见 helmetArt）；双人 / 四人联合驾驶舱见 cockpitPairArt / cockpitArt
     helmet(x, y, o) { helmetArt(x, y, o); },
     cockpit_pair(x, y, o) { cockpitPairArt(x, y, o); },
-    plate(x, y) {
+    mech_helm(x, y, q) { mechHelmArt(x, y, q); },   // 机甲头盔（2×1，见 MECH_HELMS）
+    knight_shield(x, y, q) { knightArmArt(x, y, q, 'knight_shield'); },   // 骑士手臂（2×3 侧挂，见 knightArmArt）
+    knight_fist(x, y, q) { knightArmArt(x, y, q, 'knight_fist'); },
+    knight_hammer(x, y, q) { knightArmArt(x, y, q, 'knight_hammer'); },
+    knight_sword(x, y, q) { knightArmArt(x, y, q, 'knight_sword'); },
+    knight_cannon(x, y, q) { knightArmArt(x, y, q, 'knight_cannon'); },
+    knight_gun(x, y, q) { knightArmArt(x, y, q, 'knight_gun'); },
+    leg_spring(x, y) { legSpringIcon(x, y); },     // 腿部件：装在双足上时画在腿骨 / 胯上（renderVehicle），这里是卡片图标
+    leg_booster(x, y) { legBoosterIcon(x, y); },
+    plate(x, y, q) {
+      if (q && q.mech) { mechArt(x, y, q); return; }
       box(x + 2, y + 2, 20, 20, IRONL);
       R(x + 3, y + 11, 18, 1, P.iron[1]); R(x + 3, y + 12, 18, 1, P.iron[4]);
       for (const [a, b] of [[4, 4], [17, 4], [4, 16], [17, 16]]) rivet(x + a, y + b);
       R(x + 13, y + 7, 3, 1, P.iron[2]); R(x + 7, y + 17, 2, 1, P.iron[2]);
     },
     // 水罐（1×1 / 1×2）：圆罐 + 竖玻璃窗，水位跟着剩水量降，偶尔冒个气泡
-    tank_s(x, y, q) { tankSmall(x, y, q); },
+    tank_s(x, y, q) { if (q.mech) mechArt(x, y, q); else tankSmall(x, y, q); },
     periscope(x, y, q) { periscopeArt(x, y, q.fr || 0); },
     mortar_s(x, y, q) { mortarS(x, y, q); },
     autoloader(x, y, q) { autoloaderArt(x, y, q.fr || 0); },
-    pressure_chamber(x, y, q) { pressureArt(x, y, q.fr || 0); },
+    pressure_chamber(x, y, q) { if (q.mech) mechArt(x, y, q); else pressureArt(x, y, q.fr || 0); },
     condenser(x, y, q) { condenserArt(x, y, q.fr || 0); },
     tank_tall(x, y, q) { tankTall(x, y, q); },
-    boiler_s(x, y, q) { boilerS(x, y, q); },
+    boiler_s(x, y, q) { if (q.mech) mechArt(x, y, q); else boilerS(x, y, q); },
     boiler_l(x, y, q) { BIG.boiler(ctx, x, y, { t: q.fr * 8, heat: q.ht / 2 }); },   // 炉火 3 档 × 13 帧（链节、煤块刚好循环）
     water_l(x, y, q) { BIG.tank(ctx, x, y, { t: q.fr * 9, water: q.lv / 29 }); },
     // 特殊武器（2026-09-29 定稿）：转动部分按 module-art 的耳轴 / 炮口几何；汽、火、飞出去的烟在 weaponFx 里逐帧画（材质处理之后）
@@ -2763,7 +3076,7 @@ SA.SPR = (() => {
     },
     track(x, y, o) {
       // 履带六档（2026-09-29 用户定：全部采用；样机 tools/archive/track-tiers.html）。档位 = 材料 1～6（module-art 的 vis），每档一个真实的历史节点：
-      // ① 博伊德尔铰接脚板轮（1846，无履带）② 熟铁板条链带（隆巴德 / 霍恩斯比）③ 霍尔特铁链节 + 竖肋侧框 ④ Mark IV 减重孔钢框 + 导向齿
+      // ① 博伊德尔铰接脚板轮（1846，无履带）② 熟铁板条链带（隆巴德 / 霍恩斯比；整条按样机路径画，下梁挂铸铁负重轮，见 trackT2）③ 霍尔特铁链节 + 竖肋侧框 ④ Mark IV 减重孔钢框 + 导向齿
       // ⑤ 维克斯桁架 + 板簧转向架 ⑥ 全包裙板。一格 48 宽；两端各一只半径 12 的圆弧（驱动轮在左、诱导轮在右），中间格是直段。
       // 悬挂：module-art 的 susp.pts = [13, 37]，g0 / g1 是这两个接地点的伸缩，负重轮和下段链带一起上下；gL / gR 是相邻格的偏移，跨格接成一条。
       // th = 掉链子（任意一段被毁，整条履带脱落）：链条摊在地上，sn = 被打断的那一段；T1 的脚板一起掉下来
@@ -2773,10 +3086,22 @@ SA.SPR = (() => {
       const gof = (lx) => (lx < 24 ? g0 : g1);
       floor(x, y, o, 5);
       // 车体底板下面到履带顶之间补一层铁板，和上方模块的框架相接
-      const deckTo = [0, 12, 11, 19, 19, 19, 10][T];
-      R(x, y + 5, C, deckTo - 5, P.iron[1]); R(x, y + deckTo - 1, C, 1, P.iron[0]);
+      // 履带后面的车体框：定稿样机（tools/archive/track-tiers.html 的 strip）是先铺一块 y+6～y+36 的 iron[1] 底板、再把履带叠上去的，
+      // 链带里面、轮子之间看到的是这块板。游戏里原来只铺到 y+10～19，熟铁那种中间没有侧框的就整个透空了。
+      R(x, y + 5, C, 31, P.iron[1]);
       if (T === 1) trackT1(x, y, L, Rr, ph, th, g0, g1);
-      else {
+      else if (T === 2) {
+        const pts = [];
+        if (L) pts.push([0, gL + (g0 - gL) * 0.4], [6, g0], [20, g0]); else pts.push([14, 0]);
+        if (Rr) pts.push([30, g1], [44, g1], [48, g1 + (gR - g1) * 0.4]);
+        else if (L) pts.push([26, g0 * 0.5], [34, 0]); else pts.push([34, 0]);
+        // 伸进左右邻格的那几像素用邻格靠接缝那一段的折线（邻格的 g1 / g0 就是本格的 gL / gR），跨缝的板条和负重轮两格算出来一样
+        const own = polyAt(pts), lNb = L && polyAt([[30, gL], [44, gL], [48, gL + (g0 - gL) * 0.4]]), rNb = Rr && polyAt([[0, g1 + (gR - g1) * 0.4], [6, gR], [20, gR]]);
+        const gAt = (X) => (X < x && lNb ? lNb(X - x + C) : X >= x + C && rNb ? rNb(X - x - C) : own(X - x));
+        // 段长缺省时（图标、旧调用只给了左右相连）按左右相连推一个
+        const rn = o.rn || 1 + (L ? 1 : 0) + (Rr ? 1 : 0), ri = o.rn ? o.ri || 0 : (L ? 1 : 0);
+        trackT2(x, y, L, Rr, ph, th, o.sn, ri, rn, gAt);
+      } else {
         if (!th) {
           const pts = [];
           if (L) pts.push([0, gL + (g0 - gL) * 0.4], [6, g0], [20, g0]); else pts.push([14, 0]);
@@ -2795,10 +3120,12 @@ SA.SPR = (() => {
     // part: 'far' 只画远侧腿 / 'near' 只画机身 + 近侧腿 / 省略 = 都画（卡片图标用）。bd = 机身随步态下沉的像素
     // 双足 T1 · 工装 Mk.II：箱形梁大腿 + 液压撑杆 + 双支杆小腿 + 带肋平脚（反关节）
     // 真双足 2×4（48×96，tools/chassis-lab.html 的画法）：上两行是带陀螺仪的胯（腰挂位有模块时伸出法兰板压住），
-    // 下两行是一对放大的长腿。ga = 步态角档（12 档一圈），sd = 步幅，g2 = [近侧脚, 远侧脚] 的悬挂伸缩，tt = 陀螺转动的时间档
+    // 下两行是一对放大的长腿。ga = 步态角档（12 档一圈），sd = 步幅，rk = 跑步程度（0～4 档，见 LEGLAB.bipedRun），g2 = [近侧脚, 远侧脚] 的悬挂伸缩，tt = 陀螺转动的时间档
     biped(x, y, o) {
       const LL = SA.LEGLAB, pn = penFor(ctx.canvas);
-      LL.bipedArt(pn, x, y, { mv: !!o.mv, a: (o.ga || 0) / 12 * Math.PI * 2, stride: o.sd || 16, bd: o.bd || 0, g: o.g2 || [0, 0],
+      LL.bipedArt(pn, x, y, { mv: !!o.mv, a: (o.ga || 0) / 12 * Math.PI * 2, stride: o.sd || 16, run: (o.rk || 0) / 4, bd: o.bd || 0, g: o.g2 || [0, 0],
+        crouch: (o.cr || 0) / 4, air: !!o.air, tuck: (o.tk || 0) / 4,
+        legPart: o.ls ? LL.bipedParts.jumpSpring : undefined, hipPart: o.lb ? LL.bipedParts.hipBooster : undefined,
         legs: o.lk || BIPED_LOOK[(o.st || 1) - 1], wL: !!o.wL, wR: !!o.wR, phase: (o.ga || 0) * 4, t: (o.tt || 0) / 6 }, o.part || undefined);
       pn.flush(ctx);
     },
@@ -2819,7 +3146,7 @@ SA.SPR = (() => {
   const BOT = 14;   // 精灵底下留的空：悬挂伸长时轮子 / 脚落到格子下面也画得下
   const LEFT = 16;  // 精灵左边留的空：蜘蛛腿往后张的脚伸到格子外面也画得下
   // 四足整件的腿张得很开（脚离机身 ±步幅 + 伸出量），膝盖也高过机身：画布四周多留边
-  const PAD = { quad: { l: 56, t: 44, r: 64 }, biped: { l: 48, t: 24, r: 56 } };   // 四足：温室的高膝会冒出顶板约 30px
+  const PAD = { quad: { l: 56, t: 44, r: 64 }, biped: { l: 48, t: 24, r: 56 }, boiler_s: { l: 16, t: 40, r: 32 } };   // 竖式锅炉：背在双足背上时烟囱和烟冒出格子 36px   // 四足：温室的高膝会冒出顶板约 30px
   const padOf = (id) => PAD[id] || { l: LEFT, t: TOP, r: 32 };
   const angQ = (a, rest) => Math.round((a == null ? rest : a) / 2) * 2;   // 仰角按 2° 一档缓存
   // 悬挂偏移按整像素缓存；没有偏移就不写进键里（和原来的缓存一致）
@@ -2858,7 +3185,7 @@ SA.SPR = (() => {
       case 'mortar': q.k = SA.Dyn.quant(o.recoil, 8); q.a = angQ(o.a, 55); break;
       case 'cannon_giant': q.k = SA.Dyn.quant(o.recoil, 8); q.a = angQ(o.a, 75); break;   // 没有仰角（车间、图标）时按静止 75° 画
       case 'mg': case 'mg2': case 'mg_s': case 'mg_heavy': q.k = SA.Dyn.quant(o.recoil, 8); q.f = SA.Dyn.frame(o.feed, 12); q.a = angQ(o.a, 0); break;
-      case 'track': q.ph = o.thrown ? 0 : SA.Dyn.frame(o.phase, 24); q.connL = !!o.connL; q.connR = !!o.connR; q.top = !!o.top; q.th = !!o.thrown; q.sn = !!o.snap; gndQ(q, o); break;
+      case 'track': q.ph = o.thrown ? 0 : SA.Dyn.frame(o.phase, 24); q.connL = !!o.connL; q.connR = !!o.connR; q.top = !!o.top; q.th = !!o.thrown; q.sn = !!o.snap; if (o.rn > 1) { q.ri = o.ri; q.rn = o.rn; } gndQ(q, o); break;
       case 'quad': {   // 整件四足：步态角 12 档、步幅 4px 一档、四只脚的悬挂 2px 一档
         const A = o.gait || 0;
         q.mv = !!o.moving; q.ga = q.mv ? ((Math.round(A / (Math.PI * 2 / 12)) % 12) + 12) % 12 : 0; q.sd = Math.round((o.stride || 14) / 2) * 2;
@@ -2873,7 +3200,11 @@ SA.SPR = (() => {
         const A = o.gait || 0;
         // 唯一外观进入精灵缓存键，避免同材料的不同奖励共用普通双足精灵。
         if (SA.LEG_VARIANTS.some(v => v.id === 'biped' && v.look === o.look)) q.lk = o.look;
-        q.mv = !!o.moving; q.ga = q.mv ? ((Math.round(A / (Math.PI * 2 / 12)) % 12) + 12) % 12 : 0; q.sd = Math.round((o.stride || 16) / 4) * 4;
+        q.mv = !!o.moving; q.ga = q.mv ? ((Math.round(A / (Math.PI * 2 / 12)) % 12) + 12) % 12 : 0; q.sd = Math.round((o.stride || 16) / 2) * 2;
+        if (q.mv && o.runK) q.rk = Math.round(o.runK * 4);
+        if (o.crouch) q.cr = Math.round(o.crouch * 4);                 // 下蹲 0～4 档
+        if (o.air) { q.air = 1; q.tk = Math.round((o.tuck || 0) * 4); }   // 空中 + 收腿 0～4 档
+        if (o.ls) q.ls = 1; if (o.lb) q.lb = 1;                        // 腿上装着弹簧蹬缸 / 胯上装着增压器
         q.bd = o.bd || 0; q.part = o.part || null; q.tt = Math.floor((o.t || 0) * 6) % 36;
         if (o.wL) q.wL = true; if (o.wR) q.wR = true;
         if (o.g2 && o.g2.some(v => v)) q.g2 = o.g2.map(v => Math.round((v || 0) / 2) * 2);
@@ -2885,6 +3216,18 @@ SA.SPR = (() => {
       case 'autoloader': q.fr = Math.floor((o.t || 0) * 3.3) % 18; break;          // 扬弹链：18 帧一轮（约 5.5 秒）
       case 'pressure_chamber': q.fr = Math.floor((o.t || 0) * 5) % 16; break;      // 风箱一压一放：16 帧一轮（约 3 秒）
       case 'condenser': q.fr = Math.floor((o.t || 0) * 4) % 12; break;             // 盘管滴水：12 帧一轮
+    }
+    if (o.hs && id === 'mech_helm') q.hs = o.hs;   // 样机页指定头盔方案
+    if (ARM_END[id]) {   // 骑士手臂：步伐摆动、近战出手、仰角、后坐
+      if (id === 'knight_cannon' || id === 'knight_gun') { q.a = angQ(o.a, 0); const k = SA.Dyn.quant(o.recoil, 4); if (k) q.k = k; }
+      else { if (o.moving) q.sw = Math.round(-Math.sin(o.gait || 0)); const pu = Math.round(Math.min(1, o.punch || 0) * 4); if (pu) q.pu = pu; }
+    }
+    if (o.mech) {   // 真双足的机甲外观（见 MECH_ART）：外观名 + 自己的动画档，替换掉原模块的动画档
+      for (const k of ['fr', 'lv']) delete q[k];
+      q.mech = o.mech;
+      if (o.mech === 'backboiler') q.fr = Math.floor((o.t || 0) * 6) % 20;          // 烟 3 圈 + 炉火 4 档
+      if (o.mech === 'jetpack') { q.fr = Math.floor((o.t || 0) * 8) % 5; if (o.moving) q.mv = true; }   // 喷汽一圈 0.625 秒
+      if (o.mech === 'pauldron' && o.moving) q.sw = Math.round(-Math.sin(o.gait || 0));                  // 下面两片随步伐晃
     }
     if (o.up) q.up = Math.min(3, o.up);   // 改装等级 → 挂件
     if (o.mt > 1) q.mt = o.mt;
@@ -3119,8 +3462,9 @@ SA.SPR = (() => {
 
   // ---------- 车体框架：把所有舱位连成一台机器 ----------
   // 按子格画：同一个模块内部不画缝，相邻两个模块之间打铆钉，露在外面的边描黑
-  function hull(O, cx, cy) {
-    const solid = (o) => o && !SA.isRam(o.cell.id) && SA.MODULES[o.cell.id].layer !== 'chassis';   // 双足的胯在车身行里，但不算车体框架
+  // skip(o)：这些模块不垫车体框架、靠自己的轮廓立着（机甲头盔、肩甲）
+  function hull(O, cx, cy, skip = null) {
+    const solid = (o) => o && !SA.isRam(o.cell.id) && SA.MODULES[o.cell.id].layer !== 'chassis' && !(skip && skip(o));   // 双足的胯在车身行里，但不算车体框架
     const at = (r, c) => (r >= 0 && r < K.ROWS - 2 && c >= 0 && c < K.COLS ? O[r][c] : null);
     const body = (fn) => { for (let r = 0; r < K.ROWS - 2; r++) for (let c = 0; c < K.COLS; c++) if (solid(O[r][c])) fn(r, c, cx(c), cy(r), O[r][c]); };
     body((r, c, x, y) => R(x, y, S, S, P.iron[1]));
@@ -3178,47 +3522,72 @@ SA.SPR = (() => {
     // 整件四足：dyn.phase 是步态角（战斗里按走过的距离 ÷ (4 × 步幅) 推进一圈），步幅跟着车速变；机身起伏按 quadBob
     const hasQuad = base.some(x => x && x.id === 'quad' && x.hp > 0), bipC = base.findIndex(x => x && x.id === 'biped'), hasBiped = bipC >= 0 && base[bipC].hp > 0;
     const stride = (hasQuad ? SA.LEGLAB.quadStride : SA.LEGLAB.strideFor)(o.speed || 0), gaitA = Math.round(phase / (Math.PI * 2 / 12)) * (Math.PI * 2 / 12);
+    const runK = hasBiped && o.moving ? Math.round(SA.LEGLAB.bipedRun(o.speed || 0) * 4) / 4 : 0;   // 真双足：车速快了从走过渡到跑（4 档）
     const bd = hasQuad ? SA.LEGLAB.quadBob({ mv: !!o.moving, a: gaitA, stride: Math.round(stride / 4) * 4 })
-      : hasBiped ? SA.LEGLAB.bipedBob({ mv: !!o.moving, a: gaitA, stride: Math.round(stride / 4) * 4 })
+      : hasBiped ? SA.LEGLAB.bipedBob({ mv: !!o.moving, a: gaitA, stride: Math.round(stride / 2) * 2, run: runK })
       : amp - Math.round(Math.abs(Math.sin((o.moving ? gfOf(phase) : 0) / 12 * Math.PI * 2)) * amp);
     const isChassis = (id) => SA.MODULES[id].layer === 'chassis';
     const dy = (id, r) => (isChassis(id) ? 0 : bd);   // 底盘自己处理下沉，其余整体随之起伏
     // 双足的腰挂位（胯层左右各一大格）上有没有模块：有就让胯伸出法兰板压住
     const waist = (c0) => { for (let r = CH; r < CH + 2; r++) for (let c = c0; c < c0 + 2; c++) { const x = c >= 0 && c < K.COLS && O[r][c]; if (x && x.cell.id !== 'biped') return true; } return false; };
 
+    // 真双足的机甲外观位置（只换画面）：躯干 = 胯以上、非撞击件的车体模块
+    //   最后一列（这几行里身后没有别的躯干模块、身前贴着躯干）的竖式锅炉 / 小水罐 / 加压舱 → 背负锅炉 / 背水罐 / 喷汽背包
+    //   顶上空着、左右至少一边空着的甲片 → 肩甲
+    const MECH_OF = { boiler_s: 'backboiler', tank_s: 'backjar', pressure_chamber: 'jetpack' };
+    const mechRoles = {};
+    // 腿部件（弹簧蹬缸 / 增压器）装好时画在腿骨 / 胯上，侧挂层跳过它们（SA.V.bipedParts：活着、挂位对、双足腿胯没毁）
+    const legParts = bipC >= 0 && SA.V.bipedParts ? SA.V.bipedParts(veh) : null;
+    const onLeg = new Set(legParts ? [...legParts.spring, ...legParts.booster].map(x => x.cell) : []);
+    if (bipC >= 0) {
+      const torso = (r, c) => r >= 0 && r < CH && c >= 0 && c < K.COLS && O[r][c] && !SA.isRam(O[r][c].cell.id) && !isChassis(O[r][c].cell.id);
+      eachCell(veh.body, (cell, r, c) => {
+        if (r >= CH || cell.hp <= 0) return;
+        const f = SA.fp(cell.id), rows = Array.from({ length: f.h }, (_, i) => r + i);
+        if (MECH_OF[cell.id]) {
+          const behind = rows.some(rr => { for (let cc = 0; cc < c; cc++) if (torso(rr, cc)) return true; return false; });
+          const front = rows.some(rr => torso(rr, c + f.w));
+          if (!behind && front) mechRoles[`${r},${c}`] = MECH_OF[cell.id];
+        } else if (cell.id === 'plate' && !torso(r - 1, c) && (!torso(r, c - 1) || !torso(r, c + 1)) && (torso(r, c - 1) || torso(r, c + 1) || torso(r + 1, c))) {
+          mechRoles[`${r},${c}`] = 'pauldron';
+        }
+      });
+    }
     const modOpts = (cell, r, c) => {
-      const m = SA.MODULES[cell.id];
-      const row = veh.body[r], w = SA.fp(cell.id).w;
-      const same = (k) => k >= 0 && k < K.COLS && row[k] && row[k].id === cell.id;
-      // 正上方紧贴着（非撞击件的）模块：底盘据此画出承托
-      let above = null;
-      if (r > 0) for (let k = c; k < c + w; k++) { const a = O[r - 1][k]; if (a && !SA.isRam(a.cell.id)) above = a.cell; }
-      return {
-        t, heat: o.heat || 0, water: o.water, moving: o.moving, seed: r * 3 + c, bd, mt: cell.mt, up: cell.lv || 0, look: ['quad', 'biped'].includes(cell.id) ? cell.look : undefined,
-        gnd: o.gnd && m.layer === 'chassis' ? o.gnd[`${r},${c}`] || [0, 0] : null,   // 悬挂：每格两个接地点各自上下（像素，正 = 往下伸）
-        gL: o.gnd && same(c - w) && o.gnd[`${r},${c - w}`] ? o.gnd[`${r},${c - w}`][1] : 0,   // 左右相邻同类底盘靠近本格的那个接地点（履带连成一条）
-        gR: o.gnd && same(c + w) && o.gnd[`${r},${c + w}`] ? o.gnd[`${r},${c + w}`][0] : 0,
-        recoil: dyn ? dyn.recoilOf(`${r},${c},${m.layer === 'side' ? 's' : 'b'}`) : 0,
-        feed: dyn ? dyn.feedOf(`${r},${c},${m.layer === 'side' ? 's' : 'b'}`) : 0,
-        flash: dyn ? dyn.flashOf(`${r},${c},${m.layer === 'side' ? 's' : 'b'}`) : 0,   // 喷射器 / 喷火器：正在喷
-        out: !!(o.tetherCell && o.tetherCell === cell),   // 鱼叉：已射出、绳子拴着对手
-        store: o.store,   // 蓄压罐：全车存量 0～1
-        a: o.elev ? o.elev[`${r},${c},${m.layer === 'side' ? 's' : 'b'}`] : undefined,   // 炮管仰角（度）：战斗里跟着鼠标转
-        punch: o.punch ? (o.punch[`${r},${c}`] || 0) : 0,
-        phase, gait: phase, stride,
-        g4: cell.id === 'quad' && o.gnd ? o.gnd[`${r},${c}`] || null : null,
-        g2: cell.id === 'biped' && o.gnd ? o.gnd[`${r},${c}`] || null : null,
-        wL: cell.id === 'biped' && waist(c - 2), wR: cell.id === 'biped' && waist(c + 2),
-        connL: same(c - w),
-        connR: same(c + w),
-        ...run(row, c),
-        top: !!(above && !SA.isRam(above.id)),
-        thrown, snap: cell.id === 'track' && cell.hp <= 0,
-      };
-    };
-    // 同类底盘连续段：本格在段内的序号与段长（腿按整段分配）
-    const run = (row, c) => {
-      const id = row[c].id, w = SA.fp(id).w;
+          const m = SA.MODULES[cell.id];
+          const row = veh.body[r], w = SA.fp(cell.id).w;
+          const same = (k) => k >= 0 && k < K.COLS && row[k] && row[k].id === cell.id;
+          // 正上方紧贴着（非撞击件的）模块：底盘据此画出承托
+          let above = null;
+          if (r > 0) for (let k = c; k < c + w; k++) { const a = O[r - 1][k]; if (a && !SA.isRam(a.cell.id)) above = a.cell; }
+          return {
+            t, heat: o.heat || 0, water: o.water, moving: o.moving, seed: r * 3 + c, bd, mt: cell.mt, up: cell.lv || 0, look: ['quad', 'biped'].includes(cell.id) ? cell.look : undefined,
+            gnd: o.gnd && m.layer === 'chassis' ? o.gnd[`${r},${c}`] || [0, 0] : null,   // 悬挂：每格两个接地点各自上下（像素，正 = 往下伸）
+            gL: o.gnd && same(c - w) && o.gnd[`${r},${c - w}`] ? o.gnd[`${r},${c - w}`][1] : 0,   // 左右相邻同类底盘靠近本格的那个接地点（履带连成一条）
+            gR: o.gnd && same(c + w) && o.gnd[`${r},${c + w}`] ? o.gnd[`${r},${c + w}`][0] : 0,
+            recoil: dyn ? dyn.recoilOf(`${r},${c},${m.layer === 'side' ? 's' : 'b'}`) : 0,
+            feed: dyn ? dyn.feedOf(`${r},${c},${m.layer === 'side' ? 's' : 'b'}`) : 0,
+            flash: dyn ? dyn.flashOf(`${r},${c},${m.layer === 'side' ? 's' : 'b'}`) : 0,   // 喷射器 / 喷火器：正在喷
+            out: !!(o.tetherCell && o.tetherCell === cell),   // 鱼叉：已射出、绳子拴着对手
+            store: o.store,   // 蓄压罐：全车存量 0～1
+            a: o.elev ? o.elev[`${r},${c},${m.layer === 'side' ? 's' : 'b'}`] : undefined,   // 炮管仰角（度）：战斗里跟着鼠标转
+            punch: o.punch ? (o.punch[`${r},${c}`] || 0) : 0,
+            phase, gait: phase, stride, runK, mech: mechRoles[`${r},${c}`], hs: cell.id === 'mech_helm' ? o.helmStyle : undefined,
+            g4: cell.id === 'quad' && o.gnd ? o.gnd[`${r},${c}`] || null : null,
+            g2: cell.id === 'biped' && o.gnd ? o.gnd[`${r},${c}`] || null : null,
+            ...(cell.id === 'biped' ? { crouch: o.crouch, air: o.air, tuck: o.tuck, ls: !!(legParts && legParts.spring.length), lb: !!(legParts && legParts.booster.length) } : {}),
+            wL: cell.id === 'biped' && waist(c - 2), wR: cell.id === 'biped' && waist(c + 2),
+            connL: same(c - w),
+            connR: same(c + w),
+            ...(row && row[c] ? run(row, c, cell.id) : {}),
+            top: !!(above && !SA.isRam(above.id)),
+            thrown, snap: cell.id === 'track' && cell.hp <= 0,
+          };
+        };
+    // 同类底盘连续段：本格在段内的序号与段长（腿按整段分配）。侧挂件下面的主体格可能是空的或别的模块，按单独一段算
+    const run = (row, c, id) => {
+      if (!row[c] || row[c].id !== id) return { ri: 0, rn: 1 };
+      const w = SA.fp(id).w;
       let a0 = c, a1 = c;
       while (a0 - w >= 0 && row[a0 - w] && row[a0 - w].id === id) a0 -= w;
       while (a1 + w < K.COLS && row[a1 + w] && row[a1 + w].id === id) a1 += w;
@@ -3233,7 +3602,7 @@ SA.SPR = (() => {
       const r = CH, draw = () => { g.save(); if (cell.id === 'quad' && o.ghostLegs) g.globalAlpha = 0.35; drawModule(g, cell.id, cx(c), cy(r), { ...modOpts(cell, r, c), part: 'far' }); g.restore(); ctx = g; };
       if (cell.hp > 0) draw(); else dead(draw);
     });
-    g.save(); g.translate(0, bd); hull(O, cx, cy); g.restore(); ctx = g;
+    g.save(); g.translate(0, bd); hull(O, cx, cy, (o) => o.cell.id === 'mech_helm' || mechRoles[`${o.r},${o.c}`] === 'pauldron'); g.restore(); ctx = g;
     // 主体层：底盘/撞击 → 其他 → 武器（炮管压在相邻格上，被挡时一眼可见）
     // 整件四足（pass 3）：甲壳和近侧腿压在整个车身前面（同 tools/chassis-lab.html），膝盖高过机身也不会被模块挡住
     // 撞击件（pass 4）画在四足的腿前面，装在车头的铲斗、撞角不会被腿挡住。
@@ -3279,7 +3648,7 @@ SA.SPR = (() => {
 
     // 侧挂层：硬阴影 + 本体，明确“在另一个平面”
     eachCell(veh.side, (cell, r, c) => {
-      if (cell.hp <= 0) return;
+      if (cell.hp <= 0 || onLeg.has(cell)) return;
       const img = modSprite(cell.id, modOpts(cell, r, c));
       g.save();
       g.globalAlpha = o.dimSide ? 0.35 : 1;
@@ -3291,6 +3660,17 @@ SA.SPR = (() => {
       ctx = g;
       scaled(g, cx(c), cy(r) + bd, cell.id, (xx, yy) => damage(xx, yy, cell.hp / (cell.max || SA.mod(cell).hp), r * 8 + c + 3));
     });
+    // 真双足跑起来躯干前倾（docs/true-biped.md §3.5「姿态靠整行错位」）：胯以上整体往车头错开，每高一大格多 1px（跑满），
+    // 画完再整块挪，模块、车体框、切角、驾驶员一起动，不会对不上
+    if (hasBiped && runK > 0) {
+      const top = CH * S + bd, tmp = farLayer(cv), tg = tmp.getContext('2d');
+      tg.clearRect(0, 0, tmp.width, tmp.height); tg.drawImage(cv, 0, 0, cv.width, top, 0, 0, cv.width, top);
+      g.clearRect(0, 0, cv.width, top);
+      for (let y0 = 0; y0 < top; y0 += S) {
+        const h = Math.min(S, top - y0), dx = Math.round(runK * (top - y0 - h / 2) / (2 * S));
+        g.drawImage(tmp, 0, y0, cv.width, h, dx, y0, cv.width, h);
+      }
+    }
     ctx = g;
     return cv;
   }
@@ -3392,6 +3772,7 @@ SA.SPR = (() => {
     back: ['...#.....', '..##.....', '.########', '#########', '.########', '..##.....', '...#.....', '.........', '.........'],
     flag: ['##.......', '#####....', '#######..', '#####....', '##.......', '#........', '#........', '#........', '##.......'],
     eye: ['.........', '..#####..', '.#.....#.', '#..###..#', '#..###..#', '.#.....#.', '..#####..', '.........', '.........'],
+    upmat: ['....#....', '...###...', '..#####..', '....#....', '....#....', '.........', '..#####..', '.#######.', '#########'],   // 升级材质：箭头压在锭上
   };
   const bits = (rows, x, y, c, s = 1) => {
     ctx.fillStyle = c;
@@ -3448,7 +3829,7 @@ SA.SPR = (() => {
   }
 
   return {
-    PADX, drawModule, cockpitCrew, bigStoker, weaponFx, renderVehicle, outline, iconCanvas, moduleCanvas, text, decorate,
+    PADX, drawModule, MECH_HELMS, cockpitCrew, bigStoker, weaponFx, renderVehicle, outline, iconCanvas, moduleCanvas, text, decorate,
     setMatPass: (fn) => { matPass = fn || null; cache.clear(); },
     useCtx: (c) => { ctx = c; }, R: (...a) => R(...a), disc: (...a) => disc(...a), line: (...a) => line(...a),
   };

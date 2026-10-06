@@ -726,8 +726,8 @@ textarea.code-out { font-family: Consolas, "Courier New", monospace; font-size: 
 .vn[data-who=narr] .vn-more { border-top-color: var(--glass2); }
 /* 老汤姆和远房亲戚同框：左亲戚、右老汤姆，说话的那个亮，另一个压暗；名牌挪到说话人那一边 */
 .vn-portrait, .vn-name { transition: filter .15s; }
-.vn-duo[data-who=uncle] .vn-portrait2, .vn-duo[data-who=smith] .vn-portrait:not(.vn-portrait2) { filter: brightness(.45) saturate(.5); }
-.vn-duo[data-who=smith] .vn-name { left: auto; right: 22px; }
+.vn-duo[data-side=l] .vn-portrait2, .vn-duo[data-side=r] .vn-portrait:not(.vn-portrait2) { filter: brightness(.45) saturate(.5); }
+.vn-duo[data-side=r] .vn-name { left: auto; right: 22px; }
 .vn-name { position: absolute; top: -26px; left: 22px; z-index: 1; padding: 4px 16px 6px; font-size: 15px; font-weight: 900; letter-spacing: .12em; color: #2a1a05;
   background: var(--brass3); clip-path: var(--px-corner-s); box-shadow: inset -3px -3px 0 var(--brass1); }
 .vn-name:empty { display: none; }
@@ -925,7 +925,7 @@ body[data-screen=garage] #screen, body[data-screen=arena] #screen { min-height: 
 .ed-main { display: flex; flex-direction: column; gap: 10px; min-height: 0; background: none; }
 .ed-stage { position: relative; flex: 1; min-height: 0; display: grid; place-items: center; padding: 12px; background: none; border: 12px solid transparent; border-image: var(--sk-iron) 6 fill / 12px repeat; image-rendering: pixelated; }
 .ed-stage > canvas { box-shadow: 0 0 0 2px #10233a, 0 0 0 4px #3a5875; }
-.ed-view { top: 6px; right: auto; left: 50%; transform: translateX(-50%); display: flex; gap: 8px; align-items: center; }
+.ed-view { top: 6px; right: auto; left: 50%; transform: translateX(-50%); display: flex; gap: 8px; align-items: center; width: max-content; max-width: calc(100% - 16px); }
 .ed-help { border-radius: 0; background: none; border: 8px solid transparent; border-image: var(--sk-ironBtn) 4 fill / 8px repeat; color: #e4e0d6; }
 .ed-tip { background: none; border: 12px solid transparent; border-image: var(--sk-paper) 6 fill / 12px repeat; color: #2a1a05; font: 13px SimSun, serif; padding: 0 6px; box-shadow: none; }
 .ed-tip.err { color: #b8391b; border-color: transparent; }
@@ -1070,8 +1070,12 @@ body[data-yard] #screen { min-height: 0; }
 .yb-pull { all: unset; position: absolute; left: 50%; bottom: -30px; margin-left: -14px; cursor: pointer; }
 .yb-pull:hover { filter: brightness(1.25); }
 .yb-in { height: 100%; display: grid; grid-template-columns: 290px 500px minmax(0, 1fr); gap: 22px; padding: 4px 6px; box-sizing: border-box; }
-.ar-chalk { overflow: auto; min-height: 0; color: #e8e3d2; font: 18px/1.5 KaiTi, STKaiti, serif; text-shadow: 0 0 1px rgba(232, 227, 210, .6); padding: 2px 6px; scrollbar-width: thin; }
+.ar-chalk { overflow: auto; min-height: 0; display: flex; flex-direction: column; color: #e8e3d2; font: 18px/1.5 KaiTi, STKaiti, serif; text-shadow: 0 0 1px rgba(232, 227, 210, .6); padding: 2px 6px; scrollbar-width: thin; }
 .ar-mid { display: flex; flex-direction: column; gap: 12px; min-height: 0; padding-top: 12px; }
+/* 黑板左下的「车间」路牌：和右下角的出战拉杆左右对着，点一下直接回车间 */
+.ar-garage { margin-top: auto; padding-top: 10px; flex: none; }
+.ar-garage .px-hot { cursor: pointer; }
+.ar-garage .px-hot:hover { filter: brightness(1.12); }
 .ar-mid .ar-vs { margin: 2px 0; }
 .ar-mid .ar-cars { margin: 0; min-height: 0; }
 .ar-mid .ar-prize { margin: 4px auto 0; padding-top: 4px; }
@@ -1140,6 +1144,8 @@ body[data-yard] #screen { min-height: 0; }
 .dash-lamp { display: grid; justify-items: center; gap: 1px; min-width: 32px; }
 .dash-lamp span { font-size: 12px; color: #8a8577; }
 .dash-lamp span.on { color: #ffd36b; }
+.dash-lamp span.crit { color: #ff8a5c; }
+.dash-lamp { cursor: help; }
 .dash-mid { flex: 1; min-width: 420px; display: grid; gap: 6px; align-content: center; }
 .dash-note { min-height: 20px; padding: 0 8px; display: flex; align-items: center; justify-content: center; text-align: center; font: bold 14px SimSun, serif; color: #5a4426; letter-spacing: .04em; line-height: 1.3; }
 .dash-note[data-k="alert"] { color: #b8391b; font: bold 16px "Microsoft YaHei", sans-serif; }
@@ -1168,3 +1174,108 @@ body[data-yard] #screen { min-height: 0; }
 .bt-touch { display: none; width: 100%; gap: 6px; }
 .bt-touch .btn { touch-action: none; user-select: none; -webkit-user-select: none; }
 @media (pointer: coarse) { .bt-touch { display: flex; } }
+.bt-move { display: flex; gap: 6px; flex: 2; }
+.bt-touch .btn { flex: 1; }
+/* 教程讲到这一步时，对应的真按钮一闪一闪（黄铜描边，按步跳，不渐变） */
+.tut-glow { animation: tut-glow .8s steps(2) infinite; }
+@keyframes tut-glow { 50% { box-shadow: 0 0 0 3px #0b0e15, 0 0 0 6px #f5d77a; } }
+.dash-keys.tut-glow { animation-name: tut-glow-keys; }
+@keyframes tut-glow-keys { 50% { outline: 4px solid #f5d77a; outline-offset: 3px; } }
+
+/* ---------- 手机布局（触屏设备，js 给 .bt 加 .touchui）----------
+   操作是手游式的两个半透明圆圈（js/battle-view.js 的 touchPads / bindTouch）：左圈开车，右圈跟着手指瞄准、按住开火。
+   横屏：画面占中间，左栏 = 锅炉 / 水 / 装甲 + 左圈（左手），右栏 = 泄压 / 撤退 + 武器键 + 右圈待命位（右手），画面下面是纸条。
+   竖屏：画面占满宽，下面依次是车况、纸条、泄压 / 撤退、武器键，最下面左圈、右圈待命位。
+   警报灯在横屏手机上收起来：同样的警报纸条上会用红字写出来。
+   整块战斗界面 touch-action: none：双指、双击都不会让浏览器缩放或滚动页面。 */
+.bt.touchui { display: grid; gap: 6px; box-sizing: border-box; height: 100vh; height: 100dvh; width: 100%;
+  padding: 4px max(6px, env(safe-area-inset-right)) max(4px, env(safe-area-inset-bottom)) max(6px, env(safe-area-inset-left));
+  grid-template-columns: 124px minmax(0, 1fr) 124px; grid-template-rows: minmax(0, 1fr) auto;
+  grid-template-areas: "l cv r" "l note r";
+  touch-action: none; -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
+.bt.touchui .bt-dash, .bt.touchui .dash-mid { display: contents; }
+.bt-rail { display: flex; flex-direction: column; align-items: stretch; gap: 6px; min-height: 0; }
+.bt-rail.l { grid-area: l; }
+.bt-rail.r { grid-area: r; }
+.bt.touchui .bt-canvas-wrap { grid-area: cv; position: relative; padding: 0; min-width: 0; min-height: 0; overflow: hidden; }
+.bt.touchui .dash-car { grid-area: car; flex: none; flex-wrap: wrap; justify-content: center; align-items: flex-end; gap: 4px 12px; }
+.bt.touchui .dash-hull { justify-items: center; gap: 4px; }
+.bt.touchui .dash-lamps { display: none; }
+.bt.touchui .dash-note { grid-area: note; align-self: center; justify-self: center; min-height: 0; padding: 4px 10px; font-size: 13px; }
+.bt.touchui .dash-note:empty { visibility: hidden; }
+.bt.touchui .dash-note[data-k="alert"] { font-size: 14px; }
+.bt.touchui .dash-keys { grid-area: keys; grid-template-columns: repeat(2, minmax(0, 1fr)); align-content: start; min-height: 0; padding: 2px; position: relative; z-index: 1; flex: 1; }
+.bt.touchui .dash-key.empty { display: none; }
+.bt.touchui .dash-act { grid-area: act; flex: none; gap: 4px; align-content: start; }
+.bt.touchui .dash-act .px-btn { min-height: 34px; font-size: 14px; padding: 1px 4px; }
+.bt.touchui .dash-act .px-cap, .bt.touchui .bt-speed { display: none; }
+/* 左圈：底座半透明，摇杆头跟着手指左右走；推着时亮一点 */
+.bt-stick { grid-area: move; flex: none; margin-top: auto; align-self: center; justify-self: center; position: relative; width: 108px; height: 108px; opacity: .7; }
+.bt-stick > canvas { position: absolute; left: 0; top: 0; image-rendering: pixelated; border: 0; }
+.bt-stick > .bt-knob { left: 30px; top: 30px; }
+.bt-stick.on { opacity: .95; }
+.bt-stick, .bt-aimhome i { border-radius: 50%; }   /* 教程发光跟着圆圈走，不是方框 */
+.bt-stick.tut-glow { opacity: 1; }
+.bt-aimhome.tut-glow { animation: none; }
+.bt-aimhome.tut-glow i { animation: tut-glow .8s steps(2) infinite; }
+/* 右圈待命位：没按时右圈停在这里提示右手放哪；整块不吃事件，按下去由战斗界面接管 */
+.bt-aimhome { grid-area: aim; flex: none; align-self: center; justify-self: center; display: grid; justify-items: center; gap: 2px; pointer-events: none; }
+.bt-aimhome i { width: 92px; height: 92px; }
+.bt-aimhome span { font: bold 12px SimSun, serif; color: #8a8577; white-space: nowrap; }
+@media (orientation: landscape) { .bt.touchui .bt-aimhome span { display: none; } }   /* 横屏右栏太窄，只在竖屏写字 */
+.bt-aimring { position: fixed; left: 0; top: 0; z-index: 20; margin: -46px 0 0 -46px; pointer-events: none; opacity: .3; }
+.bt-aimring canvas { image-rendering: pixelated; display: block; border: 0; }
+.bt-aimring.on { opacity: .75; }
+.bt.touchui .bt-plate { font-size: 12px; }
+@media (orientation: portrait) {
+  .bt.touchui { height: auto; min-height: 100vh; min-height: 100dvh; align-content: start;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); grid-template-rows: auto auto auto auto auto 1fr;
+    grid-template-areas: "cv cv" "car car" "note note" "act act" "keys keys" "move aim"; }
+  .bt.touchui .bt-canvas-wrap { overflow: visible; z-index: 2; }
+  .bt.touchui .dash-car { flex-wrap: nowrap; }
+  .bt.touchui .dash-lamps { display: flex; }
+  .bt.touchui .dash-act { display: flex; justify-content: center; }
+  .bt.touchui .dash-keys { grid-template-columns: repeat(5, minmax(0, 1fr)); overflow: visible; }
+  .bt.touchui .bt-rail { display: contents; }
+  .bt.touchui .bt-stick, .bt.touchui .bt-aimhome { align-self: end; margin: 0 0 8px; }
+}
+/* 教程对话框在手机上：头像缩小，只留正在说话的那一位，字有地方排开；竖屏时压在画面下面，不挡车 */
+.vn-touch.vn-battle { padding: 10px 8px 8px; }
+.vn-touch .vn-dock { margin-top: 22px; }
+.vn-touch .vn-in { min-height: 0; gap: 8px; padding: 10px 26px 12px 10px; }
+.vn-touch .vn-portrait { width: 52px; height: 52px; padding: 2px; }
+.vn-touch .vn-face { width: 48px; height: 48px; }
+.vn-touch .vn-text { font-size: 14px; line-height: 1.6; min-height: 3.2em; }
+.vn-touch .vn-name { top: -22px; font-size: 13px; padding: 3px 10px 4px; }
+.vn-touch.vn-duo[data-side=l] .vn-portrait2, .vn-touch.vn-duo[data-side=r] .vn-portrait:not(.vn-portrait2), .vn-touch.vn-duo[data-side=narr] .vn-portrait { display: none; }
+.vn-touch.vn-duo[data-side=r] .vn-name { right: auto; left: 22px; }
+.vn-touch .vn-skip { bottom: auto; top: 4px; right: 8px; }
+@media (orientation: portrait) {
+  .vn-touch.vn-battle { inset: 100% 0 auto 0; padding-top: 4px; background: var(--bg0); }
+}
+/* 别的页面（菜单、对话框）在窄屏上也不让一句话挤成一列 */
+@media (max-width: 560px) {
+  .vn-duo .vn-portrait { width: 56px; height: 56px; padding: 2px; }
+  .vn-duo .vn-face { width: 52px; height: 52px; }
+  .vn-duo[data-side=l] .vn-portrait2, .vn-duo[data-side=r] .vn-portrait:not(.vn-portrait2), .vn-duo[data-side=narr] .vn-portrait { display: none; }
+  .vn-duo[data-side=r] .vn-name { right: auto; left: 22px; }
+}
+
+/* ---------- 页面教程（js/tutorial.js）----------
+   聚光框：黄铜描边 + 黑边，dim 时四周用超大阴影压暗（只在目标那里开口），不吃事件；按步闪，不渐变。
+   旁白对话框（.vn-guide）自己不再压暗，暗底交给聚光框。动手提示：屏幕下方（目标在下半屏时换到上方）一条旁白小条。 */
+.guide-spot { position: fixed; z-index: 69; pointer-events: none; box-sizing: border-box; border: 3px solid #f5d77a; outline: 3px solid #0b0e15;
+  animation: guide-spot .9s steps(2) infinite; }
+.guide-spot.dim { box-shadow: 0 0 0 3px #0b0e15, 0 0 0 9999px rgba(7, 8, 12, .6); }
+@keyframes guide-spot { 50% { border-color: #d9a441; } }
+.vn.vn-page.vn-guide { background: none; }
+.vn.vn-page.vn-guide.vn-up { justify-content: flex-start; }
+.vn.vn-guide.vn-up .vn-skip { top: auto; bottom: 12px; }
+.guide-hint { position: fixed; left: 50%; bottom: 18px; z-index: 72; transform: translateX(-50%); width: min(620px, calc(100vw - 24px)); pointer-events: none; }
+.guide-hint.top { bottom: auto; top: 18px; }
+.guide-hint-in { pointer-events: auto; display: flex; align-items: center; gap: 12px; padding: 10px 12px 10px 16px; background: #121925;
+  border: 4px solid var(--iron3); outline: 4px solid var(--dark0); box-shadow: inset 0 0 0 2px var(--iron1), 6px 6px 0 rgba(7, 8, 12, .55);
+  color: var(--glass2); font-size: 16px; font-weight: 700; line-height: 1.6; letter-spacing: .04em; text-shadow: 2px 2px 0 var(--dark0); }
+.guide-hint-in span { flex: 1; }
+.guide-hint-x { flex: none; padding: 4px 10px; font-size: 12px; font-weight: 700; color: var(--muted); background: rgba(7, 8, 12, .6); border: 2px solid var(--dark3); cursor: pointer; }
+.guide-hint-x:hover { color: var(--text); border-color: var(--brass1); }

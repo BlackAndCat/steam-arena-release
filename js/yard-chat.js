@@ -140,8 +140,9 @@ SA.YardChat = (() => {
   }
 
   // 平滑加权轮询：同权重按编辑器顺序播；每组播完后才挑下一组。
-  function createPlayer(scope = currentScope()) {
-    const groups = read(scope).groups;
+  function createPlayer(scope = currentScope(), present = ['rel', 'tom', 'tim']) {
+    // 人物离开院子时整组对话暂停，避免其台词被其他人的气泡接着说出。
+    const groups = read(scope).groups.filter(group => group.lines.every(line => present.includes(line.who)));
     const scores = new Map();
     let active = null, lineIndex = 0, nextAt = -Infinity, bubbleUntil = -Infinity;
     let currentLine = null, forced = null;
@@ -182,7 +183,7 @@ SA.YardChat = (() => {
       }
       return { line: currentLine, expired: !!currentLine && nowSec >= bubbleUntil };
     }
-    function force(who, text) { forced = { who, text, action: 'talk', trustedHtml: true }; }
+    function force(who, text) { if (present.includes(who)) forced = { who, text, action: 'talk', trustedHtml: true }; }
     return { step, force };
   }
 
