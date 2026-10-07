@@ -1291,3 +1291,68 @@ body[data-yard] #screen { min-height: 0; }
 .guide-hint-in span { flex: 1; }
 .guide-hint-x { flex: none; padding: 4px 10px; font-size: 12px; font-weight: 700; color: var(--muted); background: rgba(7, 8, 12, .6); border: 2px solid var(--dark3); cursor: pointer; }
 .guide-hint-x:hover { color: var(--text); border-color: var(--brass1); }
+
+/* 手机和平板横屏以蓝图为主：左列占满高度，工具、工单、性能/零件切换集中右列。
+   侧栏整体纵向滚动，目录不受工单高度挤压；退出横屏时由编辑器恢复原节点位置。 */
+@media (orientation: landscape) and (max-width: 1100px) {
+  body[data-screen=garage] #side { flex-wrap: nowrap; gap: 6px; padding: 2px 6px; overflow-x: auto; }
+  body[data-screen=garage] #side > * { flex-shrink: 0; }
+  body[data-screen=garage] #side .top-where { white-space: nowrap; }
+  .ed { grid-template-columns: minmax(0, 1fr) clamp(210px, 30vw, 240px);
+    grid-template-rows: minmax(0, 1fr); gap: 6px; padding: 6px; overflow: hidden; }
+  .ed-landscape-controls { min-width: 0; min-height: 0; overflow-y: auto; overflow-x: hidden;
+    display: flex; flex-direction: column; gap: 6px; padding: 2px; }
+  .ed-landscape-controls > * { flex: none; min-width: 0; }
+  .ed-landscape-panes { display: flex; gap: 4px; }
+  .ed-landscape-panes > button { flex: 1; min-height: 36px; }
+  .ed-sheet { min-width: 0; max-height: none; overflow: visible; padding: 8px 0 0; border-width: 6px; }
+  .ed-sheet-paper { min-width: 0; min-height: 100%; gap: 6px; padding: 2px; border-width: 6px; font-size: 12px; }
+  .ed-sheet .plate-name { min-height: 30px; font-size: 14px; letter-spacing: 0; }
+  .ed-sheet-row { flex-wrap: wrap; gap: 2px; }
+  .ed-sheet .px-stats { gap: 8px; min-width: 0; }
+  /* 固定宽度刻度条移到第二行，首行保留完整名称和数值，覆盖组件内联三列模板。 */
+  .ed-sheet .px-row { grid-template-columns: auto minmax(0, 1fr) !important; gap: 2px; }
+  .ed-sheet .px-row > .nm { font-size: 12px; letter-spacing: 0; }
+  .ed-sheet .px-row > canvas { grid-column: 1 / -1; grid-row: 2; max-width: 100%; }
+  .ed-sheet .px-row > span:last-child { grid-column: 2; grid-row: 1; min-width: 0; }
+  .ed-main { min-width: 0; gap: 0; }
+  .ed-stage { min-width: 0; min-height: 0; padding: 4px; border-width: 6px; }
+  .ed-view { position: static; transform: none; width: auto; max-width: none;
+    flex-wrap: nowrap; overflow-x: auto; justify-content: flex-start; gap: 4px; }
+  .ed-view > * { flex-shrink: 0; }
+  .ed-stage .ed-help { left: 2px; bottom: 2px; min-width: 30px; min-height: 30px; width: 30px; height: 30px; border-width: 4px; }
+  .ed-tip { top: auto; bottom: 4px; border-width: 6px; font-size: 12px; }
+  /* 工单放入可滚动侧栏：保留完整选件信息和操作，出口不再占用蓝图高度。 */
+  .ed-dock { flex: none; display: flex; flex-direction: column; align-items: stretch; gap: 2px; padding: 2px; border-width: 4px; }
+  /* 滚动长目录时只把出口贴在侧栏底部，沿用工单纸底遮住其后的内容。 */
+  .ed-landscape-exit { position: sticky; bottom: 0; z-index: 7; background: #decba1; }
+  .ed-dock .dock-ctx { flex: none; min-height: 0; max-height: none; overflow: visible; padding: 2px; gap: 4px; flex-wrap: wrap; }
+  .ed-dock .dock-ctx .info { min-width: 0; flex-basis: 100%; font-size: 12px; overflow-wrap: anywhere; }
+  .ed-dock .dock-ctx .thumb { max-width: 48px; max-height: 36px; object-fit: contain; }
+  .ed-dock .dock-ctx .acts { flex-wrap: wrap; justify-content: flex-start; flex: none; }
+  .ed-dock .dock-ctx .acts .btn { flex: none; white-space: nowrap; min-height: 32px; }
+  .ed-lever { min-width: 0; gap: 4px; padding: 0; border: 0; overflow-x: auto; }
+  .ed-lever > * { flex-shrink: 0; }
+  .ed-exit-warn { font-size: 12px; }
+  .ed-cat { flex-direction: column-reverse; min-height: 0; gap: 2px; }
+  .ed-cat .ed-panel { flex: none; min-height: 0; max-height: none; border-width: 6px; }
+  /* 分类横向滑动，目录随侧栏纵向滚动；复位旧手机多列模板，保证最末分类也可达。 */
+  .ed-tabs { flex: none; flex-direction: row; min-width: 0; gap: 2px; padding: 0; margin: 0; overflow-x: auto; }
+  .ed-tab, .ed-tab.on { flex: none; flex-direction: row; width: auto; min-height: 34px; margin: 0; gap: 3px; padding: 3px; border-width: 4px; }
+  .ed-tab .nm { writing-mode: horizontal-tb; font-size: 12px; letter-spacing: 0; white-space: nowrap; }
+  .ed-tab i { width: 6px; height: 6px; }
+  .ed-cat .panel-tools { flex: none; gap: 4px; padding: 2px; }
+  .ed-cat .panel-title b { font-size: 14px; letter-spacing: 0; }
+  .ed-cat .panel-row { flex-wrap: wrap; gap: 4px; }
+  .ed-cat .panel-list { flex: none; min-width: 0; overflow: visible; grid-template-columns: minmax(0, 1fr); gap: 4px; padding: 4px 0; }
+  .ed-cat .cat-head { gap: 4px; padding-left: 8px; font-size: 12px; }
+  .ed-cat .mrow { min-width: 0; grid-template-columns: 40px minmax(0, 1fr) auto; gap: 4px; padding: 4px 2px; }
+  .ed-cat .mrow .pic { min-width: 0; min-height: 40px; padding: 0; }
+  .ed-cat .mrow .pic canvas { width: auto !important; max-width: 38px !important; height: auto !important; max-height: 46px; }
+  .ed-cat .mrow .mid { gap: 3px; }
+  .ed-cat .mrow .nm { font-size: 12px; letter-spacing: 0; }
+  .ed-cat .mrow .cnt b { font-size: 14px; }
+  .ed-cat .mrow .cnt.buy b { padding: 2px 3px 2px 8px; }
+  .ed-cat .bprow { grid-template-columns: 54px minmax(0, 1fr); gap: 4px; padding: 4px 2px; }
+  .ed-cat .bprow .bp-pic { width: 54px; height: 36px; }
+}

@@ -27,6 +27,10 @@ SA.Editor = (() => {
   const stageWorkbench = () => !!document.querySelector('#assembly-screen > #screen');
   function saveCat() { if (stageWorkbench()) return; try { localStorage.setItem('steam_arena_cat_v1', st.cat || ''); } catch (e) { /* ignore */ } }
   let cv, g, stage, tipEl, viewEl, ctxEl, toolsEl, invEl, dockEl, tabsEl, plateEl, ghost, ro, frame = null, sheetEl = null, leverEl = null;
+  // 横屏只搬动既有节点，保留按钮、拖拽事件与选件状态；方向监听在模块初始化时仅注册一次。
+  const landscapeQuery = matchMedia('(orientation: landscape) and (max-width: 1100px)');
+  let editorEl, mainEl, catalogEl, orderEl, landscapeEl, paneSlotEl, landscapeExitEl, paneButtons, landscapePane = 'parts';
+  landscapeQuery.addEventListener('change', syncLandscape);
   // 工具页工单共用本轮性能单诊断，避免重复计算；普通车间始终为 null。
   let sheetDiagnosis = null;
 
@@ -74,7 +78,17 @@ SA.Editor = (() => {
     invEl = h('div', { class: 'panel-list' });
     dockEl = h('aside', { class: 'ed-panel' }, toolsEl, invEl);
     tabsEl = h('nav', { class: 'ed-tabs' });
-    screen.append(h('div', { class: 'ed' }, sheetEl, h('div', { class: 'ed-main' }, stage, h('div', { class: 'ed-dock' }, ctxEl, leverEl)), h('div', { class: 'ed-cat' }, dockEl, tabsEl)));
+    orderEl = h('div', { class: 'ed-dock' }, ctxEl, leverEl);
+    mainEl = h('div', { class: 'ed-main' }, stage, orderEl);
+    catalogEl = h('div', { class: 'ed-cat' }, dockEl, tabsEl);
+    editorEl = h('div', { class: 'ed' }, sheetEl, mainEl, catalogEl);
+    landscapePane = 'parts';
+    paneButtons = ['stats', 'parts'].map((pane) => h('button', { class: 'btn small', type: 'button',
+      'data-editor-pane': pane, onclick: () => setLandscapePane(pane) }, pane === 'stats' ? '性能' : '零件'));
+    paneSlotEl = h('div', { class: 'ed-landscape-slot' });
+    landscapeExitEl = h('div', { class: 'ed-dock ed-landscape-exit' });
+    landscapeEl = h('aside', { class: 'ed-landscape-controls' }, h('nav', { class: 'ed-landscape-panes', 'aria-label': '车间侧栏' }, ...paneButtons), paneSlotEl, landscapeExitEl);
+    screen.append(editorEl);
 
     cv.addEventListener('pointerdown', onCanvasDown);
     cv.addEventListener('pointermove', onMove);
@@ -92,13 +106,48 @@ SA.Editor = (() => {
     ro = new ResizeObserver(fit);
     ro.observe(stage);
     renderAll();
+    syncLandscape();
     frame = requestAnimationFrame(() => { fit(); loop(); });
     // 页面教程（js/tutorial.js）：第一次进车间讲装水罐和性能单，商店第一次开张时指一下开关；后台拼装台不讲
     if (SA.Guide && !stageWorkbench() && !SA.Camp.isDesignMode()) SA.Guide.garage();
   }
+  // 参数与零件共用侧栏槽位，完整内容由侧栏纵向滚动；切换不会重新创建编辑器。
+  function setLandscapePane(pane) {
+    landscapePane = pane;
+    const active = landscapeQuery.matches;
+    sheetEl.classList.toggle('hidden', active && pane !== 'stats');
+    catalogEl.classList.toggle('hidden', active && pane !== 'parts');
+    paneButtons.forEach((button) => {
+      const selected = button.dataset.editorPane === pane;
+      button.classList.toggle('on', selected);
+      button.setAttribute('aria-pressed', String(selected));
+    });
+  }
+  // 回到竖屏/桌面时恢复原来的三块区域与工具条位置，维持原布局和交互。
+  function syncLandscape() {
+    if (!editorEl || !editorEl.isConnected) return;
+    if (landscapeQuery.matches) {
+      editorEl.append(landscapeEl);
+      landscapeEl.prepend(viewEl);
+      landscapeEl.insertBefore(orderEl, paneSlotEl);
+      paneSlotEl.append(sheetEl, catalogEl);
+      // 只固定出口，长工单与目录继续正常滚动，避免选件信息遮住可用零件。
+      landscapeExitEl.append(leverEl);
+    } else {
+      editorEl.prepend(sheetEl);
+      editorEl.append(catalogEl);
+      mainEl.append(orderEl);
+      orderEl.append(leverEl);
+      stage.insertBefore(viewEl, tipEl);
+      landscapeEl.remove();
+    }
+    setLandscapePane(landscapePane);
+    fit();
+  }
   // 教程用：把清单翻到这个模块所在的那一类（shop 决定是否打开商店），返回清单里那一行
   function focusInv(id, shop) {
     if (!invEl || !invEl.isConnected || !M[id]) return null;
+    if (landscapeQuery.matches) setLandscapePane('parts');
     if (shop != null) st.shop = !!shop && has('shop');
     st.cat = M[id].cat;
     renderTools(); renderInv();
@@ -128,9 +177,13 @@ SA.Editor = (() => {
 
   function fit() {
     if (!cv || !stage.isConnected) return;
-    const aw = stage.clientWidth - 16, ah = stage.clientHeight - 16;
+    // 横屏窄蓝图按实际内容区适配，扣除内边距，不让最小比例把画布推到邻栏。
+    const landscape = landscapeQuery.matches;
+    const style = landscape ? getComputedStyle(stage) : null;
+    const aw = landscape ? Math.max(1, stage.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight)) : stage.clientWidth - 16;
+    const ah = landscape ? Math.max(1, stage.clientHeight - parseFloat(style.paddingTop) - parseFloat(style.paddingBottom)) : stage.clientHeight - 16;
     let s = Math.min(aw / W, ah / H);
-    s = s >= 1 ? Math.floor(s * 4) / 4 : Math.max(0.3, s);
+    s = s >= 1 ? Math.floor(s * 4) / 4 : landscape ? s : Math.max(0.3, s);
     cv.style.width = `${Math.round(W * s)}px`;
     cv.style.height = `${Math.round(H * s)}px`;
   }
