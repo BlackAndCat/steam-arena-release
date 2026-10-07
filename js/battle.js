@@ -2,7 +2,7 @@
 // 视觉事件类型：part、text、particles、boom、ricochet、shatter、surrender-start、surrender。
 window.SA = window.SA || {};
 // 规则指纹的手工版本；战斗规则改动时必须递增，进化候选会因此被标记为需要复核。
-SA.RULES_VERSION = '2026-10-06-knight-waist-exclusive-refit';
+SA.RULES_VERSION = '2026-10-06-route-r1';
 
 SA.Battle = (() => {
   const h = SA.h, K = SA.K, T = K.BATTLE, M = SA.MODULES, P = SA.PAL, C = K.CELL, PADX = SA.SPR.PADX;
@@ -183,25 +183,27 @@ SA.Battle = (() => {
   // B.ter：每个像素的地面高度（土坡）、泥地区间、货箱。数据在 SA.TERRAINS；没有地形就是平地
   const MUD = T.MUD_SPEED;   // 泥地里的速度系数（按底盘）
   function makeTerrain(id) {
-    const key = SA.TERRAINS[id] ? id : 'flat', def = SA.TERRAINS[key];
-    const ground = new Float32Array(W + 1).fill(GROUND);
+    const key = id && typeof id === 'object' ? id.id : SA.TERRAINS[id] ? id : 'flat';
+    const def = id && typeof id === 'object' ? id : SA.TERRAINS[key], len = def.len || W;
+    const ground = new Float32Array(len + 1).fill(GROUND);
     for (const hl of def.hills || [])
-      for (let x = Math.max(0, Math.floor(hl.x - hl.w / 2)); x <= Math.min(W, Math.ceil(hl.x + hl.w / 2)); x++)
+      for (let x = Math.max(0, Math.floor(hl.x - hl.w / 2)); x <= Math.min(len, Math.ceil(hl.x + hl.w / 2)); x++)
         ground[x] -= hl.h * 0.5 * (1 + Math.cos(Math.PI * (x - hl.x) / (hl.w / 2)));
-    const at = (x) => ground[Math.max(0, Math.min(W, Math.round(x)))];
-    const crates = (def.crates || []).map(c => { const y1 = at(c.x); return { x0: c.x - c.w / 2, x1: c.x + c.w / 2, y0: y1 - c.h, y1, hp: c.hp, max: c.hp, dead: false, shake: 0 }; });
-    return { id: key, def, ground, mud: def.mud || [], crates };
+    const at = (x) => ground[Math.max(0, Math.min(len, Math.round(x)))];
+    const crates = (def.props || def.crates || []).map(c => { const y1 = at(c.x); return { kind: c.kind || 'crate', x0: c.x - c.w / 2, x1: c.x + c.w / 2, y0: y1 - c.h, y1, hp: c.hp, max: c.hp, dead: false, shake: 0 }; });
+    return { id: key, def, len, ground, mud: def.mud || [], crates, props: crates, pickups: (def.pickups || []).map(p => ({ ...p, taken: false })) };
   }
-  const groundAt = (x) => (B && B.ter && x >= 0 && x <= W ? B.ter.ground[Math.round(x)] : GROUND);   // 地形只在中间这一段，其余都是平地
+  const groundAt = (x) => (B && B.ter && x >= 0 && x <= B.ter.len ? B.ter.ground[Math.round(x)] : GROUND);   // 路线按世界长度取样，地形以外仍是平地
   const crateAt = (x, y) => (B && B.ter ? B.ter.crates.findIndex(c => !c.dead && x >= c.x0 && x <= c.x1 && y >= c.y0 && y <= c.y1) : -1);
   // 整车在世界里的左右边缘
   const span = (s) => (isP(s) ? [cellX(s, s.minCol), cellX(s, s.frontCol) + C] : [cellX(s, s.frontCol), cellX(s, s.minCol) + C]);
   // 有场地边界时，按整车外沿限制中心位置。碰撞会再次推动车身，因此每帧碰撞后统一限位。
   function enforceBounds(s) {
-    if (!B.bounds || s.frontCol < 0) return;
+    const bounds = B.route && s === B.e ? s.routeBounds : B.bounds;
+    if (!bounds || s.frontCol < 0) return;
     const [left, right] = span(s);
-    if (left < B.bounds.left) { s.x += B.bounds.left - left; if (s.vx < 0) s.vx = 0; }
-    else if (right > B.bounds.right) { s.x -= right - B.bounds.right; if (s.vx > 0) s.vx = 0; }
+    if (left < bounds.left) { s.x += bounds.left - left; if (s.vx < 0) s.vx = 0; }
+    else if (right > bounds.right) { s.x -= right - bounds.right; if (s.vx > 0) s.vx = 0; }
   }
   // 地形对速度的影响：泥地按底盘减速；上坡慢、下坡快（按车头车尾的高度差）
   function terrainK(s, dir) {
@@ -275,6 +277,7 @@ SA.Battle = (() => {
     const c = B.ter.crates[k];
     if (!c || c.dead) return;
     c.hp -= dmg;
+    if (B.route) emit('prop', { kind: c.kind, x: (c.x0 + c.x1) / 2, y: c.y0, state: c.hp <= 0 ? 'break' : 'hit' });
     c.shake = 0.2;
     const x = (c.x0 + c.x1) / 2, y = (c.y0 + c.y1) / 2;
     if (!crush) {
@@ -318,6 +321,7 @@ SA.Battle = (() => {
   const legCompression = (s) => s.chassisId === 'biped' ? Math.max(s.crouch, s.tuck) * 0.5 : 0;
   // 世界坐标 → 子格
   function cellAt(s, x, y) {
+    if (!s) return null; // 空敌时准星、预览与自由炮弹仍可检测地形。
     [x, y] = toFlat(s, x, y);   // 先转回车身平放时的坐标
     let localY = y - VY - (s.yo || 0) - poseOffset(s);
     const legY = bipedLegStart(s) * C;
@@ -362,7 +366,7 @@ SA.Battle = (() => {
   // 散布随聚焦和车身晃动变化；显式设置下限的抛射炮将当前角度限制在配置区间。
   const spreadDeg = (s, o, w, focus = s.focus) => {
     if ((w.m.indirect && !w.m.spread) || (s.prism && focus >= 1)) return 0;
-    let spread = (w.m.spread * (1 - s.acc * T.AIM_ACCEL_SPREAD) + shakeOf(s) * T.AIM_SHAKE_SPREAD) * (1 - s.aimShrink * focus) + o.evade * T.AIM_EVADE_SPREAD;
+    let spread = (w.m.spread * (1 - s.acc * T.AIM_ACCEL_SPREAD) + shakeOf(s) * T.AIM_SHAKE_SPREAD) * (1 - s.aimShrink * focus) + (o ? o.evade : 0) * T.AIM_EVADE_SPREAD;
     if (!w.m.indirect && w.m.arc !== 'high' && crouchStable(s)) spread *= 0.75 * s.bipedParts.crouchStability;
     return w.m.indirect && w.m.spreadMin != null ? clamp(spread, w.m.spreadMin, w.m.spread) : spread;
   };
@@ -429,9 +433,9 @@ SA.Battle = (() => {
 
   // 镜头状态同时服务于画面和炮弹出界判定；无画面模拟也必须更新它，保持战斗边界与实战一致。
   function camera(dt) {
-    const pr = cellX(B.p, B.p.minCol), er = cellX(B.e, B.e.minCol) + C;
+    const pr = cellX(B.p, B.p.minCol), er = B.e ? cellX(B.e, B.e.minCol) + C : frontEdge(B.p) + 360;
     const lob = B.p.weapons.some(w => w.cell.id === B.p.sel && w.m.indirect);
-    const tz = clamp((W - 60) / (er - pr + 360), CAMERA_ZMIN, lob ? 1.25 : 1.8);
+    const tz = B.e ? clamp((W - 60) / (er - pr + 360), CAMERA_ZMIN, lob ? 1.25 : 1.8) : 1;
     const cam = B.cam;
     cam.z += (tz - cam.z) * Math.min(1, dt * 3);
     const sw = W / cam.z, sh = H / cam.z;
@@ -1128,10 +1132,10 @@ SA.Battle = (() => {
     s.minWater = Math.min(s.minWater, s.water);
     markTelemetry(s);
     if (s.heat >= s.heatMax) { kill(s, SA.Config.text("battle_39f68a635696")); return; }
-    const aimPt = isHuman(s) ? B.aim : aiAimPoint(s, o);
-    const aiming = s.fireHeld && aimPt && s.power > 0 && !s.hold && !o.dead;
+    const aimPt = isHuman(s) ? B.aim : o ? aiAimPoint(s, o) : null;
+    const aiming = s.fireHeld && aimPt && s.power > 0 && !s.hold && (!o || !o.dead);
     // 玩家松开按键的这一帧也算开火（提前松手 = 用当前稳定度打出去）
-    const firing = aiming || (isHuman(s) && s.release && aimPt && s.power > 0 && !o.dead);
+    const firing = aiming || (isHuman(s) && s.release && aimPt && s.power > 0 && (!o || !o.dead));
     const at = firing ? targetAt(o, aimPt[0], aimPt[1]) : null;
     const side = !!at && at.layer === 'side';
     if (firing) {
@@ -1151,7 +1155,7 @@ SA.Battle = (() => {
     // 多出来的驾驶员：每人接管一组「当前没在手操」的武器，自己挑目标开火（枪法比玩家差）
     const crew = SA.V.crewPlan(s.weapons, s.drivers, s.sel);
     s.coGroups = crew.autoGroups;
-    const coPt = s.coGroups.length && !o.dead && s.power > 0 && !s.hold ? copilotAim(s, o, dt) : null;
+    const coPt = s.coGroups.length && o && !o.dead && s.power > 0 && !s.hold ? copilotAim(s, o, dt) : null;
     const coAt = coPt ? targetAt(o, coPt[0], coPt[1]) : null;
     // 每名驾驶员只装一门；优先接近完成的炮，同进度随机挑选以免实体顺序固定优先权。
     const waiting = s.weapons.filter(w => s.timers[w.key] > 0);
@@ -1620,6 +1624,7 @@ SA.Battle = (() => {
   }
 
   function retreat() {
+    if (B?.route) return recallRoute(); // 路线的撤退是返航，不能伪装成驾驶舱损毁。
     if (!B || B.p.dead) return false;
     if (B.surrender === 'raising' || B.surrender === 'asked') return false;
     kill(B.p, SA.Config.text("battle_114d47b4788d"));
@@ -1645,35 +1650,39 @@ SA.Battle = (() => {
 
   function step(dt) {
     // 实时画面与手动调试均不得在升旗或确认期间偷跑物理、炮弹或结算。
+    if (!B || B.done) return;
     if (B.surrender === 'raising' || B.surrender === 'asked') return;
+    if (B.route) advanceRoute();
+    if (B.done) return;
     const beforeX = B.telemetry ? { p: B.p.x, e: B.e.x } : null;
     B.t += dt;
     B.ramCd = Math.max(0, B.ramCd - dt);
     B.p.kickCooldown = Math.max(0, B.p.kickCooldown - dt);
-    B.e.kickCooldown = Math.max(0, B.e.kickCooldown - dt);
+    if (B.e) B.e.kickCooldown = Math.max(0, B.e.kickCooldown - dt);
     if (B.ter) for (const c of B.ter.crates) { c.shake = Math.max(0, c.shake - dt); c.touch = Math.max(0, (c.touch || 0) - dt); }
-    if (B.p.isAI) ai(B.p, B.e, dt);
+    if (B.p.isAI) {
+      if (B.e) ai(B.p, B.e, dt);
+      else { B.p.dir = 1; B.p.fireHeld = false; B.p.target = null; } // 无敌模拟只向前行驶，遇敌恢复真实战斗 AI。
+    }
     else {
       if (!B.p.dead) B.p.dir = (B.keys.right ? 1 : 0) - (B.keys.left ? 1 : 0);
       if (B.p.fireHeld && !B.keys.fire) B.p.release = true;
       B.p.fireHeld = B.keys.fire;
       B.p.crouchHeld = !!B.keys.crouch; B.p.jumpHeld = !!B.keys.jump;
     }
-    ai(B.e, B.p, dt);
+    if (B.e) ai(B.e, B.p, dt);
     // 两端先共同算出本帧收绳目标，避免先更新的一方占据时序优势。
-    B.p.tetherPullVx = B.e.tetherPullVx = 0;
-    updateTether(B.p, B.e, dt); updateTether(B.e, B.p, dt);
+    B.p.tetherPullVx = 0;
+    if (B.e) { B.e.tetherPullVx = 0; updateTether(B.p, B.e, dt); updateTether(B.e, B.p, dt); }
     sim(B.p, B.e, dt);
-    sim(B.e, B.p, dt);
+    if (B.e) sim(B.e, B.p, dt);
     // 双方供能和行驶需求都已更新，再结算绳索超载，避免用上一帧动力。
-    overloadTether(B.p, B.e, dt); overloadTether(B.e, B.p, dt);
-    B.p.anim.step(dt); B.e.anim.step(dt);
-    collide(dt);
-    pistons(B.p, B.e, dt);
-    pistons(B.e, B.p, dt);
-    enforceBounds(B.p); enforceBounds(B.e);
+    if (B.e) { overloadTether(B.p, B.e, dt); overloadTether(B.e, B.p, dt); }
+    B.p.anim.step(dt);
+    if (B.e) { B.e.anim.step(dt); collide(dt); pistons(B.p, B.e, dt); pistons(B.e, B.p, dt); enforceBounds(B.e); }
+    enforceBounds(B.p);
     // 进化评分只保存时间摘要，不保存逐帧录像；同一帧由双方共享一份距离统计。
-    if (B.metrics) {
+    if (B.metrics && B.e) {
       const distance = Math.abs(frontEdge(B.e) - frontEdge(B.p));
       B.metrics.distanceSum += distance * dt;
       B.metrics.samples += dt;
@@ -1688,6 +1697,7 @@ SA.Battle = (() => {
     camera(dt);
 
     for (const sh of B.shots) {
+      if (!sh.to && sh.from === B.p && B.e) sh.to = B.e; // 自由飞行的炮弹可命中新登场车辆，已有目标的旧弹不换敌。
       const n = Math.max(1, Math.ceil(dt * 120));
       if (sh.delay > 0) { sh.delay -= dt; continue; }
       for (let i = 0; i < n && !sh.done; i++) {
@@ -1739,6 +1749,16 @@ SA.Battle = (() => {
 
     if (!B.headless && view && view.tick) view.tick(dt);
 
+    if (B.route) {
+      // 路线胜一场仅退场敌车；不进入竞技场的平手、超时、奖金与关卡结算。
+      if (B.e && !B.p.dead && !B.e.dead) {
+        surrender(dt);
+        const e = B.e;
+        if (!e.dead && e.armed && !e.weapons.length && e.water <= 0 && !canMelee(e)) kill(e, SA.Config.text('battle_605a242d802d'));
+      }
+      advanceRoute();
+      return;
+    }
     if (!B.ending) {
       surrender(dt);
       if (B.surrender === 'raising' || B.surrender === 'asked') return;
@@ -1784,7 +1804,112 @@ SA.Battle = (() => {
     return out;
   }
 
+  // ---------- 持续出征局 ----------
+  let routeSerial = 0;
+
+  /** 从车辆副本建立一趟完整旅程；遭遇只替换敌车，玩家损伤、热量、水和装填始终连续。 */
+  function startRouteState(opts) {
+    if (!opts.headless) SA.go('battle');
+    const def = opts.routeData, vehicle = opts.vehicle || SA.S.d.vehicle;
+    const pShift = frontShift(vehicle);
+    B = { opts, headless: !!opts.headless, pShift, bounds: { left: 0, right: def.len }, ter: makeTerrain(def),
+      t: 0, shots: [], parts: [], texts: [], shake: 0, aim: null, ending: 0, done: false, hudT: 0, ramCd: 0, contact: false,
+      speed: opts.headless ? 1 : view ? view.gameSpeed() : K.GAME_SPEED,
+      keys: { left: false, right: false, fire: false, crouch: false, jump: false },
+      cam: { x: 0, y: 0, z: 1, w: W, h: H }, aimScreen: null,
+      route: { id: def.id, len: def.len, x: 0, state: 'drive', encounter: null, next: 0, cleared: [], wrecks: [],
+        runId: opts.headless ? 'simulation' : 'route-' + Date.now() + '-' + ++routeSerial } };
+    B.p = makeSide(shiftVeh(SA.V.battleCopy(vehicle, 1, false), pShift), vehicle.name, !!opts.headless, 0.8, 0);
+    B.p.x -= span(B.p)[0]; // 以车尾贴院门开局，不沿用竞技场的两车初始间距。
+    B.p.style = 'rush';
+    B.p.homeX = B.p.goalX = B.p.x;
+    B.e = null;
+    settle(B.p, 0);
+    camera(1);
+    advanceRoute();
+    return B;
+  }
+
+  /** 按车头位置接力生成一辆真实关卡车；右拴绳仅限制敌方整车，玩家使用整条路线边界。 */
+  function spawnRouteEnemy(enc, i) {
+    const stats = SA.StageCars.statMultipliers(enc.statMultipliers);
+    const ev = shiftVeh(SA.V.battleCopy(enc.vehicle, stats.hp, true), frontShift(enc.vehicle));
+    const e = B.e = makeSide(ev, enc.name, true, enc.aim || 0.8, enc.guard, stats);
+    e.x += enc.guard - frontEdge(e);
+    e.homeX = e.goalX = e.x;
+    e.style = normalizeAiStyle(enc.style);
+    e.routeBounds = { left: Math.min(enc.at, enc.guard), right: enc.leash };
+    e.charge = !!enc.charge;
+    settle(e, 0); enforceBounds(e);
+    B.route.encounter = { i, name: enc.name };
+    B.route.state = 'fight';
+    B.contact = false; B.ramCd = 0;
+    B.p.target = null; B.p.co.target = null; B.p.retarget = 0;
+    emit('encounter', { name: enc.name, x: frontEdge(e) });
+  }
+
+  /** 清除上一场的鱼叉、投降、目标和接触状态，留下世界坐标残骸与待 R2 拾取的物资。 */
+  function retireRouteEnemy() {
+    const e = B.e, encounter = B.route.encounter;
+    B.route.cleared.push({ ...encounter, surrendered: B.surrender === 'accepted', reason: e.reason });
+    B.route.wrecks.push({ x: e.x, vehicle: e.v, name: e.name });
+    B.ter.pickups.push({ kind: 'supply', x: frontEdge(e), taken: false, encounter: encounter.i });
+    B.p.tether = null; e.tether = null;
+    B.p.tetherPullVx = 0; B.p.target = null; B.p.co.target = null; B.p.retarget = 0;
+    B.e = null; B.route.encounter = null; B.route.state = 'drive';
+    B.surrender = null; B.surrenderWhy = null; B.surrenderElapsed = 0; B.surrenderAnchor = null; B.surT = 0;
+    B.flagX0 = null; B.frozen = false; B.contact = false; B.ramCd = 0; B.drawT = 0;
+    B.p.grinding = false; B.p.grind = 0; B.p.grindT = 0;
+  }
+
+  /** 路线结束出口只触发一次，结果不含竞技场胜负奖励；还原玩家车格坐标供后续战损结算。 */
+  function endRoute(how) {
+    if (!B?.route || B.done) return false;
+    B.route.state = 'end'; B.done = true; B.frozen = false;
+    B.p.dir = 0; B.p.fireHeld = false;
+    B.result = { mode: 'route', route: B.route.id, runId: B.route.runId, how, dist: B.route.x,
+      cargo: [], lost: [], refugees: 0, relic: null, money: 0,
+      playerVehicle: shiftVeh(SA.V.clone(B.p.v), -B.pShift), time: B.t };
+    emit('route-end', { how });
+    // 画面通过 route-end 和 Route.result() 展示清点；不调用竞技场 presentResult 或存档结算。
+    if (!B.headless && view) view.teardown();
+    return true;
+  }
+
+  /** 玩家损毁优先于到站；击败敌车后继续原局，未解决的遭遇不会被终点越过而丢失。 */
+  function advanceRoute() {
+    B.route.x = Math.max(B.route.x, clamp(frontEdge(B.p), 0, B.route.len));
+    if (B.p.dead) { endRoute('wrecked'); return; }
+    if (B.e?.dead) retireRouteEnemy();
+    const def = B.opts.routeData;
+    const enc = def.encounters[B.route.next];
+    if (!B.e && enc && B.route.x >= enc.at) spawnRouteEnemy(enc, B.route.next++);
+    if (!B.e && !enc && B.route.x >= def.end.x) endRoute('depot');
+  }
+
+  /** 主动返航可在遭遇和投降等待期间请求；损毁车辆仍必须按 wrecked 结束。 */
+  function recallRoute() {
+    if (!B?.route || B.done) return false;
+    return endRoute(B.p.dead ? 'wrecked' : 'recall');
+  }
+
+  /** 同步真实物理模拟：临时替换局状态和引擎随机源，finally 恢复外部游戏，不碰正式存档。 */
+  function simulateRoute(o) {
+    const keep = B, previousRandom = random;
+    try {
+      random = seededRandom(o.seed);
+      startRouteState({ mode: 'route', headless: true, routeData: o.routeData, vehicle: o.vehicle });
+      const dt = 1 / 30;
+      while (!B.done && B.t + dt <= o.maxTime + 1e-8) step(dt);
+      return { completed: B.done, reason: B.done ? B.result.how : 'budget', result: B.result || null,
+        time: B.t, dist: B.route.x, cleared: B.route.cleared.map(enc => ({ ...enc })),
+        state: { x: B.p.x, vx: B.p.vx, heat: B.p.heat, water: B.p.water, hp: hpFrac(B.p),
+          enemyX: B.e?.x ?? null, camera: { ...B.cam } } };
+    } finally { B = keep; random = previousRandom; }
+  }
+
   function startState(opts) {
+    if (opts.mode === 'route') return startRouteState(opts);
     SA.go('battle');
     const d = SA.S.d;
     const pShift = frontShift(d.vehicle);
@@ -1810,6 +1935,7 @@ SA.Battle = (() => {
     }
     if (!view) throw new Error(SA.Config.text("battle_282b507870d1"));
     view.start(opts);
+    if (opts.mode === 'route') return B;
   }
 
   function finish() {
@@ -1921,7 +2047,7 @@ SA.Battle = (() => {
     targetAt(side, x, y) { return targetAt(side === 'e' ? B.e : B.p, x, y); },
     muzzle(side = 'p', index = 0) { const s = side === 'e' ? B.e : B.p; return muzzle(s, s.weapons[index]); },
     damage(side, r, c, layer = 'body', amount = 1) { const s = side === 'e' ? B.e : B.p; damage(s, null, { layer, r, c }, amount); }, // 单位检查用真实受击与刷新路径。
-    step(sec = 1) { for (let i = 0; i < sec * 60; i++) { if (B.done) break; step(1 / 60); } if (view) { view.draw(); view.hudTick(1); } return { t: B.t, px: B.p.x, ex: B.e.x, pv: B.p.vx, ev: B.e.vx, ph: B.p.heat, eh: B.e.heat, pd: B.p.dead, ed: B.e.dead }; },
+    step(sec = 1) { for (let i = 0; i < sec * 60; i++) { if (B.done) break; step(1 / 60); } if (view) { view.draw(); view.hudTick(1); } return { t: B.t, px: B.p.x, ex: B.e?.x ?? null, pv: B.p.vx, ev: B.e?.vx ?? null, ph: B.p.heat, eh: B.e?.heat ?? null, pd: B.p.dead, ed: B.e?.dead ?? null }; },
     get B() { return B; },
     cellCenter(side, r, c, layer = 'body') { const s = side === 'e' ? B.e : B.p; return modCenter(s, layer, r, c); },
     aimWorld(x, y) { if (view) view.aimWorld(x, y); },
@@ -1934,5 +2060,5 @@ SA.Battle = (() => {
     vent, retreat, acceptSurrender, refuseSurrender, surrenderState, advanceSurrender, skipSurrenderAnimation,
     emit: (type, data) => emit(type, data),
   });
-  return { start, aiStyles, normalizeAiStyle, ...(!SA.RELEASE ? { startState, simulate, debug } : {}), reloadProgress, ricochetChance, emit, tetherState, vent, retreat, acceptSurrender, refuseSurrender, surrenderState, advanceSurrender, skipSurrenderAnimation };
+  return { start, route: { simulate: simulateRoute, recall: recallRoute, result: () => B?.route ? B.result || null : null }, aiStyles, normalizeAiStyle, ...(!SA.RELEASE ? { startState, simulate, debug } : {}), reloadProgress, ricochetChance, emit, tetherState, vent, retreat, acceptSurrender, refuseSurrender, surrenderState, advanceSurrender, skipSurrenderAnimation };
 })();

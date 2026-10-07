@@ -9,10 +9,11 @@ SA.Arena = (() => {
   const money = (n) => SA.UI.money(n);
   // [页签, 名称, 需要的功能]
   // 支线页签只在有支线开放（SA.Side）以后出现
-  const MODES = [['camp', SA.Config.text("arena_7ae0219da3ae"), null], ['side', SA.Config.text('arena_side_tab'), 'sideLine'], ['street', SA.Config.text("arena_dc638f0b9759"), 'street'], ['tour', SA.Config.text("arena_d152ba4020fe"), 'season']];
-  const modes = () => MODES.filter(([, , f]) => !f || (f === 'sideLine' ? !!SA.Side?.anyOpen() : SA.Camp.has(f)));
+  // 出征页签（docs/expedition-plan.md V1）放在最后，不挪已有页签的位置；js/route.js（SA.Route）加载了才出现
+  const MODES = [['camp', SA.Config.text("arena_7ae0219da3ae"), null], ['side', SA.Config.text('arena_side_tab'), 'sideLine'], ['street', SA.Config.text("arena_dc638f0b9759"), 'street'], ['tour', SA.Config.text("arena_d152ba4020fe"), 'season'], ['route', SA.Config.text('route_tab'), 'route']];
+  const modes = () => MODES.filter(([, , f]) => !f || (f === 'sideLine' ? !!SA.Side?.anyOpen() : f === 'route' ? !!(!SA.RELEASE && SA.Route && SA.Route.start) : SA.Camp.has(f)));
   // openCh：战役列表展开了哪几章（默认只展开当前这一章和选中的那一场所在的章）
-  const st = { mode: 'camp', pick: { camp: null, side: null, tour: null, street: null, friendly: null }, bet: null, openCh: null };
+  const st = { mode: 'camp', pick: { camp: null, side: null, tour: null, street: null, friendly: null, route: null }, bet: null, openCh: null };
   let root = null;
 
   // quiet：战后结算会接着弹窗，先不弹章节开场
@@ -44,6 +45,7 @@ SA.Arena = (() => {
     if (!root || !root.isConnected) return;
     const D = d(), UI = SA.PX.ui;
     root.innerHTML = '';
+    if (st.mode === 'route') { renderRoute(); return; }
     if (st.pick.tour == null) st.pick.tour = D.round;
     if (st.pick.camp == null) st.pick.camp = `${SA.Camp.chIndex()},${Math.min(D.camp.st, SA.CAMPAIGN[SA.Camp.chIndex()].stages.length - 1)}`;
     const list = SA.S.arenaEntries(st.mode);
@@ -65,9 +67,13 @@ SA.Arena = (() => {
     return stage ? stage.name : SA.Config.text('arena_side_stage', ci, si + 1);
   }
   // ---------- 左：黑板（打过的划掉，要打的圈起来，选中的框起来；底下粉笔画场地）----------
+  function tabsEl() {
+    const D = d(), ms = modes();
+    return ms.length > 1 ? h('div', { class: 'ch-tabs' }, ms.map(([k, n]) => h('button', { class: `ch-tab ${st.mode === k ? 'on' : ''}`, onclick: () => { st.mode = k; render(); } }, n, k === 'tour' ? ` · ${D.round + 1}` : ''))) : null;
+  }
   function board(list, cur) {
-    const D = d(), UI = SA.PX.ui, X = SA.PX, ms = modes();
-    const tabs = ms.length > 1 ? h('div', { class: 'ch-tabs' }, ms.map(([k, n]) => h('button', { class: `ch-tab ${st.mode === k ? 'on' : ''}`, onclick: () => { st.mode = k; render(); } }, n, k === 'tour' ? ` · ${D.round + 1}` : ''))) : null;
+    const D = d(), UI = SA.PX.ui, X = SA.PX;
+    const tabs = tabsEl();
     const line = (e) => {
       const name = st.mode === 'camp' ? e.name : st.mode === 'side' ? SA.Config.text('arena_side_row', e.index + 1, e.name) : e.title.replace(/^第 \d+ 轮 · /, '');
       const done = e.replay || (e.tag && e.tag[0] === 'ok'), next = e.next || (e.tag && e.tag[0] === 'next');
@@ -114,9 +120,115 @@ SA.Arena = (() => {
       : st.mode === 'street' ? h('button', { class: 'ch-tab', onclick: () => { SA.Street.offers(true); render(); } }, SA.Config.text("arena_b111553da074"))
       : st.mode === 'camp' ? h('div', { class: 'ch-foot' }, SA.Config.text("arena_76babf5f99db")) : null;
     // 黑板左下角钉一块朝左的木路牌：直接回车间改车（和右下角的出战拉杆左右对着）
-    const garage = SA.Camp.has('garage') ? h('div', { class: 'ar-garage' },
-      UI.sign(SA.Config.text('home_98d39d5eed3f'), -1, 72, { onclick: () => SA.nav('garage'), title: SA.Config.text('arena_back_garage'), seed: 11 })) : null;
-    return [tabs, h('div', { class: 'ch-list' }, rows), foot, garage];
+    return [tabs, h('div', { class: 'ch-list' }, rows), foot, garageSign()];
+  }
+  const garageSign = () => (SA.Camp.has('garage') ? h('div', { class: 'ar-garage' },
+    SA.PX.ui.sign(SA.Config.text('home_98d39d5eed3f'), -1, 72, { onclick: () => SA.nav('garage'), title: SA.Config.text('arena_back_garage'), seed: 11 })) : null);
+
+  // ---------- 出征页签（docs/expedition-plan.md V1）：左黑板列路线 · 中间海报画路线剖面 + 便签 · 右边装车单和出发拉杆 ----------
+  // 路线定义读 SA.Route（js/route.js，astra）：get(id) 或 list() 的条目；字段按计划 §8.1（len / hills / mud / props / pickups / encounters / end）
+  const routeOf = (id) => (SA.Route.get ? SA.Route.get(id) : null) || (SA.Route.list() || []).find(r => r.id === id) || null;
+  const routeEnd = (r) => (r && r.end != null ? (r.end.x != null ? r.end.x : r.end) : (r && r.len) || 0);
+  const meters = (px) => Math.round(px * 1.5 / 24);   // 一格 24px ≈ 1.5 m
+  function renderRoute() {
+    const D = d(), s = SA.V.stats(D.vehicle), routes = SA.Route.list() || [];
+    if (!routes.some(r => r.id === st.pick.route)) st.pick.route = routes[0] ? routes[0].id : null;
+    const r = st.pick.route ? routeOf(st.pick.route) : null;
+    root.append(
+      h('section', { class: 'ar-chalk', 'data-page-key': 'route-chalk' }, routeBoard(routes, r)),
+      h('section', { class: 'ar-mid', 'data-page-key': 'route-mid' },
+        h('div', { class: 'ar-poster px-sk px-sk-paperOld px-drop' }, SA.PX.ui.img(SA.PX.pin(), 2, 'position:absolute;left:50%;top:-16px;margin-left:-8px;z-index:2'), routePoster(r, s)),
+        h('div', { class: 'ar-notes' }, routeNotes(r))),
+      h('section', { class: 'ar-side', 'data-page-key': 'route-side' }, routeSide(r, s)));
+  }
+  function routeBoard(routes, cur) {
+    const UI = SA.PX.ui, X = SA.PX;
+    const rows = routes.map(r => {
+      const done = !!r.cleared, name = r.name || r.id, w = Math.round(([...name].length * 18 + 8) / 2);
+      return h('button', { class: `ch-row ${cur && cur.id === r.id ? 'on' : ''}`, 'data-page-key': `arena:route:${r.id}`, onclick: () => { st.pick.route = r.id; render(); } },
+        h('span', { class: 'ck' }, done ? '✓' : ''),
+        h('span', { class: 'nm' }, name, !done ? UI.img(X.ellipse(w + 10, 17, SA.PAL.fire[3], 0.06), 2, 'position:absolute;left:-14px;top:-4px') : null),
+        h('span', { class: 'who' }, r.best ? `${meters(r.best)} m` : ''));
+    });
+    return [tabsEl(), h('div', { class: 'ch-list' }, rows), h('div', { class: 'ch-foot' }, SA.Config.text('route_list_foot')), garageSign()];
+  }
+  // 路线剖面（海报上用墨线画，原生像素、放大 2 倍）：地面线、土坡鼓包、泥地点点、木箱方块、路障叉、遭遇红圈、难民小人、遗迹齿轮、终点小旗
+  function routeSketch(r, W = 236) {
+    const X = SA.PX, INK = X.INK, RED = X.RED, k = X.C(W, 64), len = Math.max(1, routeEnd(r) || r.len || 1), G = 48;
+    const sx = (x) => Math.round(x / len * (W - 14)) + 4;
+    const yAt = (x) => { let y = 0; for (const hl of r.hills || []) { const d0 = Math.abs(x - hl.x); if (d0 < hl.w / 2) y = Math.max(y, hl.h * 0.5 * (1 + Math.cos(Math.PI * d0 / (hl.w / 2)))); } return G - Math.round(y / 4); };
+    for (let px = 0; px < W - 6; px++) { const x = (px - 4) / (W - 14) * len; if (X.hash(px, 3, 7) > 0.08) k.p(px, yAt(x), INK); }
+    for (const [a, b] of r.mud || []) for (let px = sx(a); px < sx(b); px += 3) k.p(px, G + 2, '#7a6a3a');
+    const at = (o) => (o.x != null ? o.x : (o.x0 + o.x1) / 2);
+    for (const p of r.props || []) {
+      const x = sx(at(p)), y = yAt(at(p));
+      if (p.kind === 'barricade') { X.line(k, x - 3, y - 7, x + 3, y - 1, INK); X.line(k, x + 3, y - 7, x - 3, y - 1, INK); }
+      else if (p.kind === 'ruinDoor') { k.r(x - 4, y - 10, 2, 10, INK); k.r(x + 3, y - 10, 2, 10, INK); k.r(x - 4, y - 11, 9, 1, INK); }
+      else { k.r(x - 2, y - 4, 5, 1, INK); k.r(x - 2, y - 4, 1, 4, INK); k.r(x + 2, y - 4, 1, 4, INK); }
+    }
+    for (const p of r.pickups || []) {
+      const x = sx(at(p)), y = yAt(at(p));
+      if (p.kind === 'refugee') { k.r(x - 2, y - 6, 2, 2, INK); k.r(x + 1, y - 5, 2, 2, INK); k.r(x - 3, y - 4, 7, 3, INK); }
+      else if (p.kind === 'relic') { k.g.drawImage(X.gear(4, 6, X.RAMP.brass, 0), x - 4, y - 12); }
+      else if (p.kind === 'coal') { k.r(x - 2, y - 2, 4, 2, '#323844'); }
+      else if (p.kind === 'water') { k.r(x, y - 9, 1, 9, INK); k.r(x - 2, y - 11, 5, 3, '#1f7a86'); }
+    }
+    for (const e of r.encounters || []) { const x = sx(e.at), y = yAt(e.at) - 18; k.g.drawImage(X.ellipse(15, 13, RED, 0), x - 7, y - 6); X.line(k, x - 3, y - 2, x + 3, y + 2, RED); X.line(k, x + 3, y - 2, x - 3, y + 2, RED); }
+    const ex = sx(routeEnd(r)), ey = yAt(routeEnd(r)); k.r(ex, ey - 16, 1, 16, INK); k.r(ex + 1, ey - 16, 7, 4, RED);
+    return k.c;
+  }
+  function routePoster(r, s) {
+    const D = d(), UI = SA.PX.ui, X = SA.PX;
+    if (!r) return h('p', {}, SA.Config.text('arena_7bd3bb3555fd'));
+    return [
+      h('div', { class: 'ar-kick' }, SA.Config.text('route_where')),
+      h('div', { class: 'ar-title' }, UI.img(X.brush(r.name || r.id, 22, X.INK, '#b59c6c', 3), 2)),
+      h('div', { class: 'ar-route' }, UI.img(routeSketch(r), 2)),
+      h('div', { class: 'ar-cars' }, engraved(D.vehicle, false)),
+      h('div', { class: 'ar-prize' }, SA.Config.text('route_len', meters(routeEnd(r)))),
+    ];
+  }
+  function routeNotes(r) {
+    if (!r) return [];
+    const UI = SA.PX.ui, X = SA.PX;
+    const note = (title, ...body) => h('div', { class: 'ar-stick px-sk px-sk-note px-drop' }, UI.img(X.tape(24), 2, 'position:absolute;left:50%;top:-14px;margin-left:-24px'), h('div', { class: 'nt' }, title), ...body);
+    const line = (key) => h('div', { class: 'nb' }, SA.Config.text(key));
+    const terr = [(r.mud || []).length ? 'route_terrain_mud' : null, (r.hills || []).length ? 'route_terrain_hills' : null, (r.props || []).length ? 'route_terrain_crates' : null].filter(Boolean);
+    const count = (kind) => (r.pickups || []).filter(p => p.kind === kind).length;
+    return [
+      terr.length ? note(SA.Config.text('route_note_terrain'), ...terr.map(line)) : null,
+      note(SA.Config.text('route_note_find'), h('div', { class: 'nb' }, SA.Config.text('route_find', (r.encounters || []).length, count('refugee'), count('relic')))),
+      note(SA.Config.text('route_note_home'), ...['route_home_depot', 'route_home_recall', 'route_home_stranded', 'route_home_wrecked'].map(line)),
+    ];
+  }
+  function routeSide(r, s) {
+    const D = d(), UI = SA.PX.ui;
+    if (!r) return [];
+    let chassis = '';
+    SA.V.each(D.vehicle, (cell) => { if (!chassis && M[cell.id] && M[cell.id].layer === 'chassis') chassis = M[cell.id].name; });
+    const field = (k, ...v) => h('div', { class: 'f' }, h('span', { class: 'k' }, k), h('span', {}, ...v));
+    const cap = SA.Route.capacity ? SA.Route.capacity(D.vehicle) : null;   // R2：货位 / 煤量（astra 提供后自动显示）
+    const card = h('div', { class: 'ar-dossier px-sk px-sk-kraft px-drop' }, UI.sk('paper', [
+      h('div', { class: 'ar-dt' }, h('span', { class: 'px-h2' }, SA.Config.text('route_load_title'))),
+      field(SA.Config.text('arena_58045ad11948'), D.vehicle.name), chassis ? field(SA.Config.text('arena_d55ac43b9ae9'), chassis) : null,
+      field(SA.Config.text('arena_0e14d148b46b'), SA.kmh(s.topSpeed)),
+      h('div', { class: 'px-small' }, SA.Config.text('route_load_coal')),
+      cap && cap.cargo != null ? h('div', { class: 'px-small' }, SA.Config.text('route_load_cargo', cap.cargo)) : null,
+      h('div', { class: 'px-small' }, SA.Config.text('route_load_slow'))]));
+    const why = !s.canDeploy ? SA.Config.text('arena_ea58e9813630') : null;
+    const go = () => {
+      if (why) { SA.UI.toast(why); return; }
+      document.querySelector('#modal').hidden = true;
+      SA.Route.start(r.id);
+    };
+    return [
+      card,
+      ...readiness(s),
+      h('div', { class: 'ar-go' }, UI.throttle({ title: why || `${SA.Config.text('route_tab')} · ${r.name || r.id}`,
+        left: SA.Camp.has('garage') ? { label: SA.Config.text('arena_702c1bd28416'), go: () => SA.Home.closeBoard() } : null,
+        right: { label: SA.Config.text('route_go'), go, disabled: why } }),
+        why ? h('div', { class: 'px-cap' }, why) : null),
+    ];
   }
   // 便签（贴在海报下面）：场地剖面、线人情报、能缴获的唯一件
   function notes(e) {

@@ -694,6 +694,9 @@ textarea.code-out { font-family: Consolas, "Courier New", monospace; font-size: 
 .title-go { font-size: 20px; padding: 12px 44px; letter-spacing: .2em; clip-path: var(--px-corner-s); }
 .title-go:focus-visible { outline: none; background: var(--brass3); }
 .title-save { font-size: 12px; color: var(--muted); text-shadow: 1px 1px 0 var(--dark0); }
+/* 横屏模式入口（js/orient.js）：只给手机，竖着拿时才显示；横过来了就不需要 */
+.title-land { margin-top: 6px; }
+@media (orientation: landscape) { .title-land { display: none; } }
 
 .vn { position: absolute; inset: 0; z-index: 30; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; padding: 16px 16px 20px; cursor: pointer; user-select: none; -webkit-user-select: none; transition: opacity .25s; }
 .vn.out { opacity: 0; pointer-events: none; }
@@ -1145,6 +1148,15 @@ body[data-yard] #screen { min-height: 0; }
 .dash-lamp span { font-size: 12px; color: #8a8577; }
 .dash-lamp span.on { color: #ffd36b; }
 .dash-lamp span.crit { color: #ff8a5c; }
+/* 出征（docs/expedition-plan.md）：驾驶台的煤表、货位格、慢行 / 停车灯；遭遇电报比白旗电报窄 */
+.dash-route { display: flex; align-items: flex-end; gap: 12px; flex: none; }
+.ar-route { display: flex; justify-content: center; margin: 2px 0 6px; }
+.title-route { margin-top: 6px; }
+.ar-tally { display: grid; justify-items: center; gap: 6px; padding: 8px 0; color: #2a1a05; font: 14px/1.5 SimSun, serif; }
+.ar-tally .nt { font-weight: bold; letter-spacing: .2em; margin-top: 6px; }
+.ar-lost { opacity: .55; filter: grayscale(.6); }
+.ar-tally-go { display: grid; gap: 8px; margin-top: auto; padding-bottom: 8px; }
+.bt-tel { min-width: 200px; }
 .dash-lamp { cursor: help; }
 .dash-mid { flex: 1; min-width: 420px; display: grid; gap: 6px; align-content: center; }
 .dash-note { min-height: 20px; padding: 0 8px; display: flex; align-items: center; justify-content: center; text-align: center; font: bold 14px SimSun, serif; color: #5a4426; letter-spacing: .04em; line-height: 1.3; }

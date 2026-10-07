@@ -49,9 +49,36 @@ SA.BattleView.create = function createBattleView(api) {
     else if (type === 'ricochet') ricochetFx(data.x, data.y, data.back);
     else if (type === 'shatter') shatterFx(data.x, data.y, data.cell);
     else if (type === 'surrender-start') surrenderHint(true);
+    else if (type === 'encounter') routeTelegram(SA.Config.text('route_encounter', data.name || ''));
+    else if (type === 'route-end') {
+      const res = () => (SA.Route && SA.Route.result ? SA.Route.result() : B.result);
+      setTimeout(() => { if (SA.ExpeditionUI) SA.ExpeditionUI.afterRoute(res() || { mode: 'route', how: data.how }); else SA.nav('home'); }, data.how === 'recall' ? 500 : 1100);
+    }
+    else if (type === 'pickup' || type === 'spill') {
+      const y = data.y != null ? data.y : groundAt(data.x), key = type === 'spill' ? 'route_spill' : `route_pickup_${data.kind}`;
+      const msg = SA.Config.get('ui').messages[key] ? SA.Config.text(key) : '';
+      if (msg) B.texts.push({ str: msg, x: data.x, y: y - 40, col: type === 'spill' ? P.fire[2] : data.kind === 'relic' ? '#7fd8cc' : P.brass[3], life: 1.2 });
+      for (let i = 0; i < 10; i++) vpart(data.kind === 'coal' ? 'debris' : 'dust', data.x + vr(-14, 14), y - 6, vr(-60, 60), vr(-160, -60), vr(0.4, 0.8), data.kind === 'coal' ? '#323844' : undefined);
+    }
+    else if (type === 'prop' && data.state === 'break') {
+      const top = data.y != null ? data.y : groundAt(data.x) - 60, gy = groundAt(data.x);
+      for (let i = 0; i < 18; i++) vpart('debris', data.x + vr(-24, 24), vr(top, gy - 6), vr(-120, 120), vr(-220, -60), vr(0.5, 1), data.kind === 'ruinDoor' ? P.iron[2] : data.kind === 'barricade' ? P.rust[2] : P.leather[1]);
+      for (let i = 0; i < 8; i++) vpart('dust', data.x + vr(-30, 30), gy - 8, vr(-50, 50), vr(-60, -10), vr(0.6, 1.2));
+      B.shake = Math.max(B.shake, data.kind === 'ruinDoor' ? 6 : 3);
+    }
+    else if (type === 'coal' && data.level === 'empty') for (let i = 0; i < 16; i++) vpart('smoke', B.p.x + VW / 2 + vr(-40, 40), VY + vr(40, 160), vr(-20, 20), vr(-70, -30), vr(1, 1.8));
     else if (type === 'surrender') {
       surrenderHint(false);
       const e = B.e, why = data.why;
+      // 出征：没有声望和缴获选择，接受后对方弃车、残骸留在路边（js/route.js 退场时放一包零件）
+      if (isRoute()) {
+        SA.UI.dialog(SA.Config.text('battle_view_surrender_title', e.name), [
+          h('p', { style: 'margin-top:0' }, SA.Config.text('battle_view_surrender_reason', why)),
+          h('p', {}, SA.Config.text('route_surrender_accept')),
+          h('p', { class: 'muted' }, SA.Config.text('route_surrender_refuse')),
+        ], [{ label: SA.Config.text('battle_view_accept_button'), primary: true, onClick: () => api.acceptSurrender() }], SA.Config.text('battle_view_refuse_button'), () => api.refuseSurrender());
+        return;
+      }
       SA.UI.dialog(SA.Config.text('battle_view_surrender_title', e.name), [
         h('p', { style: 'margin-top:0' }, SA.Config.text('battle_view_surrender_reason', why)),
         h('p', {}, h('b', {}, SA.Config.text('battle_view_accept_prefix')), SA.Config.text('battle_view_accept_detail'), h('b', {}, SA.Config.text('battle_view_reputation')), SA.Config.text('battle_view_period')),
@@ -65,7 +92,66 @@ SA.BattleView.create = function createBattleView(api) {
   let BD = null;
   const sceneT = () => performance.now() / 1000;
   function drawBackdrop(vw, vh, oy) { SA.Scenes.back(BD, g, vw, vh, oy, B.cam.x, sceneT(), B.opts); }
-  function drawFloor() { SA.Scenes.floor(BD, g, B.cam); if (B.bounds) SA.Scenes.barriers(BD, g, B.bounds, groundAt, sceneT()); }   // 有场地边界时两头摆路障
+  function drawFloor() { SA.Scenes.floor(BD, g, B.cam); if (B.bounds) SA.Scenes.barriers(BD, g, B.bounds, groundAt, sceneT()); if (isRoute()) drawDress(true); }   // 有场地边界时两头摆路障
+
+  // ---------- 出征（卷轴路线，docs/expedition-plan.md）：B.opts.mode === 'route'，没有敌车时 B.e === null ----------
+  // 规则状态（B.route、B.ter.props / pickups）归 battle.js / js/route.js；这里只画。物件、布景、界面件的画法在 js/route-art.js
+  const isRoute = () => !!(B && B.opts && B.opts.mode === 'route');
+  const routeDef = () => (B.opts && B.opts.routeData) || (B.route && SA.ROUTES && SA.ROUTES[B.route.id]) || null;
+  const propX = (o) => (o.x != null ? o.x : (o.x0 + o.x1) / 2);
+  const camSees = (x, w) => x + w > B.cam.x - 8 && x - w < B.cam.x + B.cam.w + 8;
+  const putArt = (a, x, y) => { if (a && camSees(x, a.c.width)) g.drawImage(a.c, Math.round(x - a.ax), Math.round(y - a.ay)); };
+  // 布景（纯画面）：back = 远端地标（水泵站、井架），画在地面纹理上、地形和车后面；其余（路牌、小火车）贴着路
+  function drawDress(back) {
+    const A = SA.RouteArt;
+    if (!A) return;
+    const def = routeDef(), T = B.ter;
+    const like = { props: (T.props || []).map(p => ({ kind: p.kind, x: propX(p) })), end: def ? def.end : B.route && B.route.end };
+    for (const d of A.dress(like)) if (!!d.back === back) putArt(A.prop(d.kind), d.x, back ? GROUND - 82 : groundAt(d.x));
+  }
+  // 路障 / 遗迹门：0 完好 · 1 打坏一半 · 2 打开（倒了）；煤堆、物资、残骸捡走了就换成「捡走后」的样子
+  const propStage = (p) => (p.dead ? 2 : p.max && p.hp / p.max < 0.5 ? 1 : 0);
+  // 残骸：敌车画布镜像（和 drawVehicle 一样，敌车格子 c 在世界 x + VW - PADX - (c + 1) * C），整块压暗；刚退场的几秒冒黑烟
+  function drawWreck(w) {
+    if (!camSees(w.x + VW / 2, VW)) return;
+    if (!w.art) {
+      const src = SA.SPR.renderVehicle(w.vehicle, { key: 'route-wreck', t: 0 }), c = document.createElement('canvas');
+      c.width = src.width; c.height = src.height;
+      const k = c.getContext('2d'); k.drawImage(src, 0, 0); k.globalCompositeOperation = 'source-atop'; k.fillStyle = 'rgba(14,10,8,0.74)'; k.fillRect(0, 0, c.width, c.height);
+      w.art = c; w.t0 = B.t;
+    }
+    g.save(); g.translate(Math.round(w.x + VW), Math.round(groundAt(w.x + VW / 2))); g.scale(-1, 1); g.drawImage(w.art, 0, -K.ROWS * C); g.restore();
+    const age = B.t - (w.t0 || 0);
+    if (age < 6 && Math.random() < 0.35) vpart('smoke', w.x + VW / 2 + vr(-40, 40), groundAt(w.x + VW / 2) - vr(40, 110), vr(-10, 10), vr(-50, -25), vr(1, 1.8));
+  }
+  function drawRoute() {
+    const A = SA.RouteArt, T = B.ter, t = sceneT();
+    if (!A) return;
+    for (const p of T.props || []) {
+      const x = propX(p), y = p.y1 != null ? p.y1 : groundAt(x);
+      if (p.kind === 'crate') continue;   // 木箱在上面的木箱循环里画
+      const shake = p.shake > 0 ? (Math.floor(B.t * 40) % 2 ? 1 : -1) : 0;
+      putArt(A.prop(p.kind, propStage(p)), x + shake, y);
+    }
+    for (const w of (B.route && B.route.wrecks) || []) drawWreck(w);
+    const front = B.p ? frontEdge(B.p) : 0;
+    for (const k of T.pickups || []) {
+      const x = propX(k), y = groundAt(x);
+      if (!camSees(x, 160)) continue;
+      if (k.kind === 'refugee') { if (!k.taken) A.refugees(g, x, y, t, { seed: k.seed != null ? k.seed : Math.round(x / 97), near: Math.abs(front - x) < 260, sad: !!k.full }); continue; }
+      if (k.kind === 'water') { putArt(A.prop('water'), x, y - 42); continue; }
+      if (k.kind === 'relic') {
+        if (k.taken) continue;
+        const pulse = 0.5 + 0.5 * Math.sin(t * 3); g.globalAlpha = 0.2 + 0.2 * pulse; g.fillStyle = A.PAL.GLOW[2];
+        for (let r = 18; r > 6; r -= 4) g.fillRect(Math.round(x - r), Math.round(y - 12 - r / 2), r * 2, r);
+        g.globalAlpha = 1; putArt(A.prop('relic'), x, y); continue;
+      }
+      if (k.kind === 'spoils' || (k.kind === 'supply' && k.encounter != null)) { if (!k.taken) putArt(A.prop('spoils'), x, y); continue; }
+      putArt(A.prop(k.kind, !!k.taken), x, y);
+    }
+    drawDress(false);
+  }
+
   function drawNear(vw, vh, oy) { SA.Scenes.front(BD, g, vw, vh, oy, B.cam.x, sceneT()); }
 
   // ---------- 绘制 ----------
@@ -73,12 +159,20 @@ SA.BattleView.create = function createBattleView(api) {
   function drawTerrain() {
     const T = B.ter;
     if (!T) return;
-    if (!T.art && ((T.def.hills || []).length || T.mud.length)) T.art = SA.TerrainArt.layer(T.ground, T.mud, W, H, GROUND);   // 土坡 + 泥地：静态像素层，只画一次
-    if (T.art) g.drawImage(T.art, 0, 0);
-    for (const c of T.crates) {
+    const len = T.len || W;
+    if (len > W && SA.RouteArt) {   // 出征的长路线：切成 1280 宽的块缓存，只画镜头看得到的块
+      if (!T.tiles) T.tiles = SA.RouteArt.terrainTiles(T.ground, T.mud || [], len, H, GROUND);
+      for (const tl of T.tiles) if (camSees(tl.x + tl.c.width / 2, tl.c.width / 2)) g.drawImage(tl.c, tl.x, 0);
+    } else {
+      if (!T.art && (((T.def && T.def.hills) || []).length || (T.mud || []).length)) T.art = SA.TerrainArt.layer(T.ground, T.mud || [], W, H, GROUND);   // 土坡 + 泥地：静态像素层，只画一次
+      if (T.art) g.drawImage(T.art, 0, 0);
+    }
+    for (const c of T.crates || []) {
+      if (c.kind && c.kind !== 'crate') continue;
       if (c.dead) SA.TerrainArt.rubble(g, c.x0 - 6, c.x1 + 6, c.y1);
       else SA.TerrainArt.crate(g, c.x0, c.y0, Math.round(c.x1 - c.x0), Math.round(c.y1 - c.y0), c.hp / c.max, c.shake > 0 ? (Math.floor(B.t * 40) % 2 ? 1 : -1) : 0);
     }
+    if (isRoute()) drawRoute();
   }
 
   // 把世界层放到屏幕上。镜头缩放 × 设备像素比几乎总不是整数，直接最近邻放大会让像素一列宽一列窄（看起来撕裂、发虚），
@@ -133,21 +227,21 @@ SA.BattleView.create = function createBattleView(api) {
     present(vw, vh, ox, oy, true);
     // 氛围（js/scenes.js，设备分辨率、平滑）：车后面一层雾、灯光、车底软影；车前面一层薄雾、调色、超近景虚化剪影、暗角
     const fxc = { W: cv.width, H: cv.height, Z: cam.z * DPX, dpx: DPX, zoom: cam.z, camx: cam.x, camy: cam.y, ox, oy, vw, vh, t: sceneT(), opts: B.opts, aim: B.aim,
-      cars: [B.p, B.e].map(s => { const b = sideBox(s), ix = introDx(s); return isFinite(b.x0) ? { ...b, x0: b.x0 + ix, x1: b.x1 + ix, cx: b.cx + ix, ground: groundAt(b.cx + ix) } : null; }).filter(Boolean) };
+      cars: [B.p, B.e].filter(Boolean).map(s => { const b = sideBox(s), ix = introDx(s); return isFinite(b.x0) ? { ...b, x0: b.x0 + ix, x1: b.x1 + ix, cx: b.cx + ix, ground: groundAt(b.cx + ix) } : null; }).filter(Boolean) };
     SA.Scenes.fxBack(BD, dg, fxc);
 
     // 第 2 层：车。车会跟着坡度连续倾斜，在世界像素里最近邻旋转会让像素行断成台阶、每帧还跳来跳去（撕裂 / 闪烁），
     // 所以车直接画在设备分辨率上：车身画布先整数倍最近邻放大，再带着旋转双线性画上去 —— 像素块大小一致，斜边平滑不抖
     const Z = cam.z * DPX;
-    const aimT = B.aim && !B.e.dead ? targetAt(B.e, B.aim[0], B.aim[1]) : null;
+    const aimT = B.aim && B.e && !B.e.dead ? targetAt(B.e, B.aim[0], B.aim[1]) : null;
     const opts = (s, key, extra) => ({ key, t, heat: s.heat / s.heatMax, water: s.water / Math.max(1, s.waterMax), dyn: s.anim, elev: s.elev, punch: s.punch, tetherCell: s.tether ? s.tether.cell : null, store: s.storeMax > 0 ? s.store / s.storeMax : 0, moving: s.moving, speed: Math.abs(s.vx), gnd: s.gnd, crouch: s.crouch || 0, air: (s.airDuration || 0) > 0, tuck: s.tuck || 0, ...extra });
     const pc = SA.SPR.renderVehicle(B.p.v, opts(B.p, 'bp', introCar(B.p)));
     const sur = api.surrenderState();
-    const ec = SA.SPR.renderVehicle(B.e.v, opts(B.e, 'be', { ...(sur ? { crewExpr: sur.crewExpression } : null), ...introCar(B.e) }));
+    const ec = B.e ? SA.SPR.renderVehicle(B.e.v, opts(B.e, 'be', { ...(sur ? { crewExpr: sur.crewExpression } : null), ...introCar(B.e) })) : null;
     dg.setTransform(Z, 0, 0, Z, (shx - cam.x) * Z, (shy - cam.y) * Z);
     g = dg;
-    bipedAir(B.p); bipedAir(B.e);
-    drawVehicle(B.p, pc, null, Z); drawVehicle(B.e, ec, aimT, Z);
+    bipedAir(B.p); if (B.e) bipedAir(B.e);
+    drawVehicle(B.p, pc, null, Z); if (B.e) drawVehicle(B.e, ec, aimT, Z);
 
     // 第 3 层：炮弹、粒子、伤害数字（世界像素，透明底）
     g = wc.getContext('2d');
@@ -157,7 +251,7 @@ SA.BattleView.create = function createBattleView(api) {
     g.translate(shx - ox, shy - oy);
 
     // 战斗侧给出两端世界坐标，缆绳随双方移动和倾斜，失效后同帧停止绘制。
-    for (const s of [B.p, B.e]) {
+    for (const s of [B.p, B.e].filter(Boolean)) {
       const tether = api.tetherState(s);
       if (!tether) continue;
       SA.SPR.useCtx(g);
@@ -225,7 +319,7 @@ SA.BattleView.create = function createBattleView(api) {
     g = dg;
     fxLabels();
     B.previewInfo = null;
-    if (B.aim && !B.p.dead && !B.e.dead) drawPreview(aimT);
+    if (B.aim && !B.p.dead && B.e && !B.e.dead) drawPreview(aimT);   // 出征时没有敌车：弹道预览等 battle.js 的 predict 接受空目标后再画（docs/expedition-plan.md §8.5）
     if (!sur) drawDmg();   // 升白旗时伤害数字也收起来
     dg.setTransform(Z, 0, 0, Z, -cam.x * Z, -cam.y * Z);
     if (B.aim && !sur) reticle(B.aim[0], B.aim[1], aimT);
@@ -396,7 +490,7 @@ SA.BattleView.create = function createBattleView(api) {
   }
   // 数字属于哪个模块：battle.js 在模块中心上方 24px 处、左右 ±9 抖动生成数字，倒推回去找模块（找不到就按位置分格）
   function dmgKey(x, y, kind) {
-    if (kind !== 'crate') for (const s of [B.e, B.p]) {
+    if (kind !== 'crate') for (const s of [B.e, B.p].filter(Boolean)) {
       const cell = cellAt(s, x, y + 24);
       const m = cell && modAt(s, kind === 'side' ? 'side' : 'body', cell.r, cell.c);
       if (m) return `${s === B.e ? 'e' : 'p'}${m.layer}${m.r},${m.c}`;
@@ -921,19 +1015,32 @@ SA.BattleView.create = function createBattleView(api) {
       h('div', { class: 'dash-hull' },
         h('div', { class: 'dash-hp' }, h('span', {}, SA.Config.text('battle_view_armor')), hud.hpNum), hud.plates,
         h('div', { class: 'dash-lamps' }, hud.lampBox = LAMPS.map((_, i) => h('div', { class: 'dash-lamp' }, hud.lamps[i], hud.lampLabels[i])))));
+    const route = isRoute();
+    if (route) {
+      hud.coal = pxCanvas(); hud.cargo = pxCanvas(); hud.rLamps = [pxCanvas(), pxCanvas()];
+      hud.routeBox = h('div', { class: 'dash-route', 'data-page-key': 'route-dash' },
+        hud.coalFig = fig(hud.coal, SA.Config.text('route_coal')), hud.cargoFig = fig(hud.cargo, SA.Config.text('route_cargo')),
+        h('div', { class: 'dash-lamps' },
+          hud.slowLamp = h('div', { class: 'dash-lamp', title: SA.Config.text('route_lamp_slow_title') }, hud.rLamps[0], h('span', {}, SA.Config.text('route_lamp_slow'))),
+          hud.stopLamp = h('div', { class: 'dash-lamp', title: SA.Config.text('route_lamp_stop_title') }, hud.rLamps[1], h('span', {}, SA.Config.text('route_lamp_stop')))));
+    }
+    // 出征的返航：拉汽笛，救援车把车拖回院子，货全带回（SA.Route.recall）；竞技场照旧是撤退
+    const recall = () => SA.UI.dialog(SA.Config.text('route_recall'), h('p', {}, SA.Config.text('route_recall_confirm')),
+      [{ label: SA.Config.text('route_recall'), primary: true, onClick: () => { if (SA.Route && SA.Route.recall) SA.Route.recall(); else api.retreat(); } }], SA.Config.text('battle_view_continue'));
     const act = h('div', { class: 'dash-act' },
       h('div', { class: 'dash-vent' }, hud.vent, h('span', { class: 'px-cap' }, SA.Config.text('battle_view_once'))),
-      PXI().btn(SA.Config.text('battle_view_retreat'), { title: SA.Config.text('battle_view_retreat_title'), onclick: () => { if (!B.p.dead) SA.UI.dialog(SA.Config.text('battle_view_retreat_title_short'), h('p', {}, SA.Config.text('battle_view_retreat_confirm')), [{ label: SA.Config.text('battle_view_retreat'), primary: true, onClick: () => { endIntro(); api.retreat(); } }], SA.Config.text('battle_view_continue')); } }),
+      route ? PXI().btn(SA.Config.text('route_recall'), { title: SA.Config.text('route_recall_title'), icon: PXI().img(SA.RouteArt ? SA.RouteArt.whistle() : document.createElement('canvas'), 2), onclick: () => { if (!B.p.dead) recall(); } })
+        : PXI().btn(SA.Config.text('battle_view_retreat'), { title: SA.Config.text('battle_view_retreat_title'), onclick: () => { if (!B.p.dead) SA.UI.dialog(SA.Config.text('battle_view_retreat_title_short'), h('p', {}, SA.Config.text('battle_view_retreat_confirm')), [{ label: SA.Config.text('battle_view_retreat'), primary: true, onClick: () => { endIntro(); api.retreat(); } }], SA.Config.text('battle_view_continue')); } }),
       !SA.RELEASE ? speedSlider() : null);
     // 手机：左栏 = 车况 + 左圈，右栏 = 泄压 / 撤退 + 武器键 + 右圈待命位，两栏各自从上往下排（css 的 .bt-rail）
     if (touchUI) {
       touchPads();
       return h('div', { class: 'bt-dash px-sk px-sk-iron' },
-        h('div', { class: 'bt-rail l' }, car, hud.stick),
+        h('div', { class: 'bt-rail l' }, car, hud.routeBox || '', hud.stick),
         h('div', { class: 'dash-mid' }, hud.note),
         h('div', { class: 'bt-rail r' }, act, hud.keys, hud.aimHome));
     }
-    return h('div', { class: 'bt-dash px-sk px-sk-iron' }, car,
+    return h('div', { class: 'bt-dash px-sk px-sk-iron' }, car, hud.routeBox || '',
       h('div', { class: 'dash-mid' }, hud.note, hud.keys),
       act,
       h('div', { class: 'bt-touch' },
@@ -989,7 +1096,7 @@ SA.BattleView.create = function createBattleView(api) {
     const al = alertsOf(p);
     if (al.length) return ['alert', [...new Set(al.map(a => a[1]))].join(' · ')];
     if (!p.sel) return ['warn', SA.Config.text(touchUI ? 'battle_view_no_weapon_touch' : 'battle_view_no_weapon')];
-    const pi = B.previewInfo, aimT = B.aim ? targetAt(B.e, B.aim[0], B.aim[1]) : null;
+    const pi = B.previewInfo, aimT = B.aim && B.e ? targetAt(B.e, B.aim[0], B.aim[1]) : null;
     const alt = p.groups.includes('mortar') && p.sel !== 'mortar' ? SA.Config.text('battle_view_try_mortar') : '';
     if (pi && pi.blocked) return ['warn', SA.Config.text('battle_view_blocked')];
     if (pi && pi.over) return ['warn', pi.over === 'high' ? SA.Config.text('battle_view_too_high', M[p.sel].elev[1], alt) : SA.Config.text('battle_view_too_low')];
@@ -1033,9 +1140,49 @@ SA.BattleView.create = function createBattleView(api) {
     const [kind, text] = noteOf();
     if (hud.note.dataset.k !== kind || hud.note.textContent !== text) { hud.note.dataset.k = kind; hud.note.textContent = text; }
     renderKeys();
+    if (isRoute()) { updRoute(blink); return; }
     // 上方：计时鼓 + 场地
     const left = Math.max(0, Math.ceil(K.BATTLE_TIME - B.t));
     paint(hud.drum, `${left}`, () => X.drum(String(left).padStart(2, '0')));
+  }
+  // 出征：路程条（遭遇、难民、遗迹、终点）+ 煤表 + 货位 + 慢行 / 停车灯；R2 的字段还没有时对应的件不显示
+  function updRoute(blink) {
+    const A = SA.RouteArt, R = B.route || {}, T = B.ter, def = routeDef();
+    if (!A || !hud.strip) return;
+    const end = (def && def.end && (def.end.x != null ? def.end.x : def.end)) || T.len || W, at = (x) => clamp(x / end, 0, 1);
+    const marks = [];
+    ((def && def.encounters) || []).forEach((e, i) => marks.push({ at: at(e.at), kind: (R.cleared || []).some(c => c.i === i) ? 'done' : 'fight' }));
+    for (const k of T.pickups || []) {
+      if (k.kind === 'refugee') marks.push({ at: at(propX(k)), kind: k.taken ? 'refugeeGone' : 'refugee' });
+      else if (k.kind === 'relic') marks.push({ at: at(propX(k)), kind: k.taken ? 'relicGone' : 'relic' });
+      else if (k.kind === 'water') marks.push({ at: at(propX(k)), kind: 'water' });
+    }
+    const prog = at(frontEdge(B.p)), sig = `${Math.round(prog * 400)}|${marks.map(m => m.kind[0]).join('')}`;
+    paint(hud.strip, sig, () => A.strip(220, marks, prog));
+    if (!hud.routeBox) return;
+    const hasCoal = R.coal != null && !!R.coalMax, cf = hasCoal ? R.coal / R.coalMax : 0;
+    hud.coalFig.style.display = hasCoal ? '' : 'none';
+    if (hasCoal) { paint(hud.coal, `${Math.ceil(cf * 10)}|${cf < 0.2 && blink}`, () => A.coalGauge(cf, blink)); hud.coalFig.classList.toggle('bad', cf < 0.2); }
+    const cargo = R.cargo || [], cmax = R.cargoMax || 0;
+    hud.cargoFig.style.display = cmax ? '' : 'none';
+    if (cmax) paint(hud.cargo, `${cmax}|${cargo.map(c => (typeof c === 'string' ? c : c.kind)[0]).join('')}`, () => A.cargoSlots(cargo, cmax));
+    const X = SA.PX, slow = !!R.slow, stop = !!(R.boarding || (T.pickups || []).some(k => k.board > 0 && !k.taken));
+    hud.slowLamp.style.display = R.slow != null ? '' : 'none';
+    hud.stopLamp.style.display = (T.pickups || []).some(k => k.kind === 'refugee') ? '' : 'none';
+    paint(hud.rLamps[0], `${slow}`, () => X.lamp(slow, P.gauge[2]));
+    paint(hud.rLamps[1], `${stop}`, () => X.lamp(stop, P.brass[3]));
+    hud.slowLamp.lastChild.classList.toggle('on', slow); hud.stopLamp.lastChild.classList.toggle('on', stop);
+    const name = B.e ? B.e.name : '';
+    if (hud.foePlate.textContent !== name) hud.foePlate.textContent = name;
+    hud.foePlate.style.visibility = B.e ? '' : 'hidden';
+  }
+  // 出征的遭遇：画面上方钉一张电报（和白旗电报一套样式），几秒后自己收起
+  function routeTelegram(text) {
+    if (hud.tel) { hud.tel.remove(); hud.tel = null; }
+    if (!wrap || !hud.stage) return;
+    const el = h('div', { class: 'bt-sur bt-tel px-sk px-sk-kraft px-drop', 'data-page-key': 'route-telegram' }, SA.PX && SA.PX.ui ? SA.PX.ui.img(SA.PX.pin(), 2, 'position:absolute;left:50%;top:-14px;margin-left:-8px') : '', h('b', {}, text));
+    hud.tel = el; hud.stage.append(el);
+    setTimeout(() => { if (hud.tel === el) { el.remove(); hud.tel = null; } }, 2600);
   }
 
   // 武器键：仪表台上固定 10 个位置（数字键 1–9、0），装了的武器组才有键，没装的位置空着；
@@ -1307,6 +1454,7 @@ SA.BattleView.create = function createBattleView(api) {
   }
   function beginIntro(opts) {
     const I = { mode: 'cine', t: 0, clock: 0, home: { ...B.cam }, from: null, focus: null, arrows: null, puffs: [], vn: null, shook: {} };
+    if (isRoute()) { B.intro = null; return; }   // 出征：开局路上没有对手，不演开战动画
     B.intro = I;
     if (opts.ambush) { beginAmbush(I, opts.ambush); return; }
     const tut = SA.Story && SA.Story.tutorial(opts, touchUI ? 'touch' : 'desktop');
@@ -1757,10 +1905,14 @@ SA.BattleView.create = function createBattleView(api) {
     hud.drum = pxCanvas();
     const where = `${B.opts.mode === 'side' ? SA.Config.text('battle_view_outside_prefix') : B.opts.replay ? SA.Config.text('battle_view_replay_prefix') : ''}${B.ter.def.name}`;
     // 上方压在画面上：左右两块铁名牌（只有名字）+ 正中计时鼓
+    const route = isRoute(), rdef = route ? routeDef() : null;
+    hud.strip = route ? pxCanvas() : null;
     hud.top = h('div', { class: 'bt-top' },
       h('span', { class: 'bt-plate px-sk px-sk-iron' }, SA.Config.text('battle_view_player_name', B.p.name)),
-      h('div', { class: 'bt-clock' }, hud.drum, h('span', {}, where)),
-      h('span', { class: 'bt-plate px-sk px-sk-iron' }, B.e.name));
+      route ? h('div', { class: 'bt-clock bt-route', 'data-page-key': 'route-strip' }, hud.strip, h('span', {}, (rdef && rdef.name) || ''))
+        : h('div', { class: 'bt-clock' }, hud.drum, h('span', {}, where)),
+      hud.foePlate = h('span', { class: 'bt-plate px-sk px-sk-iron' }, B.e ? B.e.name : ''));
+    if (!B.e) hud.foePlate.style.visibility = 'hidden';
     hud.stage = h('div', { class: 'bt-stage' }, cv, hud.top);
     wrap = h('div', { class: 'bt-canvas-wrap' }, hud.stage);
     touchUI = hasPX && isTouchUI();
@@ -1849,6 +2001,8 @@ SA.BattleView.create = function createBattleView(api) {
     aimWorld: (x, y) => { sync(); const cam = B.cam; B.aimScreen = [(x - cam.x) * cam.z, (y - cam.y) * cam.z]; camera(0); },
     emit,
     presentResult: (data) => SA.UI.afterBattle(data),
+    // 出征结束由 route-end 事件接到清点黑板（js/expedition-ui.js）；这里留一个直接调用的口子
+    presentRouteResult: (result) => { if (SA.ExpeditionUI) SA.ExpeditionUI.afterRoute(result); else SA.nav('home'); },
     skipIntro: () => { sync(); if (B && B.intro) endIntro(); },
     teardown: () => { if (typeof window !== 'undefined') { window.removeEventListener('resize', fit); window.removeEventListener('keydown', onKey); window.removeEventListener('keyup', onKey); } },
   };

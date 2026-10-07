@@ -70,3 +70,6 @@ SA.BUILD_VIS += '+mech-helm'; // 新模块机甲头盔 mech_helm（2×1，头盔
 SA.BUILD_VIS += '+biped-in-game'; // 头盔定稿 D；骑士手臂 6 种专用画法（近战挥动、武器绕肘瞄准）；腿部件画在腿骨 / 胯上；下蹲 / 跳跃接线（按键、触屏、腿姿、地影、喷汽、扬尘）；走跑区间 92～118。
 SA.BUILD_VIS += '+knight-arm-below-helm'; // 当前开发 v9 样车改成头盔第 4 行、手臂挂在头盔下面（规则见 vehicle.js helmBottom）。
 SA.BUILD_VIS += '+knight-refit-options'; // 用户授权本次在现有改装菜单中接入骑士、承重改造及数值说明。
+SA.BUILD_VIS += '+landscape-shell'; // 横屏模式（js/orient.js）：手机浏览器转不过来时，外壳页铺 iframe 把游戏转 90° 显示；标题页「横屏游玩」+ 设置里开关 / 翻转方向
+SA.BUILD_VIS += '+route-o1'; // 出征（卷轴路线）O1：标题页入口 + 出战黑板「出征」页签 + 路线战斗画面（空敌车、长地形分块、路障 / 遗迹门 / 拾取物 / 残骸 / 布景、路程条、驾驶台煤表 / 货位 / 慢行停车灯、拉汽笛返航、遭遇电报）+ 清点黑板；画法在 js/route-art.js
+SA.BUILD_VIS += '+waste-scene'; // 出征废土场景 js/scenes.js 'waste'（塌了的厂区天际线、断高架桥、煤气罐框架、风车骨架、两倍宽废墟、煤渣路；A 锈黄昏 / B 煤烟霾 / C 冷灰晨，样机挑色调；近景可跟起伏地面）。游戏里出征仍借野地

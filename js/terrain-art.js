@@ -120,5 +120,89 @@ SA.TerrainArt = (() => {
     }
   }
 
-  return { layer, crate, rubble };
+  // ---------- 起伏地形（出征，docs/expedition-plan.md §13，取材英格兰黑乡）----------
+  // 整块地面都画出来（不再借场景的平地地面纹理）：最上面一条压实的煤渣路（跟着坡走，朝左上的坡受光），下面一层红泥表土（黑乡的埃特鲁里亚泥灰），
+  // 再往下是**水平**的岩层（砂岩 / 页岩 / 煤层 / 耐火黏土）——岩层不跟着地形弯，所以坡面、路堑把地层的剖面露出来，那条黑色的就是黑乡出名的「厚煤层」。
+  // ground：Float32Array(len + 1)，每列地面高度（世界 y）。o.fill：路堤 [{ x0, x1, natural(x) }]（路下面是煤渣填方，填方下面才是原地面）；
+  // o.cut：路堑 [{ x0, x1, depth }]（路两侧砖砌挡土墙，墙顶就是原来的地面）；o.bridge：驼背桥 [{ x0, x1, water }]（桥身砖拱，拱洞里是运河水，water = 水面 y）
+  // 返回按 tw 宽切好的块 [{ x, c }]，世界坐标 0～H
+  const CIN = ['#1a1817', '#262321', '#332e2b', '#433c37', '#574e47'];   // 煤渣路
+  const MARL = ['#2b1a15', '#3b231c', '#4b2d23', '#5c392c'];             // 红泥表土
+  // 岩层：彼此只差一两阶（低噪点，不抢车），只有煤层是一条清楚的黑带；越往下越暗，深处几乎是黑的
+  const STRATA = [   // [厚度, 主色, 暗边]，自上而下循环；带一点倾角
+    [50, '#2f2a24', '#28241f'], [36, '#2a2725', '#242120'], [16, '#151418', '#0f0e12'], [46, '#2d2725', '#272220'],
+  ];
+  const DEEP = '#141211';
+  const PERIOD = STRATA.reduce((a, b) => a + b[0], 0);
+  const BRK = ['#2a1712', '#3f2219', '#55301f', '#6a3e2a'], CAP = ['#3a3833', '#55524b', '#6e6a61'];
+  const hex = (c) => [parseInt(c.slice(1, 3), 16), parseInt(c.slice(3, 5), 16), parseInt(c.slice(5, 7), 16)];
+  const RGB = new Map();
+  const rgb = (c) => { if (!RGB.has(c)) RGB.set(c, hex(c)); return RGB.get(c); };
+  function profileTiles(ground, len, H, o = {}, tw = 1280) {
+    const gy = (x) => ground[Math.max(0, Math.min(len, x))];
+    const within = (list, x) => (list || []).find(r => x >= r.x0 && x <= r.x1);
+    const tiles = [];
+    for (let tx = 0; tx <= len; tx += tw) {
+      const w = Math.min(tw, len - tx + 1), c = document.createElement('canvas'); c.width = w; c.height = H;
+      const g = c.getContext('2d'), img = g.createImageData(w, H), D = img.data;
+      const put = (x, y, col) => { if (y < 0 || y >= H) return; const i = (y * w + x) * 4, v = rgb(col); D[i] = v[0]; D[i + 1] = v[1]; D[i + 2] = v[2]; D[i + 3] = 255; };
+      for (let lx = 0; lx < w; lx++) {
+        const x = tx + lx, top = Math.round(gy(x)), sl = gy(x + 3) - gy(x - 3);
+        const fill = within(o.fill, x), bridge = within(o.bridge, x);
+        const nat = fill ? Math.max(top + 7, Math.round(fill.natural(x))) : top + 7;
+        for (let y = Math.max(0, top); y < H; y++) {
+          const d = y - top;
+          let col;
+          if (d === 0) col = sl < -1.2 ? CIN[4] : sl > 1.2 ? CIN[3] : CIN[4];
+          else if (d < 6) col = (d === 3 || d === 5) && (x % 9) < 5 ? CIN[1] : CIN[2];
+          else if (d === 6) col = CIN[1];
+          else if (bridge && y <= bridge.water + 22) { col = null; }   // 桥身和运河另画
+          else if (y < nat) col = hash(x >> 1, y >> 1) < 0.04 ? CIN[3] : (y === nat - 1 ? CIN[0] : CIN[1]);   // 路堤的煤渣填方
+          else if (y - nat < 18) col = y - nat === 0 ? MARL[3] : y - nat === 17 && bayer(x, y) < 0.5 ? MARL[0] : (hash(x, y) < 0.015 ? MARL[3] : MARL[2]);
+          else {
+            // 水平岩层：按世界 y（带一点倾角）取层；层顶一行暗边；煤层里零星反光
+            const k = ((y + x * 0.035) % PERIOD + PERIOD) % PERIOD;
+            let acc = 0, band = STRATA[0], edge = false;
+            for (const b of STRATA) { if (k < acc + b[0]) { band = b; edge = k - acc < 1; break; } acc += b[0]; }
+            col = edge ? band[2] : band[1];
+            if (band === STRATA[2] && !edge && hash(x >> 1, y) < 0.02) col = '#2e2f38';
+            const deep = (y - nat - 18) / 150;   // 表土下面 0～150px 慢慢沉进暗处
+            if (deep > 0.25 && bayer(x, y) < Math.min(1, (deep - 0.25) * 1.4)) col = DEEP;
+          }
+          if (col) put(lx, y, col);
+        }
+        // 驼背桥：桥身砖拱，拱洞里是暗处和运河水
+        if (bridge) {
+          const mid = (bridge.x0 + bridge.x1) / 2, half = (bridge.x1 - bridge.x0) / 2, span = half * 0.62, archTop = bridge.water - 30;
+          for (let y = top + 7; y < H; y++) {
+            const u = (x - mid) / span, archY = archTop + (1 - Math.sqrt(Math.max(0, 1 - u * u))) * 30, inArch = Math.abs(u) < 1 && y > archY;
+            let col;
+            if (y > bridge.water + 22) break;   // 运河底以下交给上面的岩层
+            if (y >= bridge.water) col = y === bridge.water ? '#2a5a62' : y < bridge.water + 4 && (x + y) % 6 === 0 ? '#1e4048' : y > bridge.water + 18 ? MARL[0] : '#13282e';
+            else if (inArch) col = y - archY < 2 ? '#0a0d10' : '#121417';
+            else if (Math.abs(u) < 1.12 && Math.abs(y - archY) < 2.5 && y < bridge.water) col = CAP[1];   // 拱圈石
+            else col = (y - top) % 5 === 0 ? BRK[0] : ((x + ((y - top) / 5 | 0) * 4) % 9 === 0 ? BRK[0] : BRK[2]);
+            put(lx, y, col);
+          }
+          // 桥栏：路后面一道矮砖墙 + 压顶石
+          for (let y = top - 9; y < top; y++) put(lx, y, y === top - 9 ? CAP[2] : y === top - 8 ? CAP[1] : (y - top) % 4 === 0 ? BRK[0] : BRK[1]);
+        }
+        // 路堑：路两侧的砖砌挡土墙（画在路后面，墙顶 = 原来的地面），每 80px 一根扶壁
+        const cut = within(o.cut, x);
+        if (cut) {
+          const ramp = Math.min(1, (x - cut.x0) / 60, (cut.x1 - x) / 60), h = Math.round(cut.depth * Math.max(0, ramp));
+          const pier = (x - cut.x0) % 80 < 9;
+          for (let y = top - h; y < top; y++) {
+            const r = y - (top - h);
+            put(lx, y, r < 2 ? CAP[r ? 1 : 2] : pier ? (r % 5 === 0 ? BRK[1] : BRK[3]) : ((top - y) % 5 === 0 ? BRK[0] : ((x + ((top - y) / 5 | 0) * 4) % 10 === 0 ? BRK[0] : BRK[2])));
+          }
+        }
+      }
+      g.putImageData(img, 0, 0);
+      tiles.push({ x: tx, c });
+    }
+    return tiles;
+  }
+
+  return { layer, crate, rubble, profileTiles };
 })();
